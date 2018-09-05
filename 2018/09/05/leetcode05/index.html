@@ -123,7 +123,13 @@
     </div>
 
     <div class="post-meta">
-        <span class="attr">发布于：<span>2018-09-05 23:10:35</span></span>
+        <span class="attr">发布于：<span>2018-09-05 23:56:30</span></span>
+        
+        <span class="attr">标签：/
+        
+        <a class="tag" href="/tags/#算法" title="算法">算法</a>
+        <span>/</span>
+        
         
         </span>
         <span class="attr">访问：<span id="busuanzi_value_page_pv"></span>
@@ -143,7 +149,7 @@
 <h3 id="解法二"><a href="#解法二" class="headerlink" title="解法二"></a>解法二</h3><p>之后思考许久也没有找到更好的算法，遂查看leetcode的提示，提示是说在寻找新的更长的回文字符串时，要用到已计算的回文字符串。这样一来可以减少判断回文字符串的时间。</p>
 <p>解法如下：</p>
 <figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="built_in">string</span> <span class="title">longestPalindrome</span><span class="params">(<span class="built_in">string</span> s)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> minstart = <span class="number">0</span>, maxlength = <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; s.size(); i++)&#123;</span><br><span class="line">        <span class="keyword">int</span> sub = i, add = i;</span><br><span class="line">        <span class="keyword">while</span>(add &lt; s.size() - <span class="number">1</span> &amp;&amp; s[add + <span class="number">1</span>] == s[add])&#123;</span><br><span class="line">            add++;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">while</span>(sub &gt; <span class="number">0</span> &amp;&amp; add &lt; s.size() - <span class="number">1</span> &amp;&amp; s[add + <span class="number">1</span>] == s[sub - <span class="number">1</span>])&#123;</span><br><span class="line">            add++;</span><br><span class="line">            sub--;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">int</span> newlength = add - sub + <span class="number">1</span>;</span><br><span class="line">        <span class="keyword">if</span>(newlength &gt; maxlength)&#123;</span><br><span class="line">            minstart = sub;</span><br><span class="line">            maxlength = newlength;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> s.substr(minstart, maxlength);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>这个解法是每次以循环位置i为中心，向两端扩展找到最长的回文字符串，在判断是否为回文字符串时，实际上只用判断$s[add + 1] == s[sub - 1]$，也就是这一步时间复杂度仅为$O(1)$，这样就大幅缩短了算法运行的时间。</p>
+<p>这个解法是每次以循环位置i为中心，向两端扩展找到最长的回文字符串，在判断是否为回文字符串时，实际上只用判断s[add + 1] == s[sub - 1]，也就是这一步时间复杂度仅为O(1)，这样就大幅缩短了算法运行的时间。</p>
 
         
             <div class="donate-container">
@@ -221,11 +227,11 @@
 <script>
     var gitment = new Gitment({
         id: 'leetcode 05 最长子回文串 题解',
-        owner: 'Eadric',
-        repo: 'hexo-Eadric-blog',
+        owner: 'Krazymud',
+        repo: 'Krazymud.github.io',
         oauth: {
-            client_id: 'your-id-created-by-https://github.com/settings/applications/new',
-            client_secret: 'your-secret-created-by-https://github.com/settings/applications/new',
+            client_id: 'e12e425620b0edcd0a17',
+            client_secret: '87cf1a5544d6272fcae8729bd7d54e27b95faf5f',
         },
     })
     gitment.render('comment-container')
