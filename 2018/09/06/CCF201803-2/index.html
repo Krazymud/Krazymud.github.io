@@ -139,20 +139,19 @@
     <div class="post-content ">
         <p>最近准备参加CCF认证，刷一下这里的题目。</p>
 <h2 id="题目"><a href="#题目" class="headerlink" title="题目"></a>题目</h2><p><strong>问题描述</strong></p>
-<pre><code>数轴上有一条长度为L（L为偶数)的线段，左端点在原点，右端点在坐标L处。有n个不计体积的小球在线段上，开始时所有的小球都处在偶数坐标上，速度方向向右，速度大小为1单位长度每秒。
- 当小球到达线段的端点（左端点或右端点）的时候，会立即向相反的方向移动，速度大小仍然为原来大小。
- 当两个小球撞到一起的时候，两个小球会分别向与自己原来移动的方向相反的方向，以原来的速度大小继续移动。
- 现在，告诉你线段的长度L，小球数量n，以及n个小球的初始位置，请你计算t秒之后，各个小球的位置。
-</code></pre><p><strong>提示</strong></p>
-<pre><code>因为所有小球的初始位置都为偶数，而且线段的长度为偶数，可以证明，不会有三个小球同时相撞，小球到达线段端点以及小球之间的碰撞时刻均为整数。
-
-同时也可以证明两个小球发生碰撞的位置一定是整数（但不一定是偶数）。
-</code></pre><p><strong>输入格式</strong></p>
-<pre><code>输入的第一行包含三个整数n, L, t，用空格分隔，分别表示小球的个数、线段长度和你需要计算t秒之后小球的位置。
-第二行包含n个整数a1, a2, …, an，用空格分隔，表示初始时刻n个小球的位置。
-</code></pre><p><strong>输出格式</strong></p>
-<pre><code>输出一行包含n个整数，用空格分隔，第i个整数代表初始时刻位于ai的小球，在t秒之后的位置。
-</code></pre><p><strong>Example :</strong></p>
+<p>数轴上有一条长度为L（L为偶数)的线段，左端点在原点，右端点在坐标L处。有n个不计体积的小球在线段上，开始时所有的小球都处在偶数坐标上，速度方向向右，速度大小为1单位长度每秒。</p>
+<p>当小球到达线段的端点（左端点或右端点）的时候，会立即向相反的方向移动，速度大小仍然为原来大小。</p>
+<p>当两个小球撞到一起的时候，两个小球会分别向与自己原来移动的方向相反的方向，以原来的速度大小继续移动。</p>
+<p>现在，告诉你线段的长度L，小球数量n，以及n个小球的初始位置，请你计算t秒之后，各个小球的位置。</p>
+<p><strong>提示</strong></p>
+<p>因为所有小球的初始位置都为偶数，而且线段的长度为偶数，可以证明，不会有三个小球同时相撞，小球到达线段端点以及小球之间的碰撞时刻均为整数。</p>
+<p>同时也可以证明两个小球发生碰撞的位置一定是整数（但不一定是偶数）。</p>
+<p><strong>输入格式</strong></p>
+<p>输入的第一行包含三个整数n, L, t，用空格分隔，分别表示小球的个数、线段长度和你需要计算t秒之后小球的位置。</p>
+<p>第二行包含n个整数a1, a2, …, an，用空格分隔，表示初始时刻n个小球的位置。</p>
+<p><strong>输出格式</strong></p>
+<p>输出一行包含n个整数，用空格分隔，第i个整数代表初始时刻位于ai的小球，在t秒之后的位置。</p>
+<p><strong>Example :</strong></p>
 <figure class="highlight tap"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Input:<span class="number"> 3 </span>10 5</span><br><span class="line">	  <span class="number"> 4 </span>6 8</span><br><span class="line">Output:<span class="number"> 7 </span>9 9</span><br></pre></td></tr></table></figure>
 <h2 id="题解"><a href="#题解" class="headerlink" title="题解"></a>题解</h2><p>一开始可能有点懵，不过想到每个小球都有自己的运动方向、位置，就可以联想到建立对象来解题。</p>
 <figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> length;	<span class="comment">//每个球都再判断是否碰墙的时候都需要这个值</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Ball</span>&#123;</span></span><br><span class="line">    <span class="keyword">public</span>:</span><br><span class="line">        Ball()&#123;</span><br><span class="line">            direction = <span class="number">1</span>;</span><br><span class="line">            <span class="keyword">this</span>-&gt;pos = <span class="number">0</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">int</span> <span class="title">getpos</span><span class="params">()</span></span>&#123;</span><br><span class="line">            <span class="keyword">return</span> pos;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">void</span> <span class="title">initpos</span><span class="params">(<span class="keyword">int</span> pos)</span></span>&#123;</span><br><span class="line">            <span class="keyword">this</span>-&gt;pos = pos;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">void</span> <span class="title">move</span><span class="params">()</span></span>&#123;</span><br><span class="line">            pos = (direction) ? pos + <span class="number">1</span> : pos - <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">bool</span> <span class="title">againstwall</span><span class="params">()</span></span>&#123;</span><br><span class="line">            <span class="keyword">return</span> (pos == <span class="number">0</span> || pos == length) ? <span class="literal">true</span> : <span class="literal">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function"><span class="keyword">void</span> <span class="title">turn</span><span class="params">()</span></span>&#123;</span><br><span class="line">            direction = (direction == <span class="number">1</span>) ? <span class="number">0</span> : <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    <span class="keyword">private</span>:</span><br><span class="line">        <span class="keyword">int</span> pos;</span><br><span class="line">        <span class="keyword">int</span> direction;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
