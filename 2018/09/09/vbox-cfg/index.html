@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Eadric的博客">
+    <meta name="keyword"  content="Coding">
+    <link rel="shortcut icon" href="/img/favicon.ico">
+
+    <title>
+        
+        Win10环境下安装配置VirtualBox，搭建CentOS私有云 - Eadric的博客 | Eadric&#39;s Blog
+        
+    </title>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/aircloud.css">
+    <link rel="stylesheet" href="/css/gitment.css">
+    <!--<link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css">-->
+    <link href="//at.alicdn.com/t/font_620856_pl6z7sid89qkt9.css" rel="stylesheet" type="text/css">
+    <!-- ga & ba script hoook -->
+    <script></script>
+</head>
+
+<body>
+
+<div class="site-nav-toggle" id="site-nav-toggle">
+    <button>
+        <span class="btn-bar"></span>
+        <span class="btn-bar"></span>
+        <span class="btn-bar"></span>
+    </button>
+</div>
+
+<div class="index-about">
+    <i> Hakuna, matata </i>
+</div>
+
+<div class="index-container">
+    
+    <div class="index-left">
+        
+<div class="nav" id="nav">
+    <div class="avatar-name">
+        <div class="avatar">
+            <img src="/img/avatar.jpg" />
+        </div>
+        <div class="name">
+            <i>Eadric</i>
+        </div>
+    </div>
+    <div class="contents" id="nav-content">
+        <ul>
+            <li >
+                <a href="/">
+                    <i class="iconfont icon-shouye1"></i>
+                    <span>主页</span>
+                </a>
+            </li>
+            <li >
+                <a href="/tags">
+                    <i class="iconfont icon-biaoqian1"></i>
+                    <span>标签</span>
+                </a>
+            </li>
+            <li >
+                <a href="/archive">
+                    <i class="iconfont icon-guidang2"></i>
+                    <span>存档</span>
+                </a>
+            </li>
+            <li >
+                <a href="/about/">
+                    <i class="iconfont icon-guanyu2"></i>
+                    <span>关于</span>
+                </a>
+            </li>
+            
+            <li>
+                <a id="search">
+                    <i class="iconfont icon-sousuo1"></i>
+                    <span>搜索</span>
+                </a>
+            </li>
+            
+        </ul>
+    </div>
+    
+        <div id="toc" class="toc-article">
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#准备工作"><span class="toc-text">准备工作</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#配置VirtualBox"><span class="toc-text">配置VirtualBox</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#配置CentOS虚拟机"><span class="toc-text">配置CentOS虚拟机</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#ssh与远程桌面访问"><span class="toc-text">ssh与远程桌面访问</span></a></li></ol>
+</div>
+    
+</div>
+
+
+<div class="search-field" id="search-field">
+    <div class="search-container">
+        <div class="search-input">
+            <span id="esc-search"> <i class="icon-fanhui iconfont"></i></span>
+            <input id="search-input"/>
+            <span id="begin-search">搜索</span>
+        </div>
+        <div class="search-result-container" id="search-result-container">
+
+        </div>
+    </div>
+</div>
+        <div class="index-about-mobile">
+            <i> Hakuna, matata </i>
+        </div>
+    </div>
+    
+    <div class="index-middle">
+        <!-- Main Content -->
+        
+
+
+<div class="post-container">
+    <div class="post-title">
+        Win10环境下安装配置VirtualBox，搭建CentOS私有云
+    </div>
+
+    <div class="post-meta">
+        <span class="attr">发布于：<span>2018-09-09 10:49:50</span></span>
+        
+        <span class="attr">标签：/
+        
+        <a class="tag" href="/tags/#服务计算" title="服务计算">服务计算</a>
+        <span>/</span>
+        
+        
+        </span>
+        <span class="attr">访问：<span id="busuanzi_value_page_pv"></span>
+</span>
+</span>
+    </div>
+    <div class="post-content ">
+        <p>友情链接：<a href="https://palette25.github.io/2018/09/08/Serive-Computing-Install-Personal-Cloud/" target="_blank" rel="noopener">Win10环境下搭建Ubuntu私有云</a>（同队队员的博客，给有需要搭建Ubuntu虚拟机的同学）</p>
+<h2 id="准备工作"><a href="#准备工作" class="headerlink" title="准备工作"></a>准备工作</h2><ol>
+<li>安装VirtualBox，根据自己的需要下载相应的host版本，在这里我下载的是VirtualBox 5.2.18的Windows host版，下载地址：<a href="https://www.virtualbox.org/wiki/Downloads" target="_blank" rel="noopener">官网</a></li>
+<li>安装Git客户端（git bash），下载地址：<a href="https://git-scm.com/downloads/" target="_blank" rel="noopener">官网</a></li>
+<li>下载Linux发行版镜像，可以选择在阿里云<a href="https://opsx.alibaba.com/mirror" target="_blank" rel="noopener">opsx</a>进行下载，在这里我选择的是CentOS7镜像进行下载。</li>
+</ol>
+<h2 id="配置VirtualBox"><a href="#配置VirtualBox" class="headerlink" title="配置VirtualBox"></a>配置VirtualBox</h2><p>在创建安装虚拟机之前，要先配置虚拟机的存储位置，避免占用不必要的空间。</p>
+<ul>
+<li>VirtualBox菜单：管理 → 全局设定 → 常规 → 默认虚拟电脑位置</li>
+</ul>
+<p>之后要创建虚拟机内部虚拟网络，是将来用来测试虚拟机与主机间通讯时要用到的。</p>
+<ul>
+<li>VirtualBox菜单：管理 → 主机网络管理器</li>
+</ul>
+<p>将网卡改为手动配置，自行修改Ipv4地址，注意这个地址是作为虚拟内部网络host的地址，后续虚拟机的ip地址不能与之相同。</p>
+<p>配置界面：</p>
+<p><img src="/2018/09/09/vbox-cfg/1.png" alt="配置界面"></p>
+<p>配置网络完成后，在主机windows命令行输入ipconfig，可以看到我们创建的网卡的信息。</p>
+<p><img src="/2018/09/09/vbox-cfg/2.png" alt="网卡信息"></p>
+<h2 id="配置CentOS虚拟机"><a href="#配置CentOS虚拟机" class="headerlink" title="配置CentOS虚拟机"></a>配置CentOS虚拟机</h2><p>首先用vbox创建一个64 bit虚拟机，命名为centos-base，以便与后面另外创建的虚拟机区分。因为对于这个虚拟机计划只使用命令行操作，所以CPU、内存、显存都采用默认配置就可以，存储设置为30G，避免以后扩展麻烦。</p>
+<p>比较重要的是网络的配置：</p>
+<ul>
+<li>设置 → 网络</li>
+</ul>
+<p>第一块网卡设置为NAT（不用调整），这块网卡负责访问外网（通过宿主机）。第二块网卡连接方式：Host-Only，接口为之前创建的虚拟网卡VirtualBox Host-Only Ethernet Adapter #2，这块网卡负责进行虚拟网络连接。</p>
+<p>之后导入之前下载的iso文件进行系统安装，完成后进入系统。</p>
+<p>进入系统后，第一件事要升级OS系统内核：</p>
+<ul>
+<li><p>首先获取wget，<code>yum install wget</code></p>
+</li>
+<li><p>系统自带的源可能比较慢，可以换成163或阿里云的源，这里选择<a href="http://mirrors.163.com/.help/centos.html" target="_blank" rel="noopener">163源</a>进行更换：</p>
+<ul>
+<li><p>首先备份/etc/yum.repos.d/CentOS-Base.repo</p>
+<p><code>mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.backup</code></p>
+</li>
+<li><p>下载对应版本repo文件（这里为CentOS7），并放入/etc/yum.repos.d</p>
+<p><code>wget http://mirrors.163.com/.help/CentOS7-Base-163.repo</code></p>
+</li>
+<li><p>运行以下命令生成缓存</p>
+<p><code>yum clean all</code></p>
+<p><code>yum makecache</code></p>
+</li>
+</ul>
+</li>
+<li><p>最后 <code>yum update</code></p>
+</li>
+</ul>
+<p>接着检查网卡配置，命令行输入nmtui，出现配置网卡的界面：</p>
+<p><img src="/2018/09/09/vbox-cfg/3.png" alt="配置网卡"></p>
+<p>进入Edit之后可以看到有enp0s8、enp0s3两个以太网连接，分别对应刚才的Host-Only和NAT。对于enp0s3不用如何调整，只需要在enp0s8的edit界面设置ipv4地址：</p>
+<p><img src="/2018/09/09/vbox-cfg/4.png" alt="enp0s8"></p>
+<p>设置好了不要忘记在activate界面手动激活网卡，因为这里默认开机时不会启动网卡。当然，也可以设置它开机时自动启动。找到网卡的配置文件（在/etc/sysconfig/network-scripts中），将ifcfg-enp0s8和ifcfg-enp0s3（名称对应你的网卡名称）中的ONBOOT选项都改为true，这样就能开机自启了。</p>
+<p>接下来尝试ping外网与内网：</p>
+<p><img src="/2018/09/09/vbox-cfg/5.png" alt="fail"></p>
+<p>咦，为什么内网无法ping到？网卡的设置应该是没有问题的，同时我试了一下在windows这边命令行ping 192.168.106.50，也就是虚拟机地址，是没有问题的，说明应该是有一个协议使得连接只能是单向的了，那就应该是windows防火墙的问题了，win10防火墙有三种：域网络、专用网络和公共网络。关闭win10的专用网络防火墙后，果然可以了：</p>
+<p><img src="/2018/09/09/vbox-cfg/6.png" alt="ok"></p>
+<p>下面开始配置第二个CentOS虚拟机，这个虚拟机只需要对centos-base进行复制就可以了，这里把新的虚拟机命名为centos-client，注意复制选项，必须选择重新初始化所有网卡的MAC地址，不然后面无法测试虚拟机之间的通信（地址相同）。最后选择<strong>链接复制</strong>，此时新虚拟机的虚拟硬盘是绑定到原虚拟机的虚拟硬盘的，这样虚拟机创建的就很快。</p>
+<p>同样，在第二个虚拟机中，用nmtui配置主机名与第二块网卡的地址，并测试能否ping通，测试结果都很正常。</p>
+<p>在这个虚拟机中打算使用centos 桌面，故分配给它的CPU、内存与显存都要调高一些，并使用<code>yum groupinstall &quot;GNOME Desktop&quot;</code>来安装桌面，安装成功后，设置启动目标为桌面：<code>ln -sf /lib/systemd/system/runlevel5.target /etc/systemd/system/default.target</code>，再重启，就可以看到centos桌面了：</p>
+<p><img src="/2018/09/09/vbox-cfg/7.png" alt="centos"></p>
+<h2 id="ssh与远程桌面访问"><a href="#ssh与远程桌面访问" class="headerlink" title="ssh与远程桌面访问"></a>ssh与远程桌面访问</h2><p>既然是建立私有云，用ssh和远程桌面访问是必不可少的。而要使用这两个工具也需要做一些工作。</p>
+<p>首先对于ssh：</p>
+<ul>
+<li><p>确保CentOS7安装了openssh-server，在终端输入<code>yum list installed | grep openssh-server</code></p>
+</li>
+<li><p>如果显示没有安装，就输入<code>yum install openssh-server</code>来安装</p>
+</li>
+<li><p>有了openssh-server后，找到/etc/ssh/目录下的sshd_config文件并用编辑器打开，将Port、ListenAddress前的＃号去除，并把PermitRootLogin和PasswordAuthentication设为yes</p>
+<p><img src="/2018/09/09/vbox-cfg/8.png" alt="8"></p>
+<p><img src="/2018/09/09/vbox-cfg/9.png" alt="9"></p>
+<p><img src="/2018/09/09/vbox-cfg/10.png" alt="10"></p>
+</li>
+</ul>
+<p>测试ssh连接成功：</p>
+<p><img src="/2018/09/09/vbox-cfg/11.png" alt="ssh2"></p>
+<p>接下来是远程桌面访问：</p>
+<ul>
+<li><p>首先要安装VirtualBox远程显示系统的扩展包<a href="https://www.virtualbox.org/wiki/Downloads" target="_blank" rel="noopener">Oracle VM VirtualBox Extension pack</a>，它提供一系列的功能支持：USB 2.0，intel网卡的PXE启动与VirtualBox远程显示系统。安装完成后，重启宿主机。</p>
+</li>
+<li><p>设置虚拟机访问端口：点击虚拟机设置 → 显示 → 远程桌面 → 启用服务器并设置连接端口，注意连接时用的是宿主机的IP地址加上子机的端口（也就是192.168.106.1:（设置的端口）），每台虚拟机必须拥有唯一的RDP访问端口。</p>
+</li>
+<li><p>最后，用Windows的Remote Desktop Connection（远程桌面连接）终端进行远程桌面访问（注意先启动虚拟机）</p>
+<p><img src="/2018/09/09/vbox-cfg/12..png" alt="rdc"></p>
+<p><img src="/2018/09/09/vbox-cfg/13.png" alt="ssh2"></p>
+</li>
+</ul>
+<p>这样以来，私有云就搭建好了，可以开始愉快的玩耍了~</p>
+
+        
+            <div class="donate-container">
+    <div class="donate-button">
+        <button id="donate-button">赞赏</button>
+    </div>
+    <div class="donate-img-container hide" id="donate-img-container">
+        <img id="donate-img" src="" data-src="/img/donate.jpg">
+        <p> 感谢鼓励 </p>
+    </div>
+</div>
+        
+        <div id="comment-container">
+        </div>
+    </div>
+</div>
+    </div>
+</div>
+
+
+<footer class="footer">
+    <ul class="list-inline text-center">
+        
+        
+
+        
+
+        
+
+        
+        <li>
+            <a target="_blank"  href="https://github.com/Krazymud">
+                            <span class="fa-stack fa-lg">
+                                <i class="iconfont icon-github"></i>
+                            </span>
+            </a>
+        </li>
+        
+
+        
+
+    </ul>
+    
+    <p>
+        <span>/</span>
+        
+    </p>
+    
+    <p>
+        <span id="busuanzi_container_site_pv">
+            <span id="busuanzi_value_site_pv"></span>PV
+        </span>
+        <span id="busuanzi_container_site_uv">
+            <span id="busuanzi_value_site_uv"></span>UV
+        </span>
+        Created By <a href="https://hexo.io/">Hexo</a>  Theme <a href="https://github.com/aircloud/hexo-theme-aircloud">AirCloud</a></p>
+</footer>
+
+
+
+
+</body>
+
+<script>
+    // We expose some of the variables needed by the front end
+    window.hexo_search_path = "search.json"
+    window.hexo_root = "/"
+    window.isPost = true
+</script>
+<script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+<script src="/js/index.js"></script>
+<script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<script src="/js/gitment.js"></script>
+<script>
+    var gitment = new Gitment({
+        id: 'Win10环境下安装配置VirtualBox，搭建CentOS私有云',
+        owner: 'Krazymud',
+        repo: 'Krazymud.github.io',
+        oauth: {
+            client_id: 'e12e425620b0edcd0a17',
+            client_secret: '87cf1a5544d6272fcae8729bd7d54e27b95faf5f',
+        },
+    })
+    gitment.render('comment-container')
+</script>
+
+</html>
