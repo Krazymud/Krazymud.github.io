@@ -141,64 +141,72 @@
 <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>本文介绍了使用GO语言实现Selpg这样一个程序的过程，总体参考了<a href="https://www.ibm.com/developerworks/cn/linux/shell/clutil/index.html" target="_blank" rel="noopener">开发Linux命令行实用程序</a>这篇文章，它讲的是使用C语言实现Selpg。Selpg即Select Pages，允许用户指定从输入文本（可来自文件或命令行或是另一个进程的输出）抽取的页的范围，并控制输出的位置，可以是标准输出，也可以输入至文件或子进程。</p>
 <h2 id="Usage"><a href="#Usage" class="headerlink" title="Usage"></a>Usage</h2><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">Usage: selpg [-s startPage] [-e endPage] [-l linesPerPage | -f] [-d printDest] filename</span><br><span class="line"></span><br><span class="line">Options:</span><br><span class="line">  -d, --dest string		(Optional) Enter printing destination</span><br><span class="line">  -e, --endPage int		(Mandatory) Input Your endPage</span><br><span class="line">  -f, --pageBreak		(Optional) Choosing pageBreaks mode</span><br><span class="line">  -l, --pageLen int     (Optional) Choosing pageLen mode, enter pageLen</span><br><span class="line">  -s, --startPage int	(Mandatory) Input Your startPage</span><br></pre></td></tr></table></figure>
 <h2 id="代码结构"><a href="#代码结构" class="headerlink" title="代码结构"></a>代码结构</h2><p>总共有三个函数：</p>
-<ul>
-<li>main函数：解析命令参数的入口函数</li>
-<li>processArgs函数：处理参数，进行错误处理</li>
-<li>processInput函数：经过processArgs函数后，这里根据命令进行（文件）操作</li>
-</ul>
+<ol>
+<li><p>main函数：解析命令参数的入口函数</p>
+</li>
+<li><p>processArgs函数：处理参数，进行错误处理</p>
+</li>
+<li><p>processInput函数：经过processArgs函数后，这里根据命令进行（文件）操作</p>
+</li>
+</ol>
 <p>除此之外，还有保存参数的struct：selpgArgs，以及五个解析参数用的flag。</p>
 <p>selpgArgs存储内容：</p>
 <figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> selpgArgs <span class="keyword">struct</span> &#123;</span><br><span class="line">	startPage, endPage, pageLen, pageType <span class="keyword">int</span></span><br><span class="line">	inFilename                            <span class="keyword">string</span></span><br><span class="line">	printDest                             <span class="keyword">string</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h2 id="关键实现"><a href="#关键实现" class="headerlink" title="关键实现"></a>关键实现</h2><ol>
-<li><p>pflag</p>
+<h2 id="关键实现"><a href="#关键实现" class="headerlink" title="关键实现"></a>关键实现</h2><ul>
+<li>pflag</li>
+</ul>
 <p>在前面的参考文章中，可以看到如果使用C语言来解析参数，代码实现还是比较繁杂的，需要手动进行参数的获取、判断乃至解析。而在Go语言中，有很多便利的包供我们使用，在这里使用的是pflag这个包来进行参数的解析。</p>
 <p>pflag包的使用是非常简单的，首先<code>go get</code>了这个包(<a href="https://github.com/spf13/pflag" target="_blank" rel="noopener">spf13/pflag</a>)之后，引入它就可以使用了。基本的参数绑定操作：</p>
 <figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> ip *<span class="keyword">int</span> = flag.Int(<span class="string">"flagname"</span>, <span class="number">1234</span>, <span class="string">"help message for flagname"</span>)	<span class="comment">//绑定"--flagname"的值到*ip上，格式为int</span></span><br><span class="line"><span class="comment">//或</span></span><br><span class="line"><span class="keyword">var</span> flagvar <span class="keyword">int</span>		<span class="comment">//声明</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">init</span><span class="params">()</span></span> &#123;</span><br><span class="line">    flag.IntVar(&amp;flagvar, <span class="string">"flagname"</span>, <span class="number">1234</span>, <span class="string">"help message for flagname"</span>)	<span class="comment">//绑定</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>在Selpg中，我们需要两种格式的参数，拿输入文本的起始页做例子，我们就需要同时接受<code>--startPage</code>与<code>-s</code>这两种输入，pflag也允许我们这样做：</p>
 <figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> inputS = flag.IntP(<span class="string">"startPage"</span>, <span class="string">"s"</span>, <span class="number">-1</span>, <span class="string">"..."</span>)</span><br><span class="line"><span class="comment">//startPage配合"--"使用，s配合"-"使用</span></span><br></pre></td></tr></table></figure>
 <p>最后，<code>flag.Parse()</code>自动进行参数的捕获、解析。如果是没有带<code>-</code>或<code>--</code>的参数，则可通过<code>flag.Args()</code>获取，这类参数的数量为<code>flag.Narg()</code>。</p>
-</li>
-<li><p>bufio</p>
+<ul>
+<li>bufio</li>
+</ul>
 <p>在Selpg的实现中我使用了bufio包来进行输入输出的定向，bufio即buffered I/O，它封装了io.Reader与io.Writer，使用起来还是较为方便的。</p>
 <p>读取输入部分：</p>
 <figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//从命令行输入</span></span><br><span class="line">inputReader = bufio.NewReader(os.Stdin) </span><br><span class="line"><span class="comment">//或打开一个文件后输入</span></span><br><span class="line">file, err = os.Open(selpg.inFilename)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		fmt.Fprintln(os.Stderr, err)</span><br><span class="line">		os.Exit(<span class="number">1</span>)</span><br><span class="line">	&#125;</span><br><span class="line">inputReader = bufio.NewReader(file)	</span><br><span class="line"><span class="comment">//读取输入，直到某一字符（包含此字符）</span></span><br><span class="line">line, err = inputReader.ReadBytes(<span class="string">'\n'</span>)	<span class="comment">//换页为行模式</span></span><br><span class="line">line, err = inputReader.ReadBytes(<span class="string">'\f'</span>)	<span class="comment">//换页为换页符模式</span></span><br></pre></td></tr></table></figure>
 <p>定向输出部分：</p>
 <figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">outputWriter = bufio.NewWriter(os.Stdout)</span><br><span class="line">outputWriter.Write(line)</span><br><span class="line">outputWriter.Flush()	<span class="comment">//这一步必须</span></span><br></pre></td></tr></table></figure>
-</li>
-<li><p>os/exec</p>
+<ul>
+<li>os/exec</li>
+</ul>
 <p>“-dXXX”的实现可能是比较难的一部分，这里通过os/exec包来实现，exec允许运行外部命令，它封装了os.StartProcess，故我们可以更容易地重定向输入输出，可通过管道向命令输入内容。</p>
 <p>当<code>-d</code>参数获得了一个打印机地址，就进行如下操作：</p>
 <figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//初始化外部命令</span></span><br><span class="line">cmd = exec.Command(<span class="string">"lp"</span>, <span class="string">"-d"</span>, selpg.printDest)	</span><br><span class="line"><span class="comment">//建立一个管道以输入打印内容</span></span><br><span class="line">stdin, err = cmd.StdinPipe()</span><br><span class="line"><span class="comment">//写入管道</span></span><br><span class="line">_, err := io.WriteString(stdin, <span class="keyword">string</span>(line))</span><br><span class="line"><span class="comment">//关闭管道、获得输出</span></span><br><span class="line">stdin.Close()</span><br><span class="line">stderr, _ := cmd.CombinedOutput()</span><br></pre></td></tr></table></figure>
 <p>注意<code>cmd.CombinedOutput()</code>的作用是运行命令并获得组合在一起的stdout/stderr输出。</p>
-</li>
-</ol>
-<h2 id="简单测试"><a href="#简单测试" class="headerlink" title="简单测试"></a>简单测试</h2><ol>
-<li><p><code>selpg -s1 -e1</code></p>
+<h2 id="简单测试"><a href="#简单测试" class="headerlink" title="简单测试"></a>简单测试</h2><ul>
+<li><code>selpg -s1 -e1</code></li>
+</ul>
 <p>即，从命令行输入，并输出到命令行，打印前72行（default）</p>
 <p><img src="/2018/10/11/selpg/1.png" alt="1"></p>
-</li>
-<li><p><code>selpg -s1 -e1 -l3 input</code></p>
+<ul>
+<li><code>selpg -s1 -e1 -l3 input</code></li>
+</ul>
 <p>即，从文件输入，并输出到命令行，打印前三行</p>
 <p><img src="/2018/10/11/selpg/2.png" alt="2"></p>
-</li>
-<li><p><code>selpg -s1 -e input &gt;output 2&gt;error</code></p>
+<ul>
+<li><code>selpg -s1 -e input &gt;output 2&gt;error</code></li>
+</ul>
 <p>即，正确输出到文件output，错误输出至文件error（故意写成错误命令）</p>
 <p><img src="/2018/10/11/selpg/3.png" alt="3"></p>
-</li>
-<li><p>测试换页符，首先建立包含换页符的文件：</p>
+<ul>
+<li>测试换页符，首先建立包含换页符的文件：</li>
+</ul>
 <p><img src="/2018/10/11/selpg/4.png" alt="4"></p>
 <p>接着，测试<code>selpg -s1 -e3 -f input</code></p>
 <p><img src="/2018/10/11/selpg/5.png" alt="5"></p>
-</li>
-<li><p>测试输出至打印机lp1</p>
+<ul>
+<li>测试输出至打印机lp1</li>
+</ul>
 <p><img src="/2018/10/11/selpg/6.png" alt="6"></p>
 <p>命令正确执行了，只是没有打印机</p>
-</li>
-<li><p><code>selpg -s1 -e20 -l20 test.txt | grep -n &quot;Geralt&quot;</code></p>
+<ul>
+<li><code>selpg -s1 -e20 -l20 test.txt | grep -n &quot;Geralt&quot;</code></li>
+</ul>
 <p>测试读取并输出长篇小说的前20页（设置每页长20行）</p>
 <p><img src="/2018/10/11/selpg/7.png" alt="Geralt"></p>
-</li>
-</ol>
 <p>这样就实现了selpg程序。</p>
 
         
