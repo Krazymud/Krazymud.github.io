@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Eadric的博客">
+    <meta name="keyword"  content="Coding">
+    <link rel="shortcut icon" href="/img/favicon.ico">
+
+    <title>
+        
+        leetcode-63 Unique Paths Ⅱ 题解 - Eadric的博客 | Eadric&#39;s Blog
+        
+    </title>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/aircloud.css">
+    <link rel="stylesheet" href="/css/gitment.css">
+    <!--<link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css">-->
+    <link href="//at.alicdn.com/t/font_620856_pl6z7sid89qkt9.css" rel="stylesheet" type="text/css">
+    <!-- ga & ba script hoook -->
+    <script></script>
+</head>
+
+<body>
+
+<div class="site-nav-toggle" id="site-nav-toggle">
+    <button>
+        <span class="btn-bar"></span>
+        <span class="btn-bar"></span>
+        <span class="btn-bar"></span>
+    </button>
+</div>
+
+<div class="index-about">
+    <i> Hakuna, matata </i>
+</div>
+
+<div class="index-container">
+    
+    <div class="index-left">
+        
+<div class="nav" id="nav">
+    <div class="avatar-name">
+        <div class="avatar">
+            <img src="/img/avatar.jpg" />
+        </div>
+        <div class="name">
+            <i>Eadric</i>
+        </div>
+    </div>
+    <div class="contents" id="nav-content">
+        <ul>
+            <li >
+                <a href="/">
+                    <i class="iconfont icon-shouye1"></i>
+                    <span>主页</span>
+                </a>
+            </li>
+            <li >
+                <a href="/tags">
+                    <i class="iconfont icon-biaoqian1"></i>
+                    <span>标签</span>
+                </a>
+            </li>
+            <li >
+                <a href="/archive">
+                    <i class="iconfont icon-guidang2"></i>
+                    <span>存档</span>
+                </a>
+            </li>
+            <li >
+                <a href="/about/">
+                    <i class="iconfont icon-guanyu2"></i>
+                    <span>关于</span>
+                </a>
+            </li>
+            
+            <li>
+                <a id="search">
+                    <i class="iconfont icon-sousuo1"></i>
+                    <span>搜索</span>
+                </a>
+            </li>
+            
+        </ul>
+    </div>
+    
+        <div id="toc" class="toc-article">
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#题目"><span class="toc-text">题目</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#解法"><span class="toc-text">解法</span></a></li></ol></li></ol>
+</div>
+    
+</div>
+
+
+<div class="search-field" id="search-field">
+    <div class="search-container">
+        <div class="search-input">
+            <span id="esc-search"> <i class="icon-fanhui iconfont"></i></span>
+            <input id="search-input"/>
+            <span id="begin-search">搜索</span>
+        </div>
+        <div class="search-result-container" id="search-result-container">
+
+        </div>
+    </div>
+</div>
+        <div class="index-about-mobile">
+            <i> Hakuna, matata </i>
+        </div>
+    </div>
+    
+    <div class="index-middle">
+        <!-- Main Content -->
+        
+
+
+<div class="post-container">
+    <div class="post-title">
+        leetcode-63 Unique Paths Ⅱ 题解
+    </div>
+
+    <div class="post-meta">
+        <span class="attr">发布于：<span>2018-10-27 11:23:56</span></span>
+        
+        <span class="attr">标签：/
+        
+        <a class="tag" href="/tags/#算法" title="算法">算法</a>
+        <span>/</span>
+        
+        
+        </span>
+        <span class="attr">访问：<span id="busuanzi_value_page_pv"></span>
+</span>
+</span>
+    </div>
+    <div class="post-content ">
+        <h2 id="题目"><a href="#题目" class="headerlink" title="题目"></a>题目</h2><p>A robot is located at the top-left corner of a <em>m</em> x <em>n</em> grid (marked ‘Start’ in the diagram below).</p>
+<p>The robot can only move either down or right at any point in time. The robot is trying to reach the bottom-right corner of the grid (marked ‘Finish’ in the diagram below).</p>
+<p>Now consider if some obstacles are added to the grids. How many unique paths would there be?</p>
+<p><img src="https://assets.leetcode.com/uploads/2018/10/22/robot_maze.png" alt="img"></p>
+<p>An obstacle and empty space is marked as <code>1</code> and <code>0</code> respectively in the grid.</p>
+<p><strong>Note:</strong> <em>m</em> and <em>n</em> will be at most 100.</p>
+<p><strong>Example 1:</strong></p>
+<figure class="highlight xl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">Input:</span><br><span class="line">[</span><br><span class="line">  [<span class="number">0</span>,<span class="number">0</span>,<span class="number">0</span>],</span><br><span class="line">  [<span class="number">0</span>,<span class="number">1</span>,<span class="number">0</span>],</span><br><span class="line">  [<span class="number">0</span>,<span class="number">0</span>,<span class="number">0</span>]</span><br><span class="line">]</span><br><span class="line">Output: <span class="number">2</span></span><br><span class="line">Explanation:</span><br><span class="line">There <span class="keyword">is</span> one obstacle <span class="built_in">in</span> the middle of the <span class="number">3</span>x3 grid above.</span><br><span class="line">There are two ways to reach the bottom-right corner:</span><br><span class="line"><span class="number">1</span>. R<span class="function"><span class="title">ight</span> -&gt;</span> R<span class="function"><span class="title">ight</span> -&gt;</span> D<span class="function"><span class="title">own</span> -&gt;</span> Down</span><br><span class="line"><span class="number">2</span>. D<span class="function"><span class="title">own</span> -&gt;</span> D<span class="function"><span class="title">own</span> -&gt;</span> R<span class="function"><span class="title">ight</span> -&gt;</span> Right</span><br></pre></td></tr></table></figure>
+<h3 id="解法"><a href="#解法" class="headerlink" title="解法"></a>解法</h3><p>首先分析一下这道题，问的是从左上角走到终点即右下角总共有多少条路径，而且每次只能往右走一步或者往下走一步，如果某个位置的值为1那么就算为障碍，此时是不能走这里的。那么要计算路径的时候，可以分成对每个位置进行处理，这就成为一个DP问题了。对每一个位置来说，它最多就只有两个前置位，也就是它上方与左方的位置，如果该位置处于边界的话那么只有一个前置位。</p>
+<p>现在来讨论一下路径数目的计算，对于一个位置<code>(i, j)</code>来说，我们记录了到达它的两个前置位置<code>(i, j -1)</code>与<code>(i - 1, j)</code>的路径数，那么到达<code>(i, j)</code>的路径数就应该是两前置位置的路径数之和，这就是路径的计算方法。</p>
+<p>实现如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">uniquePathsWithObstacles</span><span class="params">(<span class="built_in">vector</span>&lt;<span class="built_in">vector</span>&lt;<span class="keyword">int</span>&gt;&gt;&amp; obstacleGrid)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> m = obstacleGrid.size(), n = obstacleGrid[<span class="number">0</span>].size();</span><br><span class="line">    <span class="built_in">vector</span>&lt;<span class="built_in">vector</span>&lt;<span class="keyword">int</span>&gt;&gt; path(obstacleGrid.size(), <span class="built_in">vector</span>&lt;<span class="keyword">int</span>&gt;(obstacleGrid[<span class="number">0</span>].size(), <span class="number">0</span>));	<span class="comment">//记录到达(i, j)的路径数</span></span><br><span class="line">    <span class="keyword">int</span> dir[<span class="number">2</span>][<span class="number">2</span>] = &#123;&#123;<span class="number">-1</span>, <span class="number">0</span>&#125;, &#123;<span class="number">0</span>, <span class="number">-1</span>&#125;&#125;;</span><br><span class="line">    path[<span class="number">0</span>][<span class="number">0</span>] = obstacleGrid[<span class="number">0</span>][<span class="number">0</span>] == <span class="number">1</span> ? <span class="number">0</span> : <span class="number">1</span>;	<span class="comment">//起点的初始路径数</span></span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; m; ++i)&#123;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> j = <span class="number">0</span>; j &lt; n; ++j)&#123;</span><br><span class="line">            <span class="keyword">if</span>(obstacleGrid[i][j] == <span class="number">1</span>)&#123;</span><br><span class="line">                path[i][j] = <span class="number">0</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">else</span>&#123;</span><br><span class="line">                <span class="keyword">for</span>(<span class="keyword">int</span> k = <span class="number">0</span>; k &lt; <span class="number">2</span>; ++k)&#123;</span><br><span class="line">                    <span class="keyword">int</span> newi = i + dir[k][<span class="number">0</span>], newj = j + dir[k][<span class="number">1</span>];</span><br><span class="line">                    <span class="keyword">if</span>(newi &gt;= <span class="number">0</span> &amp;&amp; newi &lt; m &amp;&amp; newj &gt;= <span class="number">0</span> &amp;&amp; newj &lt; n)&#123;</span><br><span class="line">                        path[i][j] += path[newi][newj];</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> path[m - <span class="number">1</span>][n - <span class="number">1</span>];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+        
+            <div class="donate-container">
+    <div class="donate-button">
+        <button id="donate-button">赞赏</button>
+    </div>
+    <div class="donate-img-container hide" id="donate-img-container">
+        <img id="donate-img" src="" data-src="/img/donate.jpg">
+        <p> 感谢鼓励 </p>
+    </div>
+</div>
+        
+        <div id="comment-container">
+        </div>
+    </div>
+</div>
+    </div>
+</div>
+
+
+<footer class="footer">
+    <ul class="list-inline text-center">
+        
+        
+
+        
+
+        
+
+        
+        <li>
+            <a target="_blank"  href="https://github.com/Krazymud">
+                            <span class="fa-stack fa-lg">
+                                <i class="iconfont icon-github"></i>
+                            </span>
+            </a>
+        </li>
+        
+
+        
+
+    </ul>
+    
+    <p>
+        <span>/</span>
+        
+    </p>
+    
+    <p>
+        <span id="busuanzi_container_site_pv">
+            <span id="busuanzi_value_site_pv"></span>PV
+        </span>
+        <span id="busuanzi_container_site_uv">
+            <span id="busuanzi_value_site_uv"></span>UV
+        </span>
+        Created By <a href="https://hexo.io/">Hexo</a>  Theme <a href="https://github.com/aircloud/hexo-theme-aircloud">AirCloud</a></p>
+</footer>
+
+
+
+
+</body>
+
+<script>
+    // We expose some of the variables needed by the front end
+    window.hexo_search_path = "search.json"
+    window.hexo_root = "/"
+    window.isPost = true
+</script>
+<script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+<script src="/js/index.js"></script>
+<script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<script src="/js/gitment.js"></script>
+<script>
+    var gitment = new Gitment({
+        id: 'leetcode-63 Unique Paths Ⅱ 题解',
+        owner: 'Krazymud',
+        repo: 'Krazymud.github.io',
+        oauth: {
+            client_id: 'e12e425620b0edcd0a17',
+            client_secret: '87cf1a5544d6272fcae8729bd7d54e27b95faf5f',
+        },
+    })
+    gitment.render('comment-container')
+</script>
+
+</html>
