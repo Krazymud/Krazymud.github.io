@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Eadric的博客">
+    <meta name="keyword"  content="Coding">
+    <link rel="shortcut icon" href="/img/favicon.ico">
+
+    <title>
+        
+        leetcode 72+213 题解 - Eadric的博客 | Eadric&#39;s Blog
+        
+    </title>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/aircloud.css">
+    <link rel="stylesheet" href="/css/gitment.css">
+    <!--<link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css">-->
+    <link href="//at.alicdn.com/t/font_620856_pl6z7sid89qkt9.css" rel="stylesheet" type="text/css">
+    <!-- ga & ba script hoook -->
+    <script></script>
+</head>
+
+<body>
+
+<div class="site-nav-toggle" id="site-nav-toggle">
+    <button>
+        <span class="btn-bar"></span>
+        <span class="btn-bar"></span>
+        <span class="btn-bar"></span>
+    </button>
+</div>
+
+<div class="index-about">
+    <i> Hakuna, matata </i>
+</div>
+
+<div class="index-container">
+    
+    <div class="index-left">
+        
+<div class="nav" id="nav">
+    <div class="avatar-name">
+        <div class="avatar">
+            <img src="/img/avatar.jpg" />
+        </div>
+        <div class="name">
+            <i>Eadric</i>
+        </div>
+    </div>
+    <div class="contents" id="nav-content">
+        <ul>
+            <li >
+                <a href="/">
+                    <i class="iconfont icon-shouye1"></i>
+                    <span>主页</span>
+                </a>
+            </li>
+            <li >
+                <a href="/tags">
+                    <i class="iconfont icon-biaoqian1"></i>
+                    <span>标签</span>
+                </a>
+            </li>
+            <li >
+                <a href="/archive">
+                    <i class="iconfont icon-guidang2"></i>
+                    <span>存档</span>
+                </a>
+            </li>
+            <li >
+                <a href="/about/">
+                    <i class="iconfont icon-guanyu2"></i>
+                    <span>关于</span>
+                </a>
+            </li>
+            
+            <li>
+                <a id="search">
+                    <i class="iconfont icon-sousuo1"></i>
+                    <span>搜索</span>
+                </a>
+            </li>
+            
+        </ul>
+    </div>
+    
+        <div id="toc" class="toc-article">
+    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-Edit-Distance"><span class="toc-text">1. Edit Distance</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#解法"><span class="toc-text">解法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#解法-1"><span class="toc-text">解法</span></a></li></ol></li></ol>
+</div>
+    
+</div>
+
+
+<div class="search-field" id="search-field">
+    <div class="search-container">
+        <div class="search-input">
+            <span id="esc-search"> <i class="icon-fanhui iconfont"></i></span>
+            <input id="search-input"/>
+            <span id="begin-search">搜索</span>
+        </div>
+        <div class="search-result-container" id="search-result-container">
+
+        </div>
+    </div>
+</div>
+        <div class="index-about-mobile">
+            <i> Hakuna, matata </i>
+        </div>
+    </div>
+    
+    <div class="index-middle">
+        <!-- Main Content -->
+        
+
+
+<div class="post-container">
+    <div class="post-title">
+        leetcode 72+213 题解
+    </div>
+
+    <div class="post-meta">
+        <span class="attr">发布于：<span>2018-11-04 10:27:31</span></span>
+        
+        <span class="attr">标签：/
+        
+        <a class="tag" href="/tags/#算法" title="算法">算法</a>
+        <span>/</span>
+        
+        
+        </span>
+        <span class="attr">访问：<span id="busuanzi_value_page_pv"></span>
+</span>
+</span>
+    </div>
+    <div class="post-content ">
+        <h2 id="1-Edit-Distance"><a href="#1-Edit-Distance" class="headerlink" title="1. Edit Distance"></a>1. Edit Distance</h2><p>Given two words <em>word1</em> and <em>word2</em>, find the minimum number of operations required to convert <em>word1</em> to <em>word2</em>.</p>
+<p>You have the following 3 operations permitted on a word:</p>
+<ol>
+<li>Insert a character</li>
+<li>Delete a character</li>
+<li>Replace a character</li>
+</ol>
+<p><strong>Example 1:</strong></p>
+<figure class="highlight xl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Input: word1 = <span class="string">"horse"</span>, word2 = <span class="string">"ros"</span></span><br><span class="line">Output: <span class="number">3</span></span><br><span class="line">Explanation: </span><br><span class="line"><span class="function"><span class="title">horse</span> -&gt;</span> rorse (replace <span class="string">'h'</span> <span class="keyword">with</span> <span class="string">'r'</span>)</span><br><span class="line"><span class="function"><span class="title">rorse</span> -&gt;</span> rose (remove <span class="string">'r'</span>)</span><br><span class="line"><span class="function"><span class="title">rose</span> -&gt;</span> ros (remove <span class="string">'e'</span>)</span><br></pre></td></tr></table></figure>
+<p><strong>Example 2:</strong></p>
+<figure class="highlight xl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">Input: word1 = <span class="string">"intention"</span>, word2 = <span class="string">"execution"</span></span><br><span class="line">Output: <span class="number">5</span></span><br><span class="line">Explanation: </span><br><span class="line"><span class="function"><span class="title">intention</span> -&gt;</span> inention (remove <span class="string">'t'</span>)</span><br><span class="line"><span class="function"><span class="title">inention</span> -&gt;</span> enention (replace <span class="string">'i'</span> <span class="keyword">with</span> <span class="string">'e'</span>)</span><br><span class="line"><span class="function"><span class="title">enention</span> -&gt;</span> exention (replace <span class="string">'n'</span> <span class="keyword">with</span> <span class="string">'x'</span>)</span><br><span class="line"><span class="function"><span class="title">exention</span> -&gt;</span> exection (replace <span class="string">'n'</span> <span class="keyword">with</span> <span class="string">'c'</span>)</span><br><span class="line"><span class="function"><span class="title">exection</span> -&gt;</span> execution (insert <span class="string">'u'</span>)</span><br></pre></td></tr></table></figure>
+<h3 id="解法"><a href="#解法" class="headerlink" title="解法"></a>解法</h3><p>这题首先注意到，在做字符匹配时，我们一共有三种操作：插入、编辑和删除，因此可能存在非常多的对齐方式，这里使用动态规划来解决这一问题。</p>
+<p>对于动态规划来说，最重要的是定义子问题，之后就按照子问题规模递增的顺序逐个求解。那么对于这道题来说如何定义子问题呢？大目标是寻找字符串<code>x[1,...m]</code>与<code>y[1,...,n]</code>间的编辑距离，将这个问题记为<code>E(m, n)</code>，我们可以尝试找到三种操作下的最小的<code>E(i, j)</code>，其中i，j比m，n规模更小，这样逐步推导下去就可以到达底层了。也就是说对每一个<code>E(i, j)</code>，将它分解为：<code>E(i, j) = min{1 + E(i - 1, j), 1 + E(i, j - 1), diff(i, j) + E(i - 1, j - 1)}</code>，这里<code>diff(i, j)</code>在i，j相同时为0，否则为1。</p>
+<p>实现在这里没有选择递归，而是采用了填表的做法，实际效果是一样的：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">minDistance</span><span class="params">(<span class="built_in">string</span> word1, <span class="built_in">string</span> word2)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> m = word1.size() + <span class="number">1</span>, n = word2.size() + <span class="number">1</span>;</span><br><span class="line">    <span class="built_in">vector</span>&lt;<span class="built_in">vector</span>&lt;<span class="keyword">int</span>&gt;&gt; E(m, <span class="built_in">vector</span>&lt;<span class="keyword">int</span>&gt;(n, <span class="number">0</span>));</span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; m; ++i)&#123;</span><br><span class="line">        E[i][<span class="number">0</span>] = i;        </span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">int</span> j = <span class="number">1</span>; j &lt; n; ++j)&#123;</span><br><span class="line">        E[<span class="number">0</span>][j] = j;        </span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">int</span> i = <span class="number">1</span>; i &lt; m; ++i)&#123;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> j = <span class="number">1</span>; j &lt; n; ++j)&#123;</span><br><span class="line">            <span class="keyword">int</span> diff = word1[i - <span class="number">1</span>] == word2[j - <span class="number">1</span>] ? <span class="number">0</span> : <span class="number">1</span>;</span><br><span class="line">            E[i][j] = min(min(<span class="number">1</span> + E[i - <span class="number">1</span>][j], <span class="number">1</span> + E[i][j - <span class="number">1</span>]), diff + E[i - <span class="number">1</span>][j - <span class="number">1</span>]);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> E[m - <span class="number">1</span>][n - <span class="number">1</span>];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>##2. House Robber Ⅱ</p>
+<p>You are a professional robber planning to rob houses along a street. Each house has a certain amount of money stashed. All houses at this place are <strong>arranged in a circle.</strong> That means the first house is the neighbor of the last one. Meanwhile, adjacent houses have security system connected and <strong>it will automatically contact the police if two adjacent houses were broken into on the same night</strong>.</p>
+<p>Given a list of non-negative integers representing the amount of money of each house, determine the maximum amount of money you can rob tonight <strong>without alerting the police</strong>.</p>
+<p><strong>Example 1:</strong></p>
+<figure class="highlight avrasm"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="symbol">Input:</span> [<span class="number">2</span>,<span class="number">3</span>,<span class="number">2</span>]</span><br><span class="line"><span class="symbol">Output:</span> <span class="number">3</span></span><br><span class="line"><span class="symbol">Explanation:</span> You cannot rob house <span class="number">1</span> (money = <span class="number">2</span>) <span class="keyword">and</span> then rob house <span class="number">3</span> (money = <span class="number">2</span>),</span><br><span class="line">             because they are adjacent houses.</span><br></pre></td></tr></table></figure>
+<p><strong>Example 2:</strong></p>
+<figure class="highlight nix"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Input: [<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">1</span>]</span><br><span class="line">Output: <span class="number">4</span></span><br><span class="line">Explanation: Rob house <span class="number">1</span> (<span class="attr">money</span> = <span class="number">1</span>) <span class="literal">and</span> <span class="keyword">then</span> rob house <span class="number">3</span> (<span class="attr">money</span> = <span class="number">3</span>).</span><br><span class="line">             Total amount you can <span class="attr">rob</span> = <span class="number">1</span> + <span class="number">3</span> = <span class="number">4</span>.</span><br></pre></td></tr></table></figure>
+<h3 id="解法-1"><a href="#解法-1" class="headerlink" title="解法"></a>解法</h3><p>题目意思即在数组中取数，相邻的数不能一起取，同时头和尾不能一起取。可以想到，当我们从前往后取时，取了一个数后下一个数的位置一定是现在的位置加2或加3，先不考虑头尾相邻，那么就可以得到我们的算法了：对数组每个位置i，填充<code>dp[i] += (dp[i - 2] &gt; dp[i - 3] ? dp[i - 2] : dp[i - 3]);</code>，前三位则独立讨论，这样在给数组赋值的过程中就是在进行子问题的计算。最后，因为一定会到达倒数第一个位置或第二个位置，那么就返回这两个中更大的那个。</p>
+<p>对于头和尾不能同时取的问题，只需要分成不包含头和不包含尾的两部分分开求解，最后返回更大的就行了。</p>
+<p>具体实现：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">rob</span><span class="params">(<span class="built_in">vector</span>&lt;<span class="keyword">int</span>&gt;&amp; nums)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(nums.empty()) <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">int</span> n = nums.size(), i = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">if</span>(nums.size() == <span class="number">1</span>)&#123;</span><br><span class="line">        <span class="keyword">return</span> nums[<span class="number">0</span>];</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">vector</span>&lt;<span class="keyword">int</span>&gt; dp1(n - <span class="number">1</span>, <span class="number">0</span>);</span><br><span class="line">    <span class="built_in">vector</span>&lt;<span class="keyword">int</span>&gt; dp2(n - <span class="number">1</span>, <span class="number">0</span>);</span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">int</span> j = <span class="number">0</span>; j &lt; nums.size() - <span class="number">1</span>; ++j)&#123;</span><br><span class="line">        dp1[j] = nums[j];</span><br><span class="line">        dp2[j] = nums[j + <span class="number">1</span>];</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> max(find(dp1), find(dp2));</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">find</span><span class="params">(<span class="built_in">vector</span>&lt;<span class="keyword">int</span>&gt;&amp; dp)</span></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> i = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">if</span>(dp.size() == <span class="number">1</span>)&#123;</span><br><span class="line">        <span class="keyword">return</span> dp[<span class="number">0</span>];</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span>(dp.size() == <span class="number">2</span>)&#123;</span><br><span class="line">        <span class="keyword">return</span> max(dp[<span class="number">0</span>], dp[<span class="number">1</span>]);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span>(dp.size() == <span class="number">3</span>)&#123;</span><br><span class="line">        <span class="keyword">return</span> max(dp[<span class="number">1</span>], dp[<span class="number">0</span>] + dp[<span class="number">2</span>]);</span><br><span class="line">    &#125;</span><br><span class="line">    dp[<span class="number">2</span>] += dp[<span class="number">0</span>];</span><br><span class="line">    <span class="keyword">for</span>(i = <span class="number">3</span>; i &lt; dp.size(); ++i)&#123;</span><br><span class="line">        dp[i] += (dp[i - <span class="number">2</span>] &gt; dp[i - <span class="number">3</span>] ? dp[i - <span class="number">2</span>] : dp[i - <span class="number">3</span>]);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> dp[i - <span class="number">1</span>] &gt; dp[i - <span class="number">2</span>] ? dp[i - <span class="number">1</span>] : dp[i - <span class="number">2</span>];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+        
+            <div class="donate-container">
+    <div class="donate-button">
+        <button id="donate-button">赞赏</button>
+    </div>
+    <div class="donate-img-container hide" id="donate-img-container">
+        <img id="donate-img" src="" data-src="/img/donate.jpg">
+        <p> 感谢鼓励 </p>
+    </div>
+</div>
+        
+        <div id="comment-container">
+        </div>
+    </div>
+</div>
+    </div>
+</div>
+
+
+<footer class="footer">
+    <ul class="list-inline text-center">
+        
+        
+
+        
+
+        
+
+        
+        <li>
+            <a target="_blank"  href="https://github.com/Krazymud">
+                            <span class="fa-stack fa-lg">
+                                <i class="iconfont icon-github"></i>
+                            </span>
+            </a>
+        </li>
+        
+
+        
+
+    </ul>
+    
+    <p>
+        <span>/</span>
+        
+    </p>
+    
+    <p>
+        <span id="busuanzi_container_site_pv">
+            <span id="busuanzi_value_site_pv"></span>PV
+        </span>
+        <span id="busuanzi_container_site_uv">
+            <span id="busuanzi_value_site_uv"></span>UV
+        </span>
+        Created By <a href="https://hexo.io/">Hexo</a>  Theme <a href="https://github.com/aircloud/hexo-theme-aircloud">AirCloud</a></p>
+</footer>
+
+
+
+
+</body>
+
+<script>
+    // We expose some of the variables needed by the front end
+    window.hexo_search_path = "search.json"
+    window.hexo_root = "/"
+    window.isPost = true
+</script>
+<script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+<script src="/js/index.js"></script>
+<script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<script src="/js/gitment.js"></script>
+<script>
+    var gitment = new Gitment({
+        id: 'leetcode 72+213 题解',
+        owner: 'Krazymud',
+        repo: 'Krazymud.github.io',
+        oauth: {
+            client_id: 'e12e425620b0edcd0a17',
+            client_secret: '87cf1a5544d6272fcae8729bd7d54e27b95faf5f',
+        },
+    })
+    gitment.render('comment-container')
+</script>
+
+</html>
