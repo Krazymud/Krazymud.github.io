@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Eadric的博客">
+    <meta name="keyword"  content="Coding">
+    <link rel="shortcut icon" href="/img/favicon.ico">
+
+    <title>
+        
+        cncf之grpc介绍 - Eadric的博客 | Eadric&#39;s Blog
+        
+    </title>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/aircloud.css">
+    <link rel="stylesheet" href="/css/gitment.css">
+    <!--<link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css">-->
+    <link href="//at.alicdn.com/t/font_620856_pl6z7sid89qkt9.css" rel="stylesheet" type="text/css">
+    <!-- ga & ba script hoook -->
+    <script></script>
+</head>
+
+<body>
+
+<div class="site-nav-toggle" id="site-nav-toggle">
+    <button>
+        <span class="btn-bar"></span>
+        <span class="btn-bar"></span>
+        <span class="btn-bar"></span>
+    </button>
+</div>
+
+<div class="index-about">
+    <i> Hakuna, matata </i>
+</div>
+
+<div class="index-container">
+    
+    <div class="index-left">
+        
+<div class="nav" id="nav">
+    <div class="avatar-name">
+        <div class="avatar">
+            <img src="/img/avatar.jpg" />
+        </div>
+        <div class="name">
+            <i>Eadric</i>
+        </div>
+    </div>
+    <div class="contents" id="nav-content">
+        <ul>
+            <li >
+                <a href="/">
+                    <i class="iconfont icon-shouye1"></i>
+                    <span>主页</span>
+                </a>
+            </li>
+            <li >
+                <a href="/tags">
+                    <i class="iconfont icon-biaoqian1"></i>
+                    <span>标签</span>
+                </a>
+            </li>
+            <li >
+                <a href="/archive">
+                    <i class="iconfont icon-guidang2"></i>
+                    <span>存档</span>
+                </a>
+            </li>
+            <li >
+                <a href="/about/">
+                    <i class="iconfont icon-guanyu2"></i>
+                    <span>关于</span>
+                </a>
+            </li>
+            
+            <li>
+                <a id="search">
+                    <i class="iconfont icon-sousuo1"></i>
+                    <span>搜索</span>
+                </a>
+            </li>
+            
+        </ul>
+    </div>
+    
+        <div id="toc" class="toc-article">
+    
+</div>
+    
+</div>
+
+
+<div class="search-field" id="search-field">
+    <div class="search-container">
+        <div class="search-input">
+            <span id="esc-search"> <i class="icon-fanhui iconfont"></i></span>
+            <input id="search-input"/>
+            <span id="begin-search">搜索</span>
+        </div>
+        <div class="search-result-container" id="search-result-container">
+
+        </div>
+    </div>
+</div>
+        <div class="index-about-mobile">
+            <i> Hakuna, matata </i>
+        </div>
+    </div>
+    
+    <div class="index-middle">
+        <!-- Main Content -->
+        
+
+
+<div class="post-container">
+    <div class="post-title">
+        cncf之grpc介绍
+    </div>
+
+    <div class="post-meta">
+        <span class="attr">发布于：<span>2019-01-19 21:49:55</span></span>
+        
+        <span class="attr">标签：/
+        
+        <a class="tag" href="/tags/#服务计算" title="服务计算">服务计算</a>
+        <span>/</span>
+        
+        
+        </span>
+        <span class="attr">访问：<span id="busuanzi_value_page_pv"></span>
+</span>
+</span>
+    </div>
+    <div class="post-content ">
+        <p>​    首先，广义上来说CNCF实际上是一个软件基金会，其核心是解决技术问题。而在技术这一层面来说，CNCF包含了许多具体的项目，其计划为支持分布式、可扩展的应用需要的组件和组装方式提出一种规范，期望定义能够支持云原生应用和容器的整个基础设施堆栈。</p>
+<p>​    CNCF主要包含的项目有：</p>
+<ul>
+<li><p>Kubernetes</p>
+</li>
+<li><p>Prometheus</p>
+</li>
+<li><p>OpenTracing</p>
+</li>
+<li><p>Fluentd</p>
+</li>
+<li><p>Linkerd</p>
+</li>
+<li><p>gRPC</p>
+</li>
+<li><p>CoreDNS</p>
+</li>
+<li><p>containerd</p>
+</li>
+</ul>
+<p>​    这里要讲的gRPC就是其中的一种现代化高性能开源远程调用框架。CoreOS 的分布式键值存储 etcd 就使用了 gRPC 进行点对点通讯，Docker 的便携式容器运行时 containerd 也通过 gRPC 暴露其功能，同时 containerd 本身也被捐献给了 CNCF。在 gRPC 中可以使用 Protocol Buffers 来定义服务的接口，Protocol Buffers 是一个强大的二进制序列化工具和语言。gRPC 也和诸多语言进行了集成，并可以自动生成特定语言的客户端和服务端接口。</p>
+<p>​    也就是说，使用gRPC的客户端应用程序可以在不同机器上的服务器应用程序上直接调用方法（支持跨语言），就像它是本地对象一样。这样一来，就能够更方便地创建分布式应用程序（及服务）。</p>
+<p><img src="/2019/01/19/grpc/1.png" alt=""></p>
+<p>​    这里使用go语言来安装gRPC与protocol buffers（gRPC使用protocol buffers消息类型来定义方法参数和返回类型）。如下：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">go get -u google.golang.org/grpc</span><br><span class="line">go get -u github.com/golang/protobuf/protoc-gen-go</span><br></pre></td></tr></table></figure>
+<p>​    golang下的文件因为网络原因可能go get不到，如果出现这个问题可以从github对应仓库中clone下来：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">git clone https://github.com/grpc/grpc-go.git $GOPATH/src/google.golang.org/grpc</span><br><span class="line">git clone https://github.com/golang/net.git $GOPATH/src/golang.org/x/net</span><br><span class="line">git clone https://github.com/golang/text.git $GOPATH/src/golang.org/x/text</span><br><span class="line">go get -u github.com/golang/protobuf/protoc-gen-go</span><br><span class="line">git clone https://github.com/google/go-genproto.git $GOPATH/src/google.golang.org/genproto</span><br><span class="line"></span><br><span class="line">cd $GOPATH/src/</span><br><span class="line">go install google.golang.org/grpc</span><br></pre></td></tr></table></figure>
+<p>​    接下来就可以正常使用了。</p>
+
+        
+            <div class="donate-container">
+    <div class="donate-button">
+        <button id="donate-button">赞赏</button>
+    </div>
+    <div class="donate-img-container hide" id="donate-img-container">
+        <img id="donate-img" src="" data-src="/img/donate.jpg">
+        <p> 感谢鼓励 </p>
+    </div>
+</div>
+        
+        <div id="comment-container">
+        </div>
+    </div>
+</div>
+    </div>
+</div>
+
+
+<footer class="footer">
+    <ul class="list-inline text-center">
+        
+        
+
+        
+
+        
+
+        
+        <li>
+            <a target="_blank"  href="https://github.com/Krazymud">
+                            <span class="fa-stack fa-lg">
+                                <i class="iconfont icon-github"></i>
+                            </span>
+            </a>
+        </li>
+        
+
+        
+
+    </ul>
+    
+    <p>
+        <span>/</span>
+        
+    </p>
+    
+    <p>
+        <span id="busuanzi_container_site_pv">
+            <span id="busuanzi_value_site_pv"></span>PV
+        </span>
+        <span id="busuanzi_container_site_uv">
+            <span id="busuanzi_value_site_uv"></span>UV
+        </span>
+        Created By <a href="https://hexo.io/">Hexo</a>  Theme <a href="https://github.com/aircloud/hexo-theme-aircloud">AirCloud</a></p>
+</footer>
+
+
+
+
+</body>
+
+<script>
+    // We expose some of the variables needed by the front end
+    window.hexo_search_path = "search.json"
+    window.hexo_root = "/"
+    window.isPost = true
+</script>
+<script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+<script src="/js/index.js"></script>
+<script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<script src="/js/gitment.js"></script>
+<script>
+    var gitment = new Gitment({
+        id: 'cncf之grpc介绍',
+        owner: 'Krazymud',
+        repo: 'Krazymud.github.io',
+        oauth: {
+            client_id: 'e12e425620b0edcd0a17',
+            client_secret: '87cf1a5544d6272fcae8729bd7d54e27b95faf5f',
+        },
+    })
+    gitment.render('comment-container')
+</script>
+
+</html>
