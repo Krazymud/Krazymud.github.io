@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="google-site-verification" content="xBT4GhYoi5qRD5tr338pgPM5OWHHIDR6mNg1a3euekI" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Eadric的博客">
+    <meta name="keyword"  content="Coding">
+    <link rel="shortcut icon" href="/img/favicon.ico">
+
+    <title>
+        
+        软件项目过程模型与规划 - Eadric的博客 | Eadric&#39;s Blog
+        
+    </title>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/aircloud.css">
+    <link rel="stylesheet" href="/css/gitment.css">
+    <!--<link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css">-->
+    <link href="//at.alicdn.com/t/font_620856_pl6z7sid89qkt9.css" rel="stylesheet" type="text/css">
+    <!-- ga & ba script hoook -->
+    <script></script>
+</head>
+
+<body>
+
+<div class="site-nav-toggle" id="site-nav-toggle">
+    <button>
+        <span class="btn-bar"></span>
+        <span class="btn-bar"></span>
+        <span class="btn-bar"></span>
+    </button>
+</div>
+
+<div class="index-about">
+    <i> Hakuna, matata </i>
+</div>
+
+<div class="index-container">
+    
+    <div class="index-left">
+        
+<div class="nav" id="nav">
+    <div class="avatar-name">
+        <div class="avatar">
+            <img src="/img/avatar.jpg" />
+        </div>
+        <div class="name">
+            <i>Eadric</i>
+        </div>
+    </div>
+    <div class="contents" id="nav-content">
+        <ul>
+            <li >
+                <a href="/">
+                    <i class="iconfont icon-shouye1"></i>
+                    <span>主页</span>
+                </a>
+            </li>
+            <li >
+                <a href="/tags">
+                    <i class="iconfont icon-biaoqian1"></i>
+                    <span>标签</span>
+                </a>
+            </li>
+            <li >
+                <a href="/archive">
+                    <i class="iconfont icon-guidang2"></i>
+                    <span>存档</span>
+                </a>
+            </li>
+            <li >
+                <a href="/about/">
+                    <i class="iconfont icon-guanyu2"></i>
+                    <span>关于</span>
+                </a>
+            </li>
+            
+            <li>
+                <a id="search">
+                    <i class="iconfont icon-sousuo1"></i>
+                    <span>搜索</span>
+                </a>
+            </li>
+            
+        </ul>
+    </div>
+    
+        <div id="toc" class="toc-article">
+    <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#简述统一过程四个阶段的划分准则是什么？每个阶段关键的里程碑是什么？"><span class="toc-text">简述统一过程四个阶段的划分准则是什么？每个阶段关键的里程碑是什么？</span></a></li></ol>
+</div>
+    
+</div>
+
+
+<div class="search-field" id="search-field">
+    <div class="search-container">
+        <div class="search-input">
+            <span id="esc-search"> <i class="icon-fanhui iconfont"></i></span>
+            <input id="search-input"/>
+            <span id="begin-search">搜索</span>
+        </div>
+        <div class="search-result-container" id="search-result-container">
+
+        </div>
+    </div>
+</div>
+        <div class="index-about-mobile">
+            <i> Hakuna, matata </i>
+        </div>
+    </div>
+    
+    <div class="index-middle">
+        <!-- Main Content -->
+        
+
+
+<div class="post-container">
+    <div class="post-title">
+        软件项目过程模型与规划
+    </div>
+
+    <div class="post-meta">
+        <span class="attr">发布于：<span>2019-04-13 11:09:25</span></span>
+        
+        <span class="attr">标签：/
+        
+        <a class="tag" href="/tags/#系统分析与设计" title="系统分析与设计">系统分析与设计</a>
+        <span>/</span>
+        
+        
+        </span>
+        <span class="attr">访问：<span id="busuanzi_value_page_pv"></span>
+</span>
+</span>
+    </div>
+    <div class="post-content ">
+        <p>###简述瀑布模型、增量模型、螺旋模型（含原型方法），并分析优缺点（从项目特点、风险特征、人力资源利用角度思考）</p>
+<p>瀑布模型开发活动的特征：</p>
+<ul>
+<li>本阶段活动的工作对象来自于上一项活动的输出，这些输出一般是代表本阶段活动结束的里程碑式的文档。</li>
+<li>根据本阶段的活动规程执行相应任务。</li>
+<li>本阶段活动产出相关的软件工件，作为下一阶段活动的输入。</li>
+<li>对本阶段活动执行情况进行评审。</li>
+</ul>
+<p>瀑布模型优点：</p>
+<ul>
+<li>降低软件开发的复杂程度，提高软件开发过程的透明性，提高软件开发过程的可管理性。</li>
+<li>推迟软件实现，强调在软件实现前必须进行分析和设计工作。</li>
+<li>以项目的阶段评审和文档控制为手段有效地对整个开发过程进行指导，保证了阶段之间的正确衔接，能够及时发现并纠正开发过程中存在的缺陷，使产品达到预期的质量要求。</li>
+</ul>
+<p>瀑布模型缺点：</p>
+<ul>
+<li>强调过程活动的线性顺序。</li>
+<li>缺乏灵活性，尤其无法解决软件需求不明确或不准确的问题。</li>
+<li>风险控制能力较弱。</li>
+<li>瀑布模型中的软件活动是文档驱动的，当阶段之间规定过多的文档时，会极大地增加系统的工作量。</li>
+<li>管理人员如果仅仅以文档的完成情况来评估项目完成进度，往往会产生错误的结论。</li>
+</ul>
+<p>增量模型：首先对系统最核心或最清晰的需求进行分析、设计、实现、测试并集成到系统中，再按优先级逐步实现后续需求。</p>
+<p>增量模型的优点：</p>
+<ul>
+<li>增强客户对系统的信心。</li>
+<li>降低系统失败风险。</li>
+<li>提高系统可靠性。</li>
+<li>提高系统的稳定性和可维护性。</li>
+</ul>
+<p>增量模型的缺点：</p>
+<ul>
+<li>建立初始模型时，作为增量基础的基本业务服务的确定有一定难度。</li>
+<li>增量粒度难以选择。</li>
+</ul>
+<p>螺旋模型：主要针对大型软件项目的开发，引入了明确的风险管理机制。它是风险驱动的迭代过程，强调可选方案和约束条件从而支持软件的重用。它结合了瀑布模型和快速原型方法，每一次迭代都包含了：</p>
+<ul>
+<li>决定目标、替代方案和约束条件。</li>
+<li>识别和解决项目的风险。</li>
+<li>评估技术方案和替代方案。</li>
+<li>开发本次迭代的交付物，并验证迭代产出的正确性。</li>
+<li>计划下一次迭代。</li>
+<li>提交下一次迭代的步骤和方案。</li>
+</ul>
+<p>螺旋模型的优点：</p>
+<ul>
+<li>支持软件重用，有助于将软件质量作为特殊目标融入产品开发之中。</li>
+<li>维持多轮迭代，降低项目的风险。</li>
+</ul>
+<p>螺旋模型的缺点：</p>
+<ul>
+<li>螺旋模型强调风险分析，但说服外部客户接受和相信分析结果并做出相关反应并不容易。</li>
+<li>风险分析需要耗费相当的成本。</li>
+<li>失误的风险分析可能带来更大的风险。</li>
+</ul>
+<p>###简述统一过程三大特点，与面向对象的方法有什么关系？</p>
+<p>统一过程三大特点：</p>
+<ul>
+<li>软件开发是一个迭代过程。</li>
+<li>软件开发是由Use Case驱动的。</li>
+<li>软件开发是以架构设计为中心的。</li>
+</ul>
+<p>与面向对象方法的关系：统一过程是一种基于UML的、以构架为中心的、用例驱动与风险驱动相结合的迭代增量过程。它将软件开发过程要素和软件工件要素整合在统一的软件工程框架中，是一个面向对象的程序开发方法论。</p>
+<h3 id="简述统一过程四个阶段的划分准则是什么？每个阶段关键的里程碑是什么？"><a href="#简述统一过程四个阶段的划分准则是什么？每个阶段关键的里程碑是什么？" class="headerlink" title="简述统一过程四个阶段的划分准则是什么？每个阶段关键的里程碑是什么？"></a>简述统一过程四个阶段的划分准则是什么？每个阶段关键的里程碑是什么？</h3><p>初始阶段：</p>
+<ul>
+<li>划分准则：为系统建立商业案例并确定项目的边界。</li>
+<li>里程碑：生命周期目标里程碑，评价项目基本的生存能力。</li>
+</ul>
+<p>细化阶段：</p>
+<ul>
+<li>划分准则：分析问题领域，建立健全的体系结构基础。编制项目计划，完成项目中高风险需求部分的开发。</li>
+<li>里程碑：生命周期结构里程碑，为系统的结构建立了管理基准并使项目小组能够在构建阶段中进行衡量。</li>
+</ul>
+<p>构造阶段：</p>
+<ul>
+<li>划分准则：完成所有剩余构件和应用程序功能的开发并集成为产品，详细测试所有的功能。</li>
+<li>里程碑：初始功能里程碑，决定产品是否可以在测试环境中进行部署。</li>
+</ul>
+<p>交付阶段：</p>
+<ul>
+<li>划分准则：确保软件对最终用户是可用的。</li>
+<li>里程碑：产品发布里程碑，确定目标是否实现。</li>
+</ul>
+<ol start="4">
+<li>软件企业为什么能按固定节奏生产、固定周期发布软件产品？它给企业项目管理带来哪些好处？</li>
+</ol>
+<p>因为软件企业可以根据其产品的实际情况选择相对应的正确的软件开发模型，从而能够更好的调度人力、资源，协调好工期、预算。软件开发模型使得软件企业能够用多个里程碑对开发流程进行划分和管控。这使得企业可以按固定节奏进行生产、发布，提升企业生产力，明确企业生产方向。</p>
+
+        
+            <div class="donate-container">
+    <div class="donate-button">
+        <button id="donate-button">赞赏</button>
+    </div>
+    <div class="donate-img-container hide" id="donate-img-container">
+        <img id="donate-img" src="" data-src="/img/donate.jpg">
+        <p> 感谢鼓励 </p>
+    </div>
+</div>
+        
+        <div id="comment-container">
+        </div>
+    </div>
+</div>
+    </div>
+</div>
+
+
+<footer class="footer">
+    <ul class="list-inline text-center">
+        
+        
+
+        
+
+        
+
+        
+        <li>
+            <a target="_blank"  href="https://github.com/Krazymud">
+                            <span class="fa-stack fa-lg">
+                                <i class="iconfont icon-github"></i>
+                            </span>
+            </a>
+        </li>
+        
+
+        
+
+    </ul>
+    
+    <p>
+        <span>/</span>
+        
+    </p>
+    
+    <p>
+        <span id="busuanzi_container_site_pv">
+            <span id="busuanzi_value_site_pv"></span>PV
+        </span>
+        <span id="busuanzi_container_site_uv">
+            <span id="busuanzi_value_site_uv"></span>UV
+        </span>
+        Created By <a href="https://hexo.io/">Hexo</a>  Theme <a href="https://github.com/aircloud/hexo-theme-aircloud">AirCloud</a></p>
+</footer>
+
+
+
+
+</body>
+
+<script>
+    // We expose some of the variables needed by the front end
+    window.hexo_search_path = "search.json"
+    window.hexo_root = "/"
+    window.isPost = true
+</script>
+<script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+<script src="/js/index.js"></script>
+<script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<script src="/js/gitment.js"></script>
+<script>
+    var gitment = new Gitment({
+        id: '软件项目过程模型与规划',
+        owner: 'Krazymud',
+        repo: 'Krazymud.github.io',
+        oauth: {
+            client_id: 'e12e425620b0edcd0a17',
+            client_secret: '87cf1a5544d6272fcae8729bd7d54e27b95faf5f',
+        },
+    })
+    gitment.render('comment-container')
+</script>
+
+</html>
