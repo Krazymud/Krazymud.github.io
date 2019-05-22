@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2"/>
+<meta name="theme-color" content="#222"/>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2"/>
+
+<link rel="stylesheet" href="/css/main.css?v=7.1.1"/>
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.1.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.1.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.1.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.1.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    version: '7.1.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="用例建模 - 绘制用例图简答题 用例的概念 用例是软件工程或系统工程中对系统如何反应外界请求的描述，是一种通过用户的使用场景来获取需求的技术。  用例和场景的关系？什么是主场景或 happy path？ 系统根据参与者的请求，在不同的条件下，执行某一行为序列。每一个行为序列可称为一个场景。一个用例包含多个场景，场景也可以称为用例的一个实例。 主场景（happy path）描述了满足涉众关注点的典型">
+<meta name="keywords" content="系统分析与设计">
+<meta property="og:type" content="article">
+<meta property="og:title" content="用例建模 - 绘制用例图">
+<meta property="og:url" content="http://Krazymud.github.io/2019/05/22/swsad6/index.html">
+<meta property="og:site_name" content="EadBlog">
+<meta property="og:description" content="用例建模 - 绘制用例图简答题 用例的概念 用例是软件工程或系统工程中对系统如何反应外界请求的描述，是一种通过用户的使用场景来获取需求的技术。  用例和场景的关系？什么是主场景或 happy path？ 系统根据参与者的请求，在不同的条件下，执行某一行为序列。每一个行为序列可称为一个场景。一个用例包含多个场景，场景也可以称为用例的一个实例。 主场景（happy path）描述了满足涉众关注点的典型">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-05-22T09:29:58.880Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="用例建模 - 绘制用例图">
+<meta name="twitter:description" content="用例建模 - 绘制用例图简答题 用例的概念 用例是软件工程或系统工程中对系统如何反应外界请求的描述，是一种通过用户的使用场景来获取需求的技术。  用例和场景的关系？什么是主场景或 happy path？ 系统根据参与者的请求，在不同的条件下，执行某一行为序列。每一个行为序列可称为一个场景。一个用例包含多个场景，场景也可以称为用例的一个实例。 主场景（happy path）描述了满足涉众关注点的典型">
+
+
+
+
+
+  
+  
+  <link rel="canonical" href="http://Krazymud.github.io/2019/05/22/swsad6/"/>
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>用例建模 - 绘制用例图 | EadBlog</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">EadBlog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">Hakuna, matata</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br/>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/about" rel="section"><i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br/>关于</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/tags" rel="section"><i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br/>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives" rel="section"><i class="menu-item-icon fa fa-fw fa-question-circle"></i> <br/>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+    
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://Krazymud.github.io/2019/05/22/swsad6/"/>
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Eadric"/>
+      <meta itemprop="description" content="Eadric的博客"/>
+      <meta itemprop="image" content="/images/avatar.jpg"/>
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="EadBlog"/>
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">用例建模 - 绘制用例图
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2019-05-22 10:57:01 / 修改时间：17:29:58" itemprop="dateCreated datePublished" datetime="2019-05-22T10:57:01+08:00">2019-05-22</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="用例建模-绘制用例图"><a href="#用例建模-绘制用例图" class="headerlink" title="用例建模 - 绘制用例图"></a>用例建模 - 绘制用例图</h2><h3 id="简答题"><a href="#简答题" class="headerlink" title="简答题"></a>简答题</h3><ol>
+<li><p>用例的概念</p>
+<p>用例是软件工程或系统工程中对系统如何反应外界请求的描述，是一种通过用户的使用场景来获取需求的技术。</p>
+</li>
+<li><p>用例和场景的关系？什么是主场景或 happy path？</p>
+<p>系统根据参与者的请求，在不同的条件下，执行某一行为序列。每一个行为序列可称为一个场景。一个用例包含多个场景，场景也可以称为用例的一个实例。</p>
+<p>主场景（happy path）描述了满足涉众关注点的典型成功路径。它是典型的、无条件的、理想方式的主成功场景。主场景是用户和系统之间的主要交互，是最常用的实现用户目标的场景。</p>
+</li>
+<li><p>用例有哪些形式？</p>
+<ul>
+<li><p>摘要：简洁的一段式摘要，通常用于主成功场景。</p>
+</li>
+<li><p>非正式：非正式的段落格式，用几个段落覆盖不同场景。</p>
+</li>
+<li><p>详述：详细编写所有步骤与各种变化，同时具有补充部分，如前置条件和成功保证。</p>
+</li>
+</ul>
+</li>
+<li><p>对于复杂业务，为什么编制完整用例非常难？</p>
+<p>对于复杂业务，其涉及的场景数量会变得很多，而各场景之间的关联使得用例设计变得特别困难。因为用例是各个成功与失败场景的集合，用例的编写需要对这些场景熟悉，并且需要建模知识与注意用户交互的相关细节，但仍无法完整地覆盖实际中可能出现的情况。用例总是不完整的，所以编制完整用例非常难。</p>
+</li>
+<li><p>什么是用例图？</p>
+<p>用例图是一种优秀的系统语境图，它能够展示系统边界，位于边界之外的事物以及系统如何被使用。它可以作为沟通的工具，用以概括系统以及其参与者的行为。</p>
+</li>
+<li><p>用例图的基本符号与元素？</p>
+<ul>
+<li><p>参与者（Actor）：表示的是一个系统用户，即与应用程序进行交互的用户、组织或外部系统。用一个小人表示。</p>
+</li>
+<li><p>用例（Use Case）：表示的是对系统提供的功能、服务的一种描述，用椭圆表示。</p>
+</li>
+<li><p>用例之间的关系：</p>
+<ul>
+<li>包含关系（表示可以简单地包含其他用例所具有的行为，并把它所包含的用例行为作为自身行为的一部分。UML中常用带箭头的虚线表示，箭头指向被包含的用例）</li>
+<li>泛化关系（指的是一个父用例可以被特化形成多个子用例，而父用例和子用例之间的关系就是泛化关系。UML中用空心三角箭头的实线表示，箭头指向父用例）</li>
+<li>关联关系（表示的是参与者与用例之间的关系。在UML中常用一条直线，或者是一条带箭头的线条来表示，箭头指向信息接收方）</li>
+<li>扩展/延伸关系（表示在一定条件下，把新的行为加入到已有的用例中，获得的新用例叫做扩展用例，原有的用例叫做基础用例，相当于为基础用例提供一个附加功能。在UML中用带箭头的虚线表示，箭头指向基础用例）</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>用例图的画法与步骤</p>
+<p>定义Subject：Subject是我们正在设计的业务、软件系统、子系统、组件、设备等。定义它是什么类型的系统，它的范围或边界。</p>
+<p>定义Actors：Actor是Subject需要服务的用户，它是一个外部实体，可以是设计系统的人类用户，也可以是其他系统或设备。</p>
+<p>定义Use Cases：当我们定义正在设计或分析的系统的边界或系统的外部用户时，我们需要定义这些用户能从系统中需要什么。每个用例都指定了主题为actor提供的完整且有用的功能单元。用例应反映用户的需求和目标，并应由Actors发起。</p>
+<p>描述用例行为：可用自然语言文本来描述，或使用UML行为图来表示特定行为。</p>
+</li>
+<li><p>用例图给利益相关人与开发者的价值有哪些？</p>
+<p>对于利益相关人：可以直观看到系统的结果和用户的功能体验，保证系统按照用户的需求进行设计；用例能够根据需要对复杂程度和形式化程序进行增减调节，即能够响应用户（利益相关人）提出的需求，而用例图使得这种调节更加便利，可通过修改图形间的关系实现。</p>
+<p>对于开发者：用例图是设计者设计过程的结论和参考，设计者与开发者之间的交流工具，开发者开发过程的蓝图；用例图使得开发者能够更明确地获得需求，更好地理解需求；用例图可以指导开发和测试，同时可以在整个过程中对其他工作流起到指导作用。</p>
+</li>
+</ol>
+<h3 id="建模练习题"><a href="#建模练习题" class="headerlink" title="建模练习题"></a>建模练习题</h3><p>选择2-3个你熟悉的类似业务的在线服务系统（或移动 APP），如定旅馆（携程、去哪儿等）、定电影票、背单词APP等，分别绘制它们用例图。并满足以下要求：</p>
+<ul>
+<li>请使用用户的视角，描述用户目标或系统提供的服务</li>
+<li>粒度达到子用例级别，并用 include 和 exclude 关联它们</li>
+<li>请用色彩标注出你认为创新（区别于竞争对手的）用例或子用例</li>
+<li>尽可能识别外部系统和服务</li>
+</ul>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/系统分析与设计/" rel="tag"># 系统分析与设计</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/04/13/swsad3/" rel="next" title="软件项目过程模型与规划">
+                <i class="fa fa-chevron-left"></i> 软件项目过程模型与规划
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image"
+                src="/images/avatar.jpg"
+                alt="Eadric"/>
+            
+              <p class="site-author-name" itemprop="name">Eadric</p>
+              <div class="site-description motion-element" itemprop="description">Eadric的博客</div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives">
+                
+                    <span class="site-state-item-count">26</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  
+                    
+                      <a href="/tags">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">4</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#用例建模-绘制用例图"><span class="nav-number">1.</span> <span class="nav-text">用例建模 - 绘制用例图</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#简答题"><span class="nav-number">1.1.</span> <span class="nav-text">简答题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#建模练习题"><span class="nav-number">1.2.</span> <span class="nav-text">建模练习题</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Eadric</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.7.1</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> v7.1.1</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    
+    
+  
+  <script color='0,0,255' opacity='0.8' zIndex='-1' count='99' src="/lib/canvas-nest/canvas-nest.min.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/utils.js?v=7.1.1"></script>
+
+  <script src="/js/motion.js?v=7.1.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/schemes/muse.js?v=7.1.1"></script>
+
+
+
+
+  
+  <script src="/js/scrollspy.js?v=7.1.1"></script>
+<script src="/js/post-details.js?v=7.1.1"></script>
+
+
+
+  
+
+
+  <script src="/js/next-boot.js?v=7.1.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
