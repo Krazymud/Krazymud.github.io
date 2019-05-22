@@ -372,7 +372,7 @@
                 
               
 
-              <time title="创建时间：2019-05-22 10:57:01 / 修改时间：17:29:58" itemprop="dateCreated datePublished" datetime="2019-05-22T10:57:01+08:00">2019-05-22</time>
+              <time title="创建时间：2019-05-22 10:57:01 / 修改时间：20:13:22" itemprop="dateCreated datePublished" datetime="2019-05-22T10:57:01+08:00">2019-05-22</time>
             
 
             
@@ -471,6 +471,27 @@
 <li>请用色彩标注出你认为创新（区别于竞争对手的）用例或子用例</li>
 <li>尽可能识别外部系统和服务</li>
 </ul>
+<p>美团外卖：</p>
+<p><img src="/2019/05/22/swsad6/./swsad6/1.png" alt=""></p>
+<p>扇贝单词：</p>
+<p><img src="/2019/05/22/swsad6/./swsad6/2.png" alt=""></p>
+<ol>
+<li><p>为什么相似系统的用例图是相似的？</p>
+<p>因为相似系统的用户人群大致相同，需求大致相同，所以参与者和用例，以及参与者和用例之间的关系都会很相似。</p>
+</li>
+<li><p>如果是定旅馆业务，请对比 Asg_RH 用例图，简述如何利用不同时代、不同地区产品的用例图，展现、突出创新业务和技术</p>
+<p>并非定旅馆业务。但都是同样的迭代过程，综合不同时代、不同地区的产品来挖掘自己的创新业务，力求突出。</p>
+</li>
+<li><p>如何利用用例图定位创新思路（业务创新、或技术创新、或商业模式创新）在系统中的作用</p>
+<p>通过在用例图中使用与其他用例不同的颜色进行标记的方法，能够快速定位到该用例图中的创新点。</p>
+</li>
+<li><p>请使用 SCRUM 方法，选择一个用例图，编制某定旅馆开发的需求（backlog）开发计划表</p>
+<p>|  ID  |   Name   | Imp  | Est  |           How to demo            |      Notes      |<br>| :–: | :——: | :–: | :–: | :——————————: | :————-: |<br>|  1   | 查询酒店 |  50  |  5   | 根据酒店名称、位置等信息进行查询 | 引入外部GPS API |<br>|  2   | 筛选酒店 |  30  |  2   |      可根据详细信息进行筛选      |                 |<br>|  3   | 预订酒店 |  60  |  3   |    选择房间、入住时间进行预订    |                 |<br>|  4   | 管理订单 |  30  |  8   |        可以更改或取消订单        |                 |<br>|  5   | 订单支付 |  60  |  8   |      可通过外部api进行支付       | 引入外部支付API |</p>
+</li>
+<li><p>根据任务4，参考 <a href="https://www.ibm.com/developerworks/cn/rational/edge/09/mar09/collaris_dekker/index.html" target="_blank" rel="noopener">使用用例点估算软件成本</a>，给出项目用例点的估算</p>
+<p>|   用例   | # 事务 | # 计算 |         原因         | UC 权重 |<br>| :——: | :—-: | :—-: | :——————: | :—–: |<br>| 查询酒店 |   3    |   3    |     查询方式多种     |  简单   |<br>| 筛选酒店 |   6    |   5    | 及时更新酒店各项信息 |  平均   |<br>| 预订酒店 |   3    |   2    |   录入信息创建订单   |  简单   |<br>| 管理订单 |   5    |   3    |      修改、取消      |  简单   |<br>| 订单支付 |   1    |   1    |     调用外部api      |  简单   |</p>
+</li>
+</ol>
 
           
         
@@ -2968,13 +2989,10 @@
 
 
 
-  
-    
-    
-  
-  <script color='0,0,255' opacity='0.8' zIndex='-1' count='99' src="/lib/canvas-nest/canvas-nest.min.js"></script>
 
 
+  
+  
 
 
 
@@ -2994,6 +3012,12 @@
 
   
   <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/three/three.min.js"></script>
+
+  
+  <script src="/lib/three/three-waves.min.js"></script>
 
 
   
