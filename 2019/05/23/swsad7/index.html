@@ -96,20 +96,25 @@
 
 
 
-  <meta name="description" content="​    首先，广义上来说CNCF实际上是一个软件基金会，其核心是解决技术问题。而在技术这一层面来说，CNCF包含了许多具体的项目，其计划为支持分布式、可扩展的应用需要的组件和组装方式提出一种规范，期望定义能够支持云原生应用和容器的整个基础设施堆栈。 ​    CNCF主要包含的项目有：  Kubernetes  Prometheus  OpenTracing  Fluentd  Linkerd">
-<meta name="keywords" content="服务计算">
+  <meta name="description" content="1、根据订旅馆建模文档，Asg-RH.pdf：  绘制用例图模型（到子用例）   给出 make reservation 用例的活动图    2、根据课程练习“投递员使用投递箱给收件人快递包裹”的业务场景  分别用多泳道图建模三个场景的业务过程 第一个场景：  第二个场景：  第三个场景：   根据上述流程，给出快递柜系统最终的用例图模型  用正常色彩表示第一个业务流程反映的用例 用绿色背景表述第">
+<meta name="keywords" content="系统分析与设计">
 <meta property="og:type" content="article">
-<meta property="og:title" content="cncf之grpc介绍">
-<meta property="og:url" content="http://Krazymud.github.io/2019/01/19/grpc/index.html">
+<meta property="og:title" content="用例建模 - 业务建模方法">
+<meta property="og:url" content="http://Krazymud.github.io/2019/05/23/swsad7/index.html">
 <meta property="og:site_name" content="EadBlog">
-<meta property="og:description" content="​    首先，广义上来说CNCF实际上是一个软件基金会，其核心是解决技术问题。而在技术这一层面来说，CNCF包含了许多具体的项目，其计划为支持分布式、可扩展的应用需要的组件和组装方式提出一种规范，期望定义能够支持云原生应用和容器的整个基础设施堆栈。 ​    CNCF主要包含的项目有：  Kubernetes  Prometheus  OpenTracing  Fluentd  Linkerd">
+<meta property="og:description" content="1、根据订旅馆建模文档，Asg-RH.pdf：  绘制用例图模型（到子用例）   给出 make reservation 用例的活动图    2、根据课程练习“投递员使用投递箱给收件人快递包裹”的业务场景  分别用多泳道图建模三个场景的业务过程 第一个场景：  第二个场景：  第三个场景：   根据上述流程，给出快递柜系统最终的用例图模型  用正常色彩表示第一个业务流程反映的用例 用绿色背景表述第">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:image" content="http://krazymud.github.io/2019/01/19/grpc/1.png">
-<meta property="og:updated_time" content="2019-01-19T14:06:03.386Z">
+<meta property="og:image" content="http://krazymud.github.io/2019/05/23/swsad7/1.png">
+<meta property="og:image" content="http://krazymud.github.io/2019/05/23/swsad7/2.png">
+<meta property="og:image" content="http://krazymud.github.io/2019/05/23/swsad7/3.png">
+<meta property="og:image" content="http://krazymud.github.io/2019/05/23/swsad7/4.png">
+<meta property="og:image" content="http://krazymud.github.io/2019/05/23/swsad7/5.png">
+<meta property="og:image" content="http://krazymud.github.io/2019/05/23/swsad7/6.png">
+<meta property="og:updated_time" content="2019-05-23T07:07:03.822Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="cncf之grpc介绍">
-<meta name="twitter:description" content="​    首先，广义上来说CNCF实际上是一个软件基金会，其核心是解决技术问题。而在技术这一层面来说，CNCF包含了许多具体的项目，其计划为支持分布式、可扩展的应用需要的组件和组装方式提出一种规范，期望定义能够支持云原生应用和容器的整个基础设施堆栈。 ​    CNCF主要包含的项目有：  Kubernetes  Prometheus  OpenTracing  Fluentd  Linkerd">
-<meta name="twitter:image" content="http://krazymud.github.io/2019/01/19/grpc/1.png">
+<meta name="twitter:title" content="用例建模 - 业务建模方法">
+<meta name="twitter:description" content="1、根据订旅馆建模文档，Asg-RH.pdf：  绘制用例图模型（到子用例）   给出 make reservation 用例的活动图    2、根据课程练习“投递员使用投递箱给收件人快递包裹”的业务场景  分别用多泳道图建模三个场景的业务过程 第一个场景：  第二个场景：  第三个场景：   根据上述流程，给出快递柜系统最终的用例图模型  用正常色彩表示第一个业务流程反映的用例 用绿色背景表述第">
+<meta name="twitter:image" content="http://krazymud.github.io/2019/05/23/swsad7/1.png">
 
 
 
@@ -117,7 +122,7 @@
 
   
   
-  <link rel="canonical" href="http://Krazymud.github.io/2019/01/19/grpc/"/>
+  <link rel="canonical" href="http://Krazymud.github.io/2019/05/23/swsad7/"/>
 
 
 
@@ -127,7 +132,7 @@
   };
 </script>
 
-  <title>cncf之grpc介绍 | EadBlog</title>
+  <title>用例建模 - 业务建模方法 | EadBlog</title>
   
 
 
@@ -330,7 +335,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://Krazymud.github.io/2019/01/19/grpc/"/>
+    <link itemprop="mainEntityOfPage" href="http://Krazymud.github.io/2019/05/23/swsad7/"/>
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="Eadric"/>
@@ -347,7 +352,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">cncf之grpc介绍
+          <h1 class="post-title" itemprop="name headline">用例建模 - 业务建模方法
 
               
             
@@ -373,7 +378,7 @@
                 
               
 
-              <time title="创建时间：2019-01-19 21:49:55 / 修改时间：22:06:03" itemprop="dateCreated datePublished" datetime="2019-01-19T21:49:55+08:00">2019-01-19</time>
+              <time title="创建时间：2019-05-23 10:31:59 / 修改时间：15:07:03" itemprop="dateCreated datePublished" datetime="2019-05-23T10:31:59+08:00">2019-05-23</time>
             
 
             
@@ -412,34 +417,34 @@
       
 
       
-        <p>​    首先，广义上来说CNCF实际上是一个软件基金会，其核心是解决技术问题。而在技术这一层面来说，CNCF包含了许多具体的项目，其计划为支持分布式、可扩展的应用需要的组件和组装方式提出一种规范，期望定义能够支持云原生应用和容器的整个基础设施堆栈。</p>
-<p>​    CNCF主要包含的项目有：</p>
+        <p>1、根据订旅馆建模文档，Asg-RH.pdf：</p>
 <ul>
-<li><p>Kubernetes</p>
+<li><p>绘制用例图模型（到子用例）</p>
+<p><img src="/2019/05/23/swsad7/1.png" alt=""></p>
 </li>
-<li><p>Prometheus</p>
-</li>
-<li><p>OpenTracing</p>
-</li>
-<li><p>Fluentd</p>
-</li>
-<li><p>Linkerd</p>
-</li>
-<li><p>gRPC</p>
-</li>
-<li><p>CoreDNS</p>
-</li>
-<li><p>containerd</p>
+<li><p>给出 make reservation 用例的活动图</p>
+<p><img src="/2019/05/23/swsad7/2.png" alt=""></p>
 </li>
 </ul>
-<p>​    这里要讲的gRPC就是其中的一种现代化高性能开源远程调用框架。CoreOS 的分布式键值存储 etcd 就使用了 gRPC 进行点对点通讯，Docker 的便携式容器运行时 containerd 也通过 gRPC 暴露其功能，同时 containerd 本身也被捐献给了 CNCF。在 gRPC 中可以使用 Protocol Buffers 来定义服务的接口，Protocol Buffers 是一个强大的二进制序列化工具和语言。gRPC 也和诸多语言进行了集成，并可以自动生成特定语言的客户端和服务端接口。</p>
-<p>​    也就是说，使用gRPC的客户端应用程序可以在不同机器上的服务器应用程序上直接调用方法（支持跨语言），就像它是本地对象一样。这样一来，就能够更方便地创建分布式应用程序（及服务）。</p>
-<p><img src="/2019/01/19/grpc/1.png" alt=""></p>
-<p>​    这里使用go语言来安装gRPC与protocol buffers（gRPC使用protocol buffers消息类型来定义方法参数和返回类型）。如下：</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">go get -u google.golang.org/grpc</span><br><span class="line">go get -u github.com/golang/protobuf/protoc-gen-go</span><br></pre></td></tr></table></figure>
-<p>​    golang下的文件因为网络原因可能go get不到，如果出现这个问题可以从github对应仓库中clone下来：</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">git clone https://github.com/grpc/grpc-go.git $GOPATH/src/google.golang.org/grpc</span><br><span class="line">git clone https://github.com/golang/net.git $GOPATH/src/golang.org/x/net</span><br><span class="line">git clone https://github.com/golang/text.git $GOPATH/src/golang.org/x/text</span><br><span class="line">go get -u github.com/golang/protobuf/protoc-gen-go</span><br><span class="line">git clone https://github.com/google/go-genproto.git $GOPATH/src/google.golang.org/genproto</span><br><span class="line"></span><br><span class="line">cd $GOPATH/src/</span><br><span class="line">go install google.golang.org/grpc</span><br></pre></td></tr></table></figure>
-<p>​    接下来就可以正常使用了。</p>
+<p>2、根据课程练习“投递员使用投递箱给收件人快递包裹”的业务场景</p>
+<ul>
+<li><p>分别用多泳道图建模三个场景的业务过程</p>
+<p>第一个场景：</p>
+<p><img src="/2019/05/23/swsad7/3.png" alt=""></p>
+<p>第二个场景：</p>
+<p><img src="/2019/05/23/swsad7/4.png" alt=""></p>
+<p>第三个场景：</p>
+<p><img src="/2019/05/23/swsad7/5.png" alt=""></p>
+</li>
+<li><p>根据上述流程，给出快递柜系统最终的用例图模型</p>
+<ul>
+<li>用正常色彩表示第一个业务流程反映的用例</li>
+<li>用绿色背景表述第二个业务场景添加或修改的用例，以及支持 Actor</li>
+<li>用黄色背景表述第三个业务场景添加或修改的用例，以及支持 Actor</li>
+</ul>
+<p><img src="/2019/05/23/swsad7/6.png" alt=""></p>
+</li>
+</ul>
 
       
     </div>
@@ -463,7 +468,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/服务计算/" rel="tag"># 服务计算</a>
+            <a href="/tags/系统分析与设计/" rel="tag"># 系统分析与设计</a>
           
         </div>
       
@@ -476,8 +481,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2018/12/22/algo2/" rel="next" title="算法设计与分析 期末项目（2）">
-                <i class="fa fa-chevron-left"></i> 算法设计与分析 期末项目（2）
+              <a href="/2019/05/22/swsad6/" rel="next" title="用例建模 - 绘制用例图">
+                <i class="fa fa-chevron-left"></i> 用例建模 - 绘制用例图
               </a>
             
           </div>
@@ -485,10 +490,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/03/15/swsad1/" rel="prev" title="软件的本质与软件工程科学">
-                软件的本质与软件工程科学 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
