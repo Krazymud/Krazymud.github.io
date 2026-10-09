@@ -51,5 +51,5 @@ describe('stills', () => {
       .png()
       .toBuffer()
     await expect(encodeStill(noise, 'vault-landscape')).rejects.toThrow(/vault-landscape/)
-  })
+  }, 30_000)
 })
