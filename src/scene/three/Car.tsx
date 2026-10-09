@@ -1,11 +1,12 @@
 import { useGLTF } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
-import { Box3, Group, Mesh, Texture, Vector3, type Object3D } from 'three'
+import { Box3, Group, Mesh, MeshStandardMaterial, Texture, Vector3, type Object3D } from 'three'
 import { damp, WHEEL_SPEED } from '../motion'
 import type { Pose } from '../poses'
 import { initialTurntable, stepTurntable } from '../turntable'
 import { useCarDrag } from './useCarDrag'
+import { useIgnitionLevel } from './useIgnitionLevel'
 
 export const CAR_URL = `${import.meta.env.BASE_URL}models/car.glb`
 
@@ -53,6 +54,20 @@ function disposeObject(root: Object3D) {
   })
 }
 
+function glowingMaterials(scene: Object3D): MeshStandardMaterial[] {
+  const found = new Set<MeshStandardMaterial>()
+  scene.traverse((object) => {
+    if (!(object instanceof Mesh)) return
+    for (const material of [object.material].flat()) {
+      if (material instanceof MeshStandardMaterial && material.emissiveMap) {
+        material.userData.baseEmissive ??= material.emissiveIntensity
+        found.add(material)
+      }
+    }
+  })
+  return [...found]
+}
+
 interface CarProps {
   pose: Pose
   deterministic: boolean
@@ -61,6 +76,8 @@ interface CarProps {
 export function Car({ pose, deterministic }: CarProps) {
   const { scene } = useGLTF(CAR_URL, false, true)
   const rig = useMemo(() => rigCar(scene), [scene])
+  const glow = useMemo(() => glowingMaterials(scene), [scene])
+  const lights = useIgnitionLevel()
   const group = useRef<Group>(null)
   const turntable = useRef(initialTurntable(pose.carYaw ?? 0))
   const wheelSpeed = useRef(0)
@@ -72,6 +89,7 @@ export function Car({ pose, deterministic }: CarProps) {
     if (group.current) group.current.rotation.y = turntable.current.angle
     wheelSpeed.current = damp(wheelSpeed.current, pose.trackLines && !deterministic ? WHEEL_SPEED : 0, 2, dt)
     for (const wheel of rig.wheels) wheel.rotation.x += wheelSpeed.current * dt
+    for (const material of glow) material.emissiveIntensity = (material.userData.baseEmissive as number) * lights.current
   })
 
   useEffect(() => () => disposeObject(scene), [scene])

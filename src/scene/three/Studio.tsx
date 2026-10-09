@@ -1,10 +1,12 @@
 import { Environment, Lightformer } from '@react-three/drei'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { useMemo, useRef, useState } from 'react'
 import { Color, type Mesh, type MeshBasicMaterial, type SpotLight } from 'three'
 import { dampFactor, STILL_SWEEP_X, sweepX, TRANSITION_LAMBDA } from '../motion'
 import { GOLD, type Pose } from '../poses'
+import { useIgnitionLevel } from './useIgnitionLevel'
 
+const KEY_INTENSITY = 150
 const RIM_SPOT_INTENSITY = 120
 const RIM_PANEL_INTENSITY = 2
 const RIM_TARGET: [number, number, number] = [0, 0.6, 0]
@@ -15,6 +17,8 @@ interface StudioProps {
 }
 
 export function Studio({ pose, deterministic }: StudioProps) {
+  const lights = useIgnitionLevel()
+  const scene = useThree((state) => state.scene)
   const key = useRef<SpotLight>(null)
   const sweep = useRef<Mesh>(null)
   const rimSpot = useRef<SpotLight>(null)
@@ -27,12 +31,14 @@ export function Studio({ pose, deterministic }: StudioProps) {
   useFrame(({ clock }, delta) => {
     const k = dampFactor(TRANSITION_LAMBDA, Math.min(delta, 0.1))
     goal.set(pose.light)
+    scene.environmentIntensity = lights.current
+    if (key.current) key.current.intensity = KEY_INTENSITY * lights.current
     if (key.current) {
       if (deterministic) key.current.color.copy(goal)
       else key.current.color.lerp(goal, k)
     }
     rim.current = deterministic ? pose.rim : rim.current + (pose.rim - rim.current) * k
-    if (rimSpot.current) rimSpot.current.intensity = RIM_SPOT_INTENSITY * rim.current
+    if (rimSpot.current) rimSpot.current.intensity = RIM_SPOT_INTENSITY * rim.current * lights.current
     if (rimPanel.current) {
       rimPanel.current.visible = rim.current > 0.001
       ;(rimPanel.current.material as MeshBasicMaterial).color.set(GOLD).multiplyScalar(RIM_PANEL_INTENSITY * rim.current)
@@ -46,7 +52,7 @@ export function Studio({ pose, deterministic }: StudioProps) {
 
   return (
     <>
-      <spotLight ref={key} position={[3, 7, 4]} angle={0.55} penumbra={1} intensity={150} decay={2} color={pose.light} />
+      <spotLight ref={key} position={[3, 7, 4]} angle={0.55} penumbra={1} intensity={KEY_INTENSITY} decay={2} color={pose.light} />
       <spotLight ref={rimSpot} position={[0, 4.5, 5.5]} angle={0.6} penumbra={1} intensity={RIM_SPOT_INTENSITY * initialRim} decay={2} color={GOLD} />
       <Environment frames={deterministic ? 1 : Infinity} resolution={128}>
         <Lightformer form="rect" intensity={3} color="#ffffff" position={[0, 6, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[8, 1.2, 1]} />
