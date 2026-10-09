@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent } from 'react'
+import { setPrefs, usePrefs } from '../prefs/prefs'
 import { useProgress } from '../progress/ProgressProvider'
 import { parseProgress, serializeProgress, type ProgressData } from '../progress/store'
 import { studyDay } from '../trial/day'
@@ -51,10 +52,27 @@ export function SettingsPage() {
   }
 
   const learned = Object.keys(data.words).length
+  const { scene3d } = usePrefs()
 
   return (
     <section className="space-y-6">
       <h1 className="font-display text-2xl font-bold tracking-wide">设置</h1>
+
+      <div className="border border-line bg-panel/90 p-4">
+        <label className="flex items-center justify-between gap-4">
+          <span>
+            <span className="block text-sm font-bold">3D 车库</span>
+            <span className="mt-1 block text-xs text-muted">关闭后只显示静态画面，更省电。</span>
+          </span>
+          <input
+            type="checkbox"
+            role="switch"
+            checked={scene3d}
+            onChange={(event) => setPrefs({ scene3d: event.target.checked })}
+            className="h-5 w-5 shrink-0 accent-[var(--accent-hi)]"
+          />
+        </label>
+      </div>
 
       <div className="border border-line bg-panel/90 p-4">
         <h2 className="text-sm font-bold">导出进度</h2>
@@ -86,13 +104,33 @@ export function SettingsPage() {
         {message && <p className="mt-3 text-sm">{message}</p>}
       </div>
 
-      <p className="text-xs text-muted">
-        词库来自{' '}
-        <a href="https://github.com/skywind3000/ECDICT" className="underline">
-          ECDICT
-        </a>
-        （MIT 协议）。
-      </p>
+      <section aria-labelledby="credits-title" className="space-y-2 text-xs text-muted">
+        <h2 id="credits-title" className="text-sm font-bold text-fg">
+          鸣谢
+        </h2>
+        <p>
+          车模型「
+          <a
+            href="https://sketchfab.com/3d-models/fictional-supercar-v12-goblin-0a20e49ad5774d778567cb5c3f345786"
+            className="underline"
+          >
+            Fictional supercar - V12 Goblin
+          </a>
+          」，作者 ollitei，采用{' '}
+          <a href="https://creativecommons.org/licenses/by/4.0/" className="underline">
+            CC BY 4.0
+          </a>{' '}
+          授权。已修改：材质、配色和压缩。
+        </p>
+        <p>
+          词库来自{' '}
+          <a href="https://github.com/skywind3000/ECDICT" className="underline">
+            ECDICT
+          </a>
+          （MIT 协议）。
+        </p>
+        <p>英文字体 Rajdhani，采用 SIL Open Font License 1.1。</p>
+      </section>
     </section>
   )
 }
