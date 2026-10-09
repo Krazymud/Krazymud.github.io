@@ -12,6 +12,14 @@ describe('frame guard', () => {
     expect(feed(initialGuard, 58, 30)).toEqual(initialGuard)
   })
 
+  it('keeps a device capped near 30 fps at full quality', () => {
+    expect(feed(initialGuard, 29, 30)).toEqual(initialGuard)
+  })
+
+  it('still downgrades a steady 20 fps', () => {
+    expect(feed(initialGuard, 20, 3).quality).toBe(1)
+  })
+
   it('lowers resolution, then drops post effects, then gives up', () => {
     const lower = feed(initialGuard, 20, 3)
     expect(lower.quality).toBe(1)

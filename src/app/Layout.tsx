@@ -18,7 +18,11 @@ export function Layout() {
   return (
     <div
       data-theme={scene === 'vault' ? 'vault' : undefined}
-      className={`relative min-h-dvh bg-ink text-fg ${scene === 'garage' ? 'touch-pan-y touch-pinch-zoom' : ''}`}
+      className={
+        scene === 'garage'
+          ? 'relative min-h-dvh bg-ink text-fg touch-pan-y touch-pinch-zoom select-none'
+          : 'relative min-h-dvh bg-ink text-fg'
+      }
     >
       <SceneHost scene={scene} />
       <header className="relative z-10 flex items-center justify-between gap-3 px-5 pt-4 text-xs">

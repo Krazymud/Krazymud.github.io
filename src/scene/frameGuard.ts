@@ -6,7 +6,7 @@ export interface GuardState {
   failed: boolean
 }
 
-export const MIN_FPS = 30
+export const MIN_FPS = 24
 export const DOWNGRADE_AFTER = 3
 export const GIVE_UP_AFTER = 5
 

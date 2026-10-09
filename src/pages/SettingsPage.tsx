@@ -112,19 +112,31 @@ export function SettingsPage() {
           车模型「
           <a
             href="https://sketchfab.com/3d-models/fictional-supercar-v12-goblin-0a20e49ad5774d778567cb5c3f345786"
+            target="_blank"
+            rel="noreferrer"
             className="underline"
           >
             Fictional supercar - V12 Goblin
           </a>
           」，作者 ollitei，采用{' '}
-          <a href="https://creativecommons.org/licenses/by/4.0/" className="underline">
+          <a
+            href="https://creativecommons.org/licenses/by/4.0/"
+            target="_blank"
+            rel="noreferrer"
+            className="underline"
+          >
             CC BY 4.0
           </a>{' '}
           授权。已修改：材质、配色和压缩。
         </p>
         <p>
           词库来自{' '}
-          <a href="https://github.com/skywind3000/ECDICT" className="underline">
+          <a
+            href="https://github.com/skywind3000/ECDICT"
+            target="_blank"
+            rel="noreferrer"
+            className="underline"
+          >
             ECDICT
           </a>
           （MIT 协议）。
