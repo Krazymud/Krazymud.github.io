@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CASE_OVERRIDES } from './caseOverrides.ts'
+import { CASE_OVERRIDES, PHONETIC_FIXES } from './caseOverrides.ts'
 import {
   isCetWord,
   isLowercaseWord,
@@ -81,6 +81,14 @@ describe('CASE_OVERRIDES', () => {
       expect(override.w).toBe(word.toLowerCase())
     }
   })
+
+  it('keeps meaning labels aligned with their pos when both are set', () => {
+    for (const override of Object.values(CASE_OVERRIDES)) {
+      if (override.pos !== undefined && override.m !== undefined) {
+        expect(override.m.startsWith(override.pos)).toBe(true)
+      }
+    }
+  })
 })
 
 describe('parseTranslation', () => {
@@ -113,6 +121,19 @@ describe('toEntry', () => {
   it('builds a word entry and normalizes the schwa character', () => {
     const entry = toEntry(row({ word: 'abandon', phonetic: "ә'bændәn", translation: 'vt. 放弃, 抛弃' }))
     expect(entry).toEqual({ w: 'abandon', p: "ə'bændən", pos: 'v.', m: 'v. 放弃，抛弃' })
+  })
+
+  it('replaces ECDICT caret markers with g', () => {
+    const entry = toEntry(row({ word: 'god', phonetic: '^ɔd', translation: 'n. 神' }))
+    expect(entry?.p).toBe('gɔd')
+  })
+
+  it('applies curated phonetic fixes for malformed rows', () => {
+    expect(PHONETIC_FIXES.permanently).toBe("'pə:mənəntli")
+    const entry = toEntry(
+      row({ word: 'permanently', phonetic: "p\\'m\\'n\\'ntli", translation: 'ad. 永久地' }),
+    )
+    expect(entry?.p).toBe("'pə:mənəntli")
   })
 
   it('returns null for rows without a usable meaning', () => {

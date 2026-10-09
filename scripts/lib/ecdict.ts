@@ -1,4 +1,4 @@
-import { CASE_OVERRIDES, type CaseOverride } from './caseOverrides.ts'
+import { CASE_OVERRIDES, PHONETIC_FIXES, type CaseOverride } from './caseOverrides.ts'
 
 export interface EcdictRow {
   word: string
@@ -77,7 +77,8 @@ export function parseTranslation(translation: string): { pos: string; meaning: s
 export function toEntry(row: EcdictRow): WordEntry | null {
   const parsed = parseTranslation(row.translation)
   if (!parsed) return null
-  return { w: row.word, p: row.phonetic.replace(/ә/g, 'ə'), pos: parsed.pos, m: parsed.meaning }
+  const phonetic = PHONETIC_FIXES[row.word] ?? row.phonetic.replace(/ә/g, 'ə').replace(/\^/g, 'g')
+  return { w: row.word, p: phonetic, pos: parsed.pos, m: parsed.meaning }
 }
 
 export function toPackEntry(
@@ -86,8 +87,9 @@ export function toPackEntry(
 ): WordEntry | null {
   if (isLowercaseWord(row.word)) return toEntry(row)
   const override = overrides[row.word]
-  const entry = override ? toEntry(row) : null
-  if (!override || !entry) return null
+  if (!override) return null
+  const entry = toEntry(row)
+  if (!entry) return null
   return { ...entry, w: override.w, pos: override.pos ?? entry.pos, m: override.m ?? entry.m }
 }
 

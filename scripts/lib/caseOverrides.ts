@@ -16,3 +16,11 @@ export const CASE_OVERRIDES: Readonly<Record<string, CaseOverride>> = {
   Polish: { w: 'polish', pos: 'v.', m: 'v. 擦亮，使完美；n. 上光剂，光泽' },
   Saint: { w: 'saint' },
 }
+
+// Explicit phonetics for ECDICT rows whose phonetic field is garbage or ambiguous.
+export const PHONETIC_FIXES: Readonly<Record<string, string>> = {
+  permanently: "'pə:mənəntli",
+  conversely: "'kɔnvə:sli",
+  universally: ",ju:ni'və:səli",
+  simultaneously: ",siməl'teiniəsli",
+}
