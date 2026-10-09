@@ -61,6 +61,7 @@ export function TrialScreen({ source, now = () => new Date() }: TrialScreenProps
     return item && entry ? buildQuestion(entry.word, item.kind, entry.pool, Math.random) : null
   }, [item, resolved])
 
+  const wordMissing = item !== undefined && resolved !== null && !resolved.has(item.word)
   const correct = picked !== null && question !== null && picked === question.answerIndex
 
   const commit = useCallback(
@@ -89,7 +90,7 @@ export function TrialScreen({ source, now = () => new Date() }: TrialScreenProps
     return () => window.removeEventListener('keydown', onKey)
   }, [question, picked])
 
-  if (lookupFailed) {
+  if (lookupFailed || wordMissing) {
     return (
       <LoadError
         onRetry={() => {

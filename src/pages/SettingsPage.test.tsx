@@ -36,4 +36,15 @@ describe('SettingsPage', () => {
     expect(await screen.findByText('进度已导入')).toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).words.alpha.interval).toBe(7)
   })
+
+  it('reports a file that cannot be read', async () => {
+    const input = renderSettings()
+    upload(input, JSON.stringify(emptyProgress()))
+    await screen.findByRole('button', { name: '确认导入' })
+    const file = new File([''], 'progress.json', { type: 'application/json' })
+    file.text = () => Promise.reject(new Error('x'))
+    fireEvent.change(input, { target: { files: [file] } })
+    expect(await screen.findByRole('alert')).toHaveTextContent('无法读取文件')
+    expect(screen.queryByRole('button', { name: '确认导入' })).not.toBeInTheDocument()
+  })
 })

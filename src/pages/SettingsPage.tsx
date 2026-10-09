@@ -23,7 +23,16 @@ export function SettingsPage() {
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
-    const result = parseProgress(await file.text())
+    let text: string
+    try {
+      text = await file.text()
+    } catch {
+      setMessage(null)
+      setPending(null)
+      setError('无法读取文件')
+      return
+    }
+    const result = parseProgress(text)
     setMessage(null)
     if (result.ok) {
       setPending(result.data)

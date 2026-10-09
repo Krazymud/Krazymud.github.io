@@ -53,6 +53,19 @@ describe('parseProgress', () => {
     expect(result.ok && result.data.session).toBeUndefined()
     expect(result.ok && result.data.words.alpha.interval).toBe(7)
   })
+
+  it.each([
+    { cursor: -1 },
+    { cursor: 1.5 },
+    { cursor: 2 },
+    { correct: -1 },
+    { combo: 0.5 },
+    { bestCombo: -2 },
+  ])('drops a session with out-of-range counters %o but keeps words', (patch) => {
+    const result = parseProgress(JSON.stringify({ ...sample, session: { ...sample.session, ...patch } }))
+    expect(result.ok && result.data.session).toBeUndefined()
+    expect(result.ok && result.data.words.alpha.interval).toBe(7)
+  })
 })
 
 describe('loadProgress / saveProgress', () => {

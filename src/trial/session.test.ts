@@ -38,6 +38,10 @@ describe('buildSession', () => {
     expect(buildSession(TODAY, progress, ['alpha'], 5)).toEqual([{ word: 'alpha', kind: 'new' }])
   })
 
+  it('serves words named like inherited object properties as new', () => {
+    expect(buildSession(TODAY, {}, ['constructor'])).toEqual([{ word: 'constructor', kind: 'new' }])
+  })
+
   it('returns fewer items when the word list runs out', () => {
     expect(buildSession(TODAY, {}, ['alpha', 'bravo'])).toHaveLength(2)
   })

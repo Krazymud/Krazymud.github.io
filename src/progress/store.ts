@@ -54,6 +54,10 @@ function isNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value)
 }
 
+function isCount(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= 0
+}
+
 function isDay(value: unknown): value is string {
   return typeof value === 'string' && DAY_RE.test(value)
 }
@@ -80,10 +84,11 @@ function isDaySession(value: unknown): value is DaySession {
     isDay(value.day) &&
     Array.isArray(value.items) &&
     value.items.every(isSessionItem) &&
-    isNumber(value.cursor) &&
-    isNumber(value.correct) &&
-    isNumber(value.combo) &&
-    isNumber(value.bestCombo) &&
+    isCount(value.cursor) &&
+    value.cursor <= value.items.length &&
+    isCount(value.correct) &&
+    isCount(value.combo) &&
+    isCount(value.bestCombo) &&
     isNumber(value.startedAt) &&
     (value.finishedAt === undefined || isNumber(value.finishedAt))
   )

@@ -20,9 +20,9 @@ const source: WordSource = {
   lookup: async (words) => new Map(WORDS.filter((w) => words.includes(w.w)).map((w) => [w.w, { word: w, pool: WORDS }])),
 }
 
-function renderTrial() {
+function renderTrial(wordSource: WordSource = source) {
   const router = createMemoryRouter(
-    [{ path: '/', element: <TrialScreen source={source} now={() => new Date(2026, 9, 9, 12)} /> }],
+    [{ path: '/', element: <TrialScreen source={wordSource} now={() => new Date(2026, 9, 9, 12)} /> }],
     { initialEntries: ['/'] },
   )
   render(
@@ -98,5 +98,11 @@ describe('TrialScreen', () => {
     expect(await screen.findByText('圈速')).toBeInTheDocument()
     expect(screen.getByText('100%')).toBeInTheDocument()
     expect(saved().history).toHaveLength(1)
+  })
+
+  it('shows the load error when the current word is missing from the word pack', async () => {
+    renderTrial({ order: source.order, lookup: async () => new Map() })
+    expect(await screen.findByText('词库加载失败')).toBeInTheDocument()
+    expect(screen.queryByText('正在加载词库…')).not.toBeInTheDocument()
   })
 })

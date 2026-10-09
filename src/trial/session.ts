@@ -18,7 +18,7 @@ export function buildSession(
 
   for (const word of order) {
     if (items.length >= limit) break
-    if (!(word in progress)) items.push({ word, kind: 'new' })
+    if (!Object.hasOwn(progress, word)) items.push({ word, kind: 'new' })
   }
   return items
 }
