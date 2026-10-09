@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { STORAGE_KEY } from '../progress/store'
 import { DEFAULT_PREFS, getPrefs, PREFS_KEY, readPrefs, resetPrefsCache, setPrefs, usePrefs } from './prefs'
 
 describe('prefs', () => {
@@ -14,8 +15,10 @@ describe('prefs', () => {
   })
 
   it('saves the switch apart from the progress data', () => {
+    localStorage.setItem(STORAGE_KEY, '{"version":1}')
     setPrefs({ scene3d: false })
     expect(JSON.parse(localStorage.getItem(PREFS_KEY)!)).toEqual({ scene3d: false, muted: false, introSeen: false })
+    expect(localStorage.getItem(STORAGE_KEY)).toBe('{"version":1}')
     resetPrefsCache()
     expect(getPrefs().scene3d).toBe(false)
   })
@@ -25,6 +28,32 @@ describe('prefs', () => {
     expect(readPrefs()).toEqual(DEFAULT_PREFS)
     localStorage.setItem(PREFS_KEY, '{"scene3d":"no"}')
     expect(readPrefs()).toEqual(DEFAULT_PREFS)
+  })
+
+  it('falls back to the defaults when the stored value is not an object', () => {
+    for (const raw of ['5', 'null', '[]', '"scene3d"']) {
+      localStorage.setItem(PREFS_KEY, raw)
+      expect(readPrefs()).toEqual(DEFAULT_PREFS)
+    }
+  })
+
+  it('does not store undefined fields', () => {
+    setPrefs({ scene3d: false })
+    setPrefs({ scene3d: undefined, muted: true })
+    expect(getPrefs()).toEqual({ scene3d: false, muted: true, introSeen: false })
+    expect(JSON.parse(localStorage.getItem(PREFS_KEY)!)).toEqual({ scene3d: false, muted: true, introSeen: false })
+  })
+
+  it('does not notify hook users when nothing changes', () => {
+    let renders = 0
+    renderHook(() => {
+      renders++
+      return usePrefs()
+    })
+    const before = renders
+    act(() => setPrefs({ scene3d: true }))
+    act(() => setPrefs({}))
+    expect(renders).toBe(before)
   })
 
   it('checks each field on its own', () => {

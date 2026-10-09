@@ -40,5 +40,5 @@ export function useLoading(): Loading {
 }
 
 export function resetLoading(): void {
-  state = INITIAL
+  setLoading(INITIAL)
 }

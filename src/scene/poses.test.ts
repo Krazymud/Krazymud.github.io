@@ -11,6 +11,13 @@ describe('sceneFor', () => {
     expect(sceneFor('/settings')).toBe('settings')
     expect(sceneFor('/2018/09/05/leetcode05/')).toBe('garage')
   })
+
+  it('matches whole path segments only', () => {
+    expect(sceneFor('/vault/')).toBe('vault')
+    expect(sceneFor('/vaulted')).toBe('garage')
+    expect(sceneFor('/trials')).toBe('garage')
+    expect(sceneFor('/settings-old')).toBe('garage')
+  })
 })
 
 describe('POSES', () => {
@@ -40,6 +47,7 @@ describe('POSES', () => {
 
   it('shows the settings page from the garage camera without spinning', () => {
     expect(POSES.settings.camera).toEqual(POSES.garage.camera)
+    expect(POSES.settings.target).toEqual(POSES.garage.target)
     expect(POSES.settings.still).toBe('garage')
     expect(POSES.settings.spin).toBe(false)
   })
@@ -66,5 +74,11 @@ describe('framedCamera', () => {
     expect(z).toBeGreaterThan(8)
     const hHalf = Math.atan(Math.tan((CAMERA_FOV * Math.PI) / 360) * (9 / 16))
     expect(distance([x, y, z], [0, 0, 0])).toBeCloseTo(CAR_RADIUS / Math.sin(hHalf), 6)
+  })
+
+  it('backs off along +Z when the camera sits on the target', () => {
+    const [x, y, z] = framedCamera({ ...pose, camera: [0, 1, 0], target: [0, 1, 0] }, 16 / 9)
+    expect([x, y]).toEqual([0, 1])
+    expect(z).toBeCloseTo(CAR_RADIUS / Math.sin((CAMERA_FOV * Math.PI) / 360), 6)
   })
 })

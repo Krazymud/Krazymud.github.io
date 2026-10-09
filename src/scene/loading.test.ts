@@ -18,4 +18,11 @@ describe('loading progress', () => {
     act(() => setLoading({ kind: 'still', fraction: 1 }))
     expect(result.current).toEqual({ kind: 'still', fraction: 1 })
   })
+
+  it('tells hook users when it is reset', () => {
+    const { result } = renderHook(() => useLoading())
+    act(() => setLoading({ kind: 'still', fraction: 1 }))
+    act(() => resetLoading())
+    expect(result.current).toEqual({ kind: '3d', fraction: 0 })
+  })
 })

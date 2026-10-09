@@ -73,6 +73,7 @@ export function SceneHost({ scene, loadStage = loadDefaultStage, webgl2 = suppor
     if (mode === '3d') return
     setReady(false)
     setStillGone(false)
+    setAssets(0)
   }, [mode])
 
   useEffect(() => {

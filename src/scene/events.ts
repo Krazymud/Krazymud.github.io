@@ -1,9 +1,19 @@
 type Listener = () => void
 
+function notify(listeners: Set<Listener>): void {
+  for (const listener of [...listeners]) {
+    try {
+      listener()
+    } catch (error) {
+      if (import.meta.env.DEV) console.warn('[events]', error)
+    }
+  }
+}
+
 const nitroListeners = new Set<Listener>()
 
 export function emitNitro(): void {
-  for (const listener of nitroListeners) listener()
+  notify(nitroListeners)
 }
 
 export function onNitro(listener: Listener): () => void {
@@ -26,7 +36,7 @@ export function isIgnitionPending(): boolean {
 
 export function emitIgnition(): void {
   ignitionPending = false
-  for (const listener of ignitionListeners) listener()
+  notify(ignitionListeners)
 }
 
 export function onIgnition(listener: Listener): () => void {

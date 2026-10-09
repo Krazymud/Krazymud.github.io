@@ -132,6 +132,24 @@ describe('SceneHost', () => {
     expect(getLoading()).toEqual({ kind: '3d', fraction: 1 })
   })
 
+  it('starts the asset progress over when 3D is switched back on', async () => {
+    let report: ((fraction: number) => void) | undefined
+    function Stage({ onProgress }: StageProps) {
+      report = onProgress
+      return <div data-testid="fake-stage" />
+    }
+    render(<SceneHost scene="garage" loadStage={async () => ({ Stage })} webgl2={yes} />)
+    await screen.findByTestId('fake-stage')
+    act(() => report?.(0.8))
+    expect(getLoading().fraction).toBeCloseTo(0.86)
+    act(() => setPrefs({ scene3d: false }))
+    act(() => setPrefs({ scene3d: true }))
+    await screen.findByTestId('fake-stage')
+    expect(getLoading()).toEqual({ kind: '3d', fraction: 0.3 })
+    act(() => report?.(0.5))
+    expect(getLoading().fraction).toBeCloseTo(0.65)
+  })
+
   it('dims the scene for each page', () => {
     const { rerender } = render(<SceneHost scene="track" webgl2={() => false} />)
     expect(screen.getByTestId('scene-dim').style.opacity).toBe('0.45')

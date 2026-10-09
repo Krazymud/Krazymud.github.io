@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dprFor, guardStep, initialGuard, type GuardState } from './frameGuard'
+import { dprFor, guardStep, initialGuard, MIN_FPS, type GuardState } from './frameGuard'
 
 function feed(state: GuardState, fps: number, seconds: number): GuardState {
   let next = state
@@ -37,6 +37,20 @@ describe('frame guard', () => {
   it('stays failed once it has given up', () => {
     const failed: GuardState = { quality: 2, lowFor: 5, failed: true }
     expect(guardStep(failed, 60, 1)).toBe(failed)
+  })
+
+  it('counts exactly the minimum frame rate as healthy', () => {
+    const slow: GuardState = { quality: 0, lowFor: 2, failed: false }
+    expect(guardStep(slow, MIN_FPS, 1)).toEqual(initialGuard)
+    expect(guardStep(slow, MIN_FPS - 0.1, 1).quality).toBe(1)
+  })
+
+  it('ignores samples that are not finite numbers', () => {
+    const slow: GuardState = { quality: 2, lowFor: 2, failed: false }
+    for (const [fps, seconds] of [[NaN, 1], [20, NaN], [Infinity, 1], [20, Infinity], [-Infinity, 1]]) {
+      expect(guardStep(slow, fps, seconds)).toBe(slow)
+      expect(guardStep(initialGuard, fps, seconds)).toBe(initialGuard)
+    }
   })
 
   it('caps the pixel ratio at 1.5, then 1', () => {

@@ -13,7 +13,7 @@ export const GIVE_UP_AFTER = 5
 export const initialGuard: GuardState = { quality: 0, lowFor: 0, failed: false }
 
 export function guardStep(state: GuardState, fps: number, seconds: number): GuardState {
-  if (state.failed) return state
+  if (state.failed || !Number.isFinite(fps) || !Number.isFinite(seconds)) return state
   if (fps >= MIN_FPS) return state.lowFor === 0 ? state : { ...state, lowFor: 0 }
   const lowFor = state.lowFor + seconds
   if (state.quality < 2) {
