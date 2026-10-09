@@ -1,5 +1,6 @@
+import { useProgress } from '@react-three/drei'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Suspense, useLayoutEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { dprFor, type Quality } from '../frameGuard'
 import { usePageVisible } from '../hooks'
 import { CAMERA_FOV, POSES } from '../poses'
@@ -21,7 +22,15 @@ function FirstFrame({ onReady }: { onReady: () => void }) {
   return null
 }
 
-export function Stage({ scene, onReady, onFail, deterministic = false }: StageProps) {
+function ReportProgress({ onProgress }: { onProgress: (fraction: number) => void }) {
+  const progress = useProgress((state) => state.progress)
+  useEffect(() => {
+    onProgress(progress / 100)
+  }, [progress, onProgress])
+  return null
+}
+
+export function Stage({ scene, onReady, onFail, onProgress, deterministic = false }: StageProps) {
   const pose = POSES[scene]
   const visible = usePageVisible()
   const [quality, setQuality] = useState<Quality>(0)
@@ -58,6 +67,7 @@ export function Stage({ scene, onReady, onFail, deterministic = false }: StagePr
       <Studio pose={pose} deterministic={deterministic} />
       <Floor pose={pose} deterministic={deterministic} />
       <CameraRig pose={pose} deterministic={deterministic} />
+      {onProgress && <ReportProgress onProgress={onProgress} />}
       <Suspense fallback={null}>
         <Car pose={pose} deterministic={deterministic} />
         <FirstFrame onReady={onReady} />

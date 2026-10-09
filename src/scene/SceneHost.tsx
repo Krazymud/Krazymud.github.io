@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ComponentType } from 'react'
 import { usePrefs } from '../prefs/prefs'
 import { usePrefersReducedMotion } from './hooks'
+import { setLoading, stageProgress } from './loading'
 import { markSceneFailed, sceneFailed, sceneMode, supportsWebGL2 } from './mode'
 import { POSES } from './poses'
 import { SceneErrorBoundary } from './SceneErrorBoundary'
@@ -36,6 +37,12 @@ export function SceneHost({ scene, loadStage = loadDefaultStage, webgl2 = suppor
   const [Stage, setStage] = useState<ComponentType<StageProps> | null>(null)
   const [ready, setReady] = useState(false)
   const [stillGone, setStillGone] = useState(false)
+  const [assets, setAssets] = useState(0)
+  const reportProgress = useCallback((fraction: number) => setAssets((current) => Math.max(current, fraction)), [])
+
+  useEffect(() => {
+    setLoading(mode === '3d' ? { kind: '3d', fraction: ready ? 1 : stageProgress(Stage !== null, assets) } : { kind: 'still', fraction: 1 })
+  }, [mode, Stage, assets, ready])
 
   const fail = useCallback(() => {
     markSceneFailed()
@@ -85,7 +92,7 @@ export function SceneHost({ scene, loadStage = loadDefaultStage, webgl2 = suppor
           style={{ opacity: ready ? 1 : 0, transitionDuration: `${FADE_MS}ms` }}
         >
           <SceneErrorBoundary onError={fail}>
-            <Stage scene={scene} onReady={markReady} onFail={fail} />
+            <Stage scene={scene} onReady={markReady} onFail={fail} onProgress={reportProgress} />
           </SceneErrorBoundary>
         </div>
       )}
