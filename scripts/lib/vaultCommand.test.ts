@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import sharp from 'sharp'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { decryptJson, deriveKek, unwrapDek } from '../../src/vault/crypto.ts'
+import { decryptBytes, DecryptError, decryptJson, deriveKek, unwrapDek, type VaultKey } from '../../src/vault/crypto.ts'
 import type { VaultFile, VaultManifest } from '../../src/vault/types.ts'
 import { runRekey, runVault, WrongPassphraseError } from './vaultCommand.ts'
 
@@ -32,10 +32,14 @@ const run = (passphrase = PASS) => runVault({ sourceDir: src, outDir: out, passp
 const blobs = async () => (await readdir(join(out, 'blobs'))).sort()
 const vaultText = () => readFile(join(out, 'vault.json'), 'utf8')
 
-async function openAsBrowser(passphrase: string): Promise<VaultManifest> {
+async function openAsBrowserWithKey(passphrase: string): Promise<{ dek: VaultKey; manifest: VaultManifest }> {
   const file = JSON.parse(await vaultText()) as VaultFile
   const dek = await unwrapDek(file.wrappedKey, await deriveKek(passphrase, file.kdf), false)
-  return decryptJson<VaultManifest>(dek, file.manifest)
+  return { dek, manifest: await decryptJson<VaultManifest>(dek, file.manifest) }
+}
+
+async function openAsBrowser(passphrase: string): Promise<VaultManifest> {
+  return (await openAsBrowserWithKey(passphrase)).manifest
 }
 
 describe('runVault', () => {
@@ -97,19 +101,68 @@ describe('runVault', () => {
 describe('runRekey', () => {
   const NEW_PASS = '新的口令也要足够长 才能通过检查'
 
-  it('switches the passphrase without touching the content', async () => {
+  async function contents(passphrase: string): Promise<Map<string, Uint8Array>> {
+    const { dek, manifest } = await openAsBrowserWithKey(passphrase)
+    const result = new Map<string, Uint8Array>()
+    const items = [
+      ...manifest.photos.flatMap((p) => [[`${p.source}#thumb`, p.thumb], [`${p.source}#full`, p.full]]),
+      ...manifest.notes.map((n) => [n.source, n.blob]),
+      ...manifest.lists.map((l) => [l.source, l.blob]),
+    ]
+    for (const [source, blob] of items) {
+      result.set(source, await decryptBytes(dek, await readFile(join(out, 'blobs', `${blob}.bin`))))
+    }
+    return result
+  }
+
+  it('changes the passphrase and rotates the content key', async () => {
     await run()
     const before = JSON.parse(await vaultText()) as VaultFile
-    const files = await blobs()
+    const oldDek = await unwrapDek(before.wrappedKey, await deriveKek(PASS, before.kdf), false)
+    const oldFiles = await blobs()
+    const oldContents = await contents(PASS)
+
     await runRekey({ outDir: out, oldPassphrase: PASS, newPassphrase: NEW_PASS, iterations: 1000 })
     const after = JSON.parse(await vaultText()) as VaultFile
 
-    expect(after.manifest).toBe(before.manifest)
     expect(after.kdf.salt).not.toBe(before.kdf.salt)
-    expect(await blobs()).toEqual(files)
-    expect(await readdir(out)).not.toContain('vault.json.tmp')
+    await expect(openAsBrowser(PASS)).rejects.toBeInstanceOf(DecryptError)
     expect((await openAsBrowser(NEW_PASS)).notes).toHaveLength(1)
-    await expect(openAsBrowser(PASS)).rejects.toThrow()
+    await expect(decryptJson(oldDek, after.manifest)).rejects.toBeInstanceOf(DecryptError)
+
+    const newFiles = await blobs()
+    expect(newFiles).toHaveLength(oldFiles.length)
+    expect(newFiles.filter((name) => oldFiles.includes(name))).toEqual([])
+    expect(await contents(NEW_PASS)).toEqual(oldContents)
+    expect(await readdir(out)).not.toContain('vault.json.tmp')
+  })
+
+  it('leaves the old vault intact when vault.json cannot be written', async () => {
+    await run()
+    const before = await vaultText()
+    const files = await blobs()
+    await mkdir(join(out, 'vault.json.tmp'))
+    await expect(runRekey({ outDir: out, oldPassphrase: PASS, newPassphrase: NEW_PASS, iterations: 1000 })).rejects.toThrow()
+    expect(await vaultText()).toBe(before)
+    expect(await blobs()).toEqual(files)
+    expect((await openAsBrowser(PASS)).notes).toHaveLength(1)
+  })
+
+  it('keeps working with later runs after a rekey', async () => {
+    await run()
+    await runRekey({ outDir: out, oldPassphrase: PASS, newPassphrase: NEW_PASS, iterations: 1000 })
+    expect(await run(NEW_PASS)).toMatchObject({ written: 0, removed: 0 })
+  })
+
+  it('rejects a weak new passphrase before touching anything', async () => {
+    await run()
+    const before = await vaultText()
+    const files = await blobs()
+    await expect(
+      runRekey({ outDir: out, oldPassphrase: PASS, newPassphrase: 'a b c d', iterations: 1000 }),
+    ).rejects.toThrow('口令至少要 16 个字符')
+    expect(await vaultText()).toBe(before)
+    expect(await blobs()).toEqual(files)
   })
 
   it('requires the current passphrase', async () => {

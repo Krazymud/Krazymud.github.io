@@ -25,6 +25,10 @@ export function referencedBlobs(manifest: VaultManifest): Set<string> {
   ])
 }
 
+export function newBlobName(): string {
+  return randomBytes(16).toString('hex')
+}
+
 function byDateDesc(a: { date: string; source: string }, b: { date: string; source: string }): number {
   if (a.date === b.date) return a.source.localeCompare(b.source)
   return a.date < b.date ? 1 : -1
@@ -42,7 +46,7 @@ export async function buildVault(
   const encoder = new TextEncoder()
 
   async function seal(bytes: Uint8Array): Promise<string> {
-    const name = randomBytes(16).toString('hex')
+    const name = newBlobName()
     writes.set(name, await encryptBytes(dek, bytes))
     return name
   }

@@ -3,9 +3,11 @@ import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/p
 import { join } from 'node:path'
 import {
   checkPassphrase,
+  decryptBytes,
   DecryptError,
   decryptJson,
   deriveKek,
+  encryptBytes,
   encryptJson,
   generateDek,
   newKdfParams,
@@ -15,7 +17,7 @@ import {
 } from '../../src/vault/crypto.ts'
 import type { VaultFile, VaultManifest } from '../../src/vault/types.ts'
 import { photoDate, processPhoto } from './photo.ts'
-import { buildVault, referencedBlobs, type SourceItem } from './vaultBuild.ts'
+import { buildVault, newBlobName, referencedBlobs, type SourceItem } from './vaultBuild.ts'
 import {
   checkConfigRefs,
   isPhotoFile,
@@ -195,13 +197,53 @@ export interface RunRekeyOptions {
   iterations?: number
 }
 
+function renameBlobs(manifest: VaultManifest, names: Map<string, string>): VaultManifest {
+  const rename = (name: string) => names.get(name)!
+  return {
+    photos: manifest.photos.map((p) => ({ ...p, thumb: rename(p.thumb), full: rename(p.full) })),
+    notes: manifest.notes.map((n) => ({ ...n, blob: rename(n.blob) })),
+    lists: manifest.lists.map((l) => ({ ...l, blob: rename(l.blob) })),
+  }
+}
+
+// Order matters for crash safety: new blobs, then vault.json, then the old blobs.
 export async function runRekey(options: RunRekeyOptions): Promise<void> {
-  const existing = await readVaultFile(options.outDir)
+  const { outDir } = options
+  const existing = await readVaultFile(outDir)
   if (!existing) throw new VaultError('还没有保险库，先运行 npm run vault')
   const weak = checkPassphrase(options.newPassphrase)
   if (weak) throw new VaultError(weak)
-  const { dek } = await openVault(existing, options.oldPassphrase)
-  const kdf = newKdfParams(options.iterations)
-  const wrappedKey = await wrapDek(dek, await deriveKek(options.newPassphrase, kdf))
-  await writeVaultFile(options.outDir, { ...existing, kdf, wrappedKey })
+  const { dek: oldDek, manifest } = await openVault(existing, options.oldPassphrase)
+
+  const dek = await generateDek()
+  const blobDir = join(outDir, BLOB_DIR)
+  const names = new Map<string, string>()
+  try {
+    for (const oldName of referencedBlobs(manifest)) {
+      const oldPath = join(blobDir, `${oldName}.bin`)
+      if (!existsSync(oldPath)) throw new VaultError(`缺少 blobs/${oldName}.bin，无法更换口令`)
+      let plain: Uint8Array
+      try {
+        plain = await decryptBytes(oldDek, await readFile(oldPath))
+      } catch (error) {
+        if (error instanceof DecryptError) throw new VaultError(`blobs/${oldName}.bin 已损坏，无法更换口令`)
+        throw error
+      }
+      const newName = newBlobName()
+      names.set(oldName, newName)
+      await writeFile(join(blobDir, `${newName}.bin`), await encryptBytes(dek, plain))
+    }
+
+    const kdf = newKdfParams(options.iterations)
+    await writeVaultFile(outDir, {
+      version: 1,
+      kdf,
+      wrappedKey: await wrapDek(dek, await deriveKek(options.newPassphrase, kdf)),
+      manifest: await encryptJson(dek, renameBlobs(manifest, names)),
+    })
+  } catch (error) {
+    for (const newName of names.values()) await rm(join(blobDir, `${newName}.bin`), { force: true })
+    throw error
+  }
+  for (const oldName of names.keys()) await rm(join(blobDir, `${oldName}.bin`), { force: true })
 }
