@@ -30,13 +30,15 @@ export function Studio({ pose, deterministic }: StudioProps) {
 
   return (
     <>
-      <spotLight ref={key} position={[3, 7, 4]} angle={0.55} penumbra={1} intensity={80} decay={2} color={pose.light} />
+      <spotLight ref={key} position={[3, 7, 4]} angle={0.55} penumbra={1} intensity={150} decay={2} color={pose.light} />
       <Environment frames={deterministic ? 1 : Infinity} resolution={128}>
-        <Lightformer form="rect" intensity={1.2} color="#ffffff" position={[0, 6, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[8, 1.2, 1]} />
-        <Lightformer form="rect" intensity={0.8} color="#ffffff" position={[0, 6, -3]} rotation={[Math.PI / 2, 0, 0]} scale={[8, 0.6, 1]} />
-        <Lightformer form="rect" intensity={0.8} color="#ffffff" position={[0, 6, 3]} rotation={[Math.PI / 2, 0, 0]} scale={[8, 0.6, 1]} />
-        <Lightformer form="rect" intensity={0.6} color="#ffffff" position={[-8, 2, 0]} rotation={[0, Math.PI / 2, 0]} scale={[10, 2, 1]} />
-        <Lightformer form="rect" intensity={0.6} color="#ffffff" position={[8, 2, 0]} rotation={[0, -Math.PI / 2, 0]} scale={[10, 2, 1]} />
+        <Lightformer form="rect" intensity={3} color="#ffffff" position={[0, 6, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[8, 1.2, 1]} />
+        <Lightformer form="rect" intensity={2} color="#ffffff" position={[0, 6, -3]} rotation={[Math.PI / 2, 0, 0]} scale={[8, 0.6, 1]} />
+        <Lightformer form="rect" intensity={2} color="#ffffff" position={[0, 6, 3]} rotation={[Math.PI / 2, 0, 0]} scale={[8, 0.6, 1]} />
+        <Lightformer form="rect" intensity={1.5} color="#ffffff" position={[-8, 2.5, 0]} rotation={[0, Math.PI / 2, 0]} scale={[10, 3, 1]} />
+        <Lightformer form="rect" intensity={1.5} color="#ffffff" position={[8, 2.5, 0]} rotation={[0, -Math.PI / 2, 0]} scale={[10, 3, 1]} />
+        <Lightformer form="rect" intensity={1.5} color="#ffffff" position={[0, 2.5, -8]} rotation={[0, 0, 0]} scale={[10, 3, 1]} />
+        <Lightformer form="rect" intensity={1.5} color="#ffffff" position={[0, 2.5, 8]} rotation={[0, Math.PI, 0]} scale={[10, 3, 1]} />
         <Lightformer ref={sweep} form="rect" intensity={4} color="#C1272D" position={[0, 4, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[0.8, 14, 1]} />
       </Environment>
     </>

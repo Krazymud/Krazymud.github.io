@@ -36,7 +36,7 @@ export function Stage({ scene, onReady, onFail, deterministic = false }: StagePr
       }}
     >
       <color attach="background" args={['#050506']} />
-      <fog attach="fog" args={['#050506', 25, 70]} />
+      <fog attach="fog" args={['#050506', 12, 32]} />
       <Studio pose={pose} deterministic={deterministic} />
       <Floor pose={pose} deterministic={deterministic} />
       <CameraRig pose={pose} deterministic={deterministic} />
