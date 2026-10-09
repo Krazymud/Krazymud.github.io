@@ -59,13 +59,13 @@ lists:
 
 ```ts
 interface VaultManifest {
-  photos: { title: string; caption: string; date: string; width: number; height: number; thumb: string; full: string; source: string; hash: string }[]
+  photos: { caption: string; date: string; width: number; height: number; thumb: string; full: string; source: string; hash: string }[]
   notes: { title: string; date: string; blob: string; source: string; hash: string }[]
   lists: { title: string; blob: string; source: string; hash: string }[]
 }
 ```
 
-`source` 是源文件相对路径，`hash` 是源文件内容（笔记和清单含 front matter）加上 `manifest.yaml` 中该项配置的 SHA-256，仅用于增量更新；两者都在加密的清单里，不对外暴露。笔记的 blob 内容是笔记正文 Markdown；清单的 blob 内容是 `{ items: { text: string; done: boolean }[] }`。
+`source` 是源文件相对路径，`hash` 是源文件内容（笔记和清单含 front matter）的 SHA-256，仅用于判断能否沿用旧密文；照片的说明和日期每次都按当前 `manifest.yaml` 和 EXIF 重新生成，改说明不会触发重新加密照片；两者都在加密的清单里，不对外暴露。笔记的 blob 内容是笔记正文 Markdown；清单的 blob 内容是 `{ items: { text: string; done: boolean }[] }`。
 
 ## 4. 加密
 
