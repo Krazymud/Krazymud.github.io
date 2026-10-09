@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { site } from '../config/site'
 import { ProgressProvider } from '../progress/ProgressProvider'
 import { routes } from './routes'
 
@@ -18,7 +19,7 @@ describe('app shell', () => {
 
   it('greets her in the garage with today\'s trial status', () => {
     renderAt('/')
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('HELLO, YOU')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(`HELLO, ${site.nickname}`)
     expect(screen.getByText('0 / 20')).toBeInTheDocument()
     expect(screen.getByText('到期复习 0 个')).toBeInTheDocument()
   })
@@ -31,6 +32,6 @@ describe('app shell', () => {
 
   it('redirects unknown paths to the garage', async () => {
     renderAt('/2018/09/05/leetcode05/')
-    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('HELLO, YOU')
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(`HELLO, ${site.nickname}`)
   })
 })
