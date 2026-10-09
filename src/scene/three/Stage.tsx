@@ -1,5 +1,5 @@
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Suspense, useRef, useState } from 'react'
+import { Suspense, useLayoutEffect, useRef, useState } from 'react'
 import { dprFor, type Quality } from '../frameGuard'
 import { usePageVisible } from '../hooks'
 import { CAMERA_FOV, POSES } from '../poses'
@@ -25,6 +25,20 @@ export function Stage({ scene, onReady, onFail, deterministic = false }: StagePr
   const pose = POSES[scene]
   const visible = usePageVisible()
   const [quality, setQuality] = useState<Quality>(0)
+  const mounted = useRef(false)
+  const latestOnFail = useRef(onFail)
+
+  useLayoutEffect(() => {
+    latestOnFail.current = onFail
+  })
+
+  // R3F forces a context loss while disposing the renderer, after this component is gone.
+  useLayoutEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
 
   return (
     <Canvas
@@ -35,7 +49,7 @@ export function Stage({ scene, onReady, onFail, deterministic = false }: StagePr
       onCreated={({ gl }) => {
         gl.domElement.addEventListener('webglcontextlost', (event) => {
           event.preventDefault()
-          onFail('webgl-context-lost')
+          if (mounted.current) latestOnFail.current('webgl-context-lost')
         })
       }}
     >

@@ -92,6 +92,20 @@ describe('SceneHost', () => {
     expect(still()).toBeInTheDocument()
   })
 
+  it('brings the 3D stage back when 3D is switched on again', async () => {
+    render(<SceneHost scene="garage" loadStage={async () => fakeStage('ready')} webgl2={yes} />)
+    await screen.findByTestId('fake-stage')
+    await waitFor(() => expect(still()).toBeNull(), { timeout: 2000 })
+    act(() => setPrefs({ scene3d: false }))
+    expect(screen.queryByTestId('fake-stage')).toBeNull()
+    expect(still()).toBeInTheDocument()
+    act(() => setPrefs({ scene3d: true }))
+    expect(await screen.findByTestId('fake-stage')).toBeInTheDocument()
+    expect(still()).toBeInTheDocument()
+    await waitFor(() => expect(still()).toBeNull(), { timeout: 2000 })
+    expect(sceneFailed()).toBe(false)
+  })
+
   it('dims the scene for each page', () => {
     const { rerender } = render(<SceneHost scene="track" webgl2={() => false} />)
     expect(screen.getByTestId('scene-dim').style.opacity).toBe('0.45')
