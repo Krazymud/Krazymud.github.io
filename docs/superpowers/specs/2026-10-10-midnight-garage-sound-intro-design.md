@@ -1,6 +1,6 @@
 # Midnight Garage 开场与音效 设计（计划 3B）
 
-状态：待确认
+状态：已确认
 
 上级文档：`docs/superpowers/specs/2026-10-09-midnight-garage-design.md` 第 5.3、6.2 节；`docs/superpowers/specs/2026-10-10-midnight-garage-scene-design.md`（3D 场景，本文不改其行为，只加一个加载进度回调和一个点火事件）。
 
@@ -111,9 +111,9 @@
 
 1. 调用 `unlockAudio()` 并 `play('ignition')`。
 2. 发出 `ignition` 事件（`src/scene/events.ts` 新增 `emitIgnition` / `onIgnition`，与 `emitNitro` 同风格）。
-3. 3D 车辆监听该事件：开场组件决定显示时，先调用 `events.ts` 新增的 `setIgnitionPending(true)`（模块级标记，`isIgnitionPending()` 读取；`emitIgnition()` 会把它清回 `false`）；车辆挂载时若标记为真，车灯（发光材质）保持熄灭；收到事件后在约 0.8 秒内闪两下再常亮。没有开场的访问，车灯一开始就是常亮（与现在一致）。
+3. 3D 车辆监听该事件：开场组件决定显示时，先调用 `events.ts` 新增的 `setIgnitionPending(true)`（模块级标记，`isIgnitionPending()` 读取；`emitIgnition()` 会把它清回 `false`）；3D 场景挂载时若标记为真，「灯光亮度」保持为 0：车上的发光材质（尾灯）熄灭，摄影棚主光和环境光也为 0（车库一片漆黑）；收到事件后亮度在约 0.8 秒内闪两下再常亮为 1。因为这台车只有尾灯是发光材质，从车库镜头看不到尾灯，所以摄影棚灯光必须一起亮起，点火的「灯亮了」才看得见。没有开场的访问，亮度一开始就是 1（与现在一致）。
 4. 覆盖层在约 0.6 秒内淡出后卸载；设置 `introSeen = true`。
-5. 「减少动态效果」时不闪烁，车灯直接亮，覆盖层直接消失。
+5. 「减少动态效果」时 3D 场景本来就不加载（显示静帧），覆盖层直接消失，不做淡出。
 
 ### 7.5 失败
 
