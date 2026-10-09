@@ -1,12 +1,15 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { play } from '../audio/sound'
 import { ProgressProvider } from '../progress/ProgressProvider'
 import { STORAGE_KEY } from '../progress/store'
 import { onNitro } from '../scene/events'
 import { TrialScreen } from './TrialScreen'
 import type { Word } from './types'
 import type { WordSource } from './wordsRepo'
+
+vi.mock('../audio/sound', () => ({ play: vi.fn(async () => undefined) }))
 
 const WORDS: Word[] = [
   { w: 'alpha', p: 'ˈælfə', pos: 'n.', m: 'n. 阿尔法' },
@@ -44,6 +47,7 @@ function saved() {
 describe('TrialScreen', () => {
   beforeEach(() => {
     localStorage.clear()
+    vi.mocked(play).mockClear()
     vi.useFakeTimers({ shouldAdvanceTime: true })
   })
   afterEach(() => vi.useRealTimers())
@@ -113,6 +117,36 @@ describe('TrialScreen', () => {
       fireEvent.click(good)
     }
     off()
+  })
+
+  it('revs on the nitro combo and again when the lap is finished', async () => {
+    renderTrial()
+    for (const [index, word] of WORDS.entries()) {
+      await screen.findByRole('heading', { name: word.w })
+      fireEvent.click(options().find((b) => b.textContent?.includes(word.m.slice(3)))!)
+      const good = await screen.findByRole('button', { name: '会了' })
+      expect(vi.mocked(play)).toHaveBeenCalledTimes(index === 4 ? 1 : 0)
+      fireEvent.click(good)
+    }
+    await screen.findByText('圈速')
+    expect(vi.mocked(play).mock.calls.map(([name]) => name)).toEqual(['rev', 'rev'])
+  })
+
+  it('stays quiet when an already finished lap is opened again', async () => {
+    renderTrial()
+    for (const word of WORDS) {
+      await screen.findByRole('heading', { name: word.w })
+      fireEvent.click(options().find((b) => !b.textContent?.includes(word.m.slice(3)))!)
+      act(() => {
+        vi.advanceTimersByTime(1500)
+      })
+    }
+    await screen.findByText('圈速')
+    cleanup()
+    vi.mocked(play).mockClear()
+    renderTrial()
+    await screen.findByText('圈速')
+    expect(play).not.toHaveBeenCalled()
   })
 
   it('skips a word that is missing from the word pack without grading it', async () => {

@@ -1,5 +1,6 @@
 import { motion, useReducedMotion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
+import { play } from '../../audio/sound'
 
 export const HOLD_MS = 1000
 
@@ -31,6 +32,7 @@ export function UnlockPanel({ canRemember, onUnlock }: UnlockPanelProps) {
       setMessage('先输入口令')
       return
     }
+    void play('ignition')
     setBusy(true)
     setMessage(null)
     let ok: boolean

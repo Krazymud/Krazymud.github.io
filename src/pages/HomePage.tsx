@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { play } from '../audio/sound'
 import { site } from '../config/site'
 import { useProgress } from '../progress/ProgressProvider'
 import { daysBetween, studyDay } from '../trial/day'
@@ -28,7 +29,13 @@ export function HomePage() {
         )}
       </div>
       <div className="space-y-3">
-        <Link to="/trial" className="flex items-center justify-between border border-accent-hi bg-accent/20 px-5 py-4">
+        <Link
+          to="/trial"
+          onClick={() => {
+            if (!finished) void play('blip')
+          }}
+          className="flex items-center justify-between border border-accent-hi bg-accent/20 px-5 py-4"
+        >
           <span>
             <span className="block text-xs text-muted">今日试炼</span>
             <span className="font-display text-2xl font-bold">

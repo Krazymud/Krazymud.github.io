@@ -2,12 +2,15 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { IDBFactory } from 'fake-indexeddb'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { play } from '../audio/sound'
 import { HOLD_MS } from './components/UnlockPanel'
 import { toBase64 } from './crypto'
 import { createKeyStore, type KeyStore } from './keyStore'
 import type { FetchBytes } from './repo'
 import { makeTestVault, TEST_PASSPHRASE } from './testVault'
 import { VaultScreen } from './VaultScreen'
+
+vi.mock('../audio/sound', () => ({ play: vi.fn(async () => undefined) }))
 
 function renderVault(fetchBytes: FetchBytes, keyStore: KeyStore | null, path = '/vault') {
   const router = createMemoryRouter([{ path: '/vault', element: <VaultScreen fetchBytes={fetchBytes} keyStore={keyStore} /> }], {
@@ -44,6 +47,24 @@ describe('VaultScreen', () => {
     offline = false
     fireEvent.click(screen.getByRole('button', { name: '重试' }))
     expect(await screen.findByLabelText('口令')).toBeInTheDocument()
+  })
+
+  it('starts the engine on submit and plays the unlock sound when it opens', async () => {
+    vi.mocked(play).mockClear()
+    const vault = await makeTestVault()
+    renderVault(vault.fetchBytes, null)
+    await enter(TEST_PASSPHRASE)
+    await screen.findByRole('tab', { name: '照片' })
+    expect(vi.mocked(play).mock.calls.map(([name]) => name)).toEqual(['ignition', 'unlock'])
+  })
+
+  it('does not play the unlock sound for a wrong passphrase', async () => {
+    vi.mocked(play).mockClear()
+    const vault = await makeTestVault()
+    renderVault(vault.fetchBytes, null)
+    await enter('iceland aurora penguin goodbye')
+    await screen.findByRole('alert')
+    expect(vi.mocked(play).mock.calls.map(([name]) => name)).toEqual(['ignition'])
   })
 
   it('says 口令不对 for a wrong passphrase', async () => {

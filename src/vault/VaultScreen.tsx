@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { play } from '../audio/sound'
 import { DecryptError } from './crypto'
 import { defaultKeyStore, type KeyStore } from './keyStore'
 import { fetchVaultBytes, loadVaultFile, unlockWithKey, unlockWithPassphrase, type FetchBytes, type VaultSession } from './repo'
@@ -66,6 +67,7 @@ export function VaultScreen({ fetchBytes = fetchVaultBytes, keyStore }: VaultScr
         throw error
       }
       if (remember && store) await store.save(session.dek).catch(() => undefined)
+      void play('unlock')
       setState({ status: 'open', file, session })
       return true
     },
