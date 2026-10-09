@@ -1,11 +1,41 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
-import { useEffect } from 'react'
+import { Children, isValidElement, useEffect, type ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetPrefsCache, setPrefs } from '../prefs/prefs'
 import { getLoading, resetLoading } from './loading'
 import { resetSceneFailure, sceneFailed } from './mode'
 import { SceneHost } from './SceneHost'
 import type { StageModule, StageProps } from './types'
+
+const renderer = vi.hoisted(() => ({ disposed: 0 }))
+
+// Like R3F, the fake canvas forces a context loss while disposing, after the stage has unmounted.
+vi.mock('@react-three/fiber', () => ({
+  Canvas: ({ onCreated, children }: { onCreated: (state: { gl: { domElement: HTMLCanvasElement } }) => void; children?: ReactNode }) => {
+    useEffect(() => {
+      const canvas = document.createElement('canvas')
+      onCreated({ gl: { domElement: canvas } })
+      return () => {
+        setTimeout(() => {
+          canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true }))
+          renderer.disposed++
+        })
+      }
+    }, [])
+    const components = Children.toArray(children).filter((child) => isValidElement(child) && typeof child.type !== 'string')
+    return <div data-testid="fake-stage">{components}</div>
+  },
+  useFrame: (callback: () => void) => {
+    useEffect(() => callback(), [])
+  },
+}))
+vi.mock('@react-three/drei', () => ({ useProgress: (select: (state: { progress: number }) => number) => select({ progress: 0 }) }))
+vi.mock('./three/CameraRig', () => ({ CameraRig: () => null }))
+vi.mock('./three/Car', () => ({ Car: () => null }))
+vi.mock('./three/Floor', () => ({ Floor: () => null }))
+vi.mock('./three/FrameGuard', () => ({ FrameGuard: () => null }))
+vi.mock('./three/PostFx', () => ({ PostFx: () => null }))
+vi.mock('./three/Studio', () => ({ Studio: () => null }))
 
 function fakeStage(behaviour: 'ready' | 'fail' | 'wait'): StageModule {
   function Stage({ scene, onReady, onFail }: StageProps) {
@@ -28,6 +58,7 @@ describe('SceneHost', () => {
     resetPrefsCache()
     resetSceneFailure()
     resetLoading()
+    renderer.disposed = 0
   })
   afterEach(() => vi.unstubAllGlobals())
 
@@ -95,12 +126,13 @@ describe('SceneHost', () => {
   })
 
   it('brings the 3D stage back when 3D is switched on again', async () => {
-    render(<SceneHost scene="garage" loadStage={async () => fakeStage('ready')} webgl2={yes} />)
+    render(<SceneHost scene="garage" loadStage={() => import('./three/Stage')} webgl2={yes} />)
     await screen.findByTestId('fake-stage')
     await waitFor(() => expect(still()).toBeNull(), { timeout: 2000 })
     act(() => setPrefs({ scene3d: false }))
     expect(screen.queryByTestId('fake-stage')).toBeNull()
     expect(still()).toBeInTheDocument()
+    await waitFor(() => expect(renderer.disposed).toBe(1))
     act(() => setPrefs({ scene3d: true }))
     expect(await screen.findByTestId('fake-stage')).toBeInTheDocument()
     expect(still()).toBeInTheDocument()

@@ -41,11 +41,13 @@ export function useCarDrag(turntable: RefObject<Turntable>, enabled: boolean): v
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
     window.addEventListener('pointercancel', up)
+    window.addEventListener('lostpointercapture', up)
     return () => {
       window.removeEventListener('pointerdown', down)
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
       window.removeEventListener('pointercancel', up)
+      window.removeEventListener('lostpointercapture', up)
       finish(performance.now())
     }
   }, [enabled, turntable])

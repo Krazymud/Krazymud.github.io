@@ -34,7 +34,7 @@ export function Stage({ scene, onReady, onFail, onProgress, deterministic = fals
   const pose = POSES[scene]
   const visible = usePageVisible()
   const [quality, setQuality] = useState<Quality>(0)
-  const mounted = useRef(false)
+  const detachContextLoss = useRef<(() => void) | null>(null)
   const latestOnFail = useRef(onFail)
 
   useLayoutEffect(() => {
@@ -42,12 +42,7 @@ export function Stage({ scene, onReady, onFail, onProgress, deterministic = fals
   })
 
   // R3F forces a context loss while disposing the renderer, after this component is gone.
-  useLayoutEffect(() => {
-    mounted.current = true
-    return () => {
-      mounted.current = false
-    }
-  }, [])
+  useLayoutEffect(() => () => detachContextLoss.current?.(), [])
 
   return (
     <Canvas
@@ -56,10 +51,13 @@ export function Stage({ scene, onReady, onFail, onProgress, deterministic = fals
       camera={{ fov: CAMERA_FOV, near: 0.1, far: 150, position: pose.camera }}
       gl={{ antialias: false, powerPreference: 'high-performance', preserveDrawingBuffer: deterministic }}
       onCreated={({ gl }) => {
-        gl.domElement.addEventListener('webglcontextlost', (event) => {
+        const canvas = gl.domElement
+        const lost = (event: Event) => {
           event.preventDefault()
-          if (mounted.current) latestOnFail.current('webgl-context-lost')
-        })
+          latestOnFail.current('webgl-context-lost')
+        }
+        canvas.addEventListener('webglcontextlost', lost)
+        detachContextLoss.current = () => canvas.removeEventListener('webglcontextlost', lost)
       }}
     >
       <color attach="background" args={['#050506']} />

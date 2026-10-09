@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   dragBy,
+  FLICK_WINDOW,
   FRICTION,
   grab,
   initialTurntable,
+  MIN_DRAG_DT,
   nearestEquivalent,
   RAD_PER_PX,
   release,
@@ -48,6 +50,36 @@ describe('turntable', () => {
     expect(Math.abs(later.velocity)).toBeLessThan(flicked.velocity * 0.05)
   })
 
+  it('coasts the other way after a flick to the left', () => {
+    const flicked = release(dragBy(grab(initialTurntable()), -100, 0.1), 0.02)
+    expect(flicked.velocity).toBeLessThan(0)
+    expect(run(flicked, 0.5, STILL).angle).toBeLessThan(flicked.angle)
+  })
+
+  it('comes to a full stop once the coasting dies down', () => {
+    const flicked = release(dragBy(grab(initialTurntable()), 100, 0.1), 0.02)
+    const stopped = run(flicked, 10, STILL)
+    expect(stopped.velocity).toBe(0)
+    expect(stepTurntable(stopped, 0.01, STILL).angle).toBe(stopped.angle)
+  })
+
+  it('ignores drag steps when the car is not held', () => {
+    const t = initialTurntable(1)
+    expect(dragBy(t, 100, 0.1)).toBe(t)
+  })
+
+  it('does not spike the speed when two moves arrive almost together', () => {
+    const t = dragBy(grab(initialTurntable()), 10, 0.0001)
+    expect(t.angle).toBeCloseTo(10 * RAD_PER_PX)
+    expect(t.velocity).toBeLessThanOrEqual((10 * RAD_PER_PX) / MIN_DRAG_DT)
+  })
+
+  it('keeps the flick when released right at the end of the flick window', () => {
+    const dragged = dragBy(grab(initialTurntable()), 100, 0.1)
+    expect(release(dragged, FLICK_WINDOW).velocity).toBe(dragged.velocity)
+    expect(release(dragged, FLICK_WINDOW + 0.001).velocity).toBe(0)
+  })
+
   it('does not coast when the finger rested before letting go', () => {
     const rested = release(dragBy(grab(initialTurntable()), 100, 0.1), 0.5)
     expect(rested.velocity).toBe(0)
@@ -62,6 +94,13 @@ describe('turntable', () => {
 
   it('turns back to the requested angle the short way', () => {
     const t = initialTurntable(2 * Math.PI + 0.3)
+    expect(run(t, 3, { spin: false, holdYaw: 0 }).angle).toBeCloseTo(2 * Math.PI, 3)
+  })
+
+  it('turns back the short way from the other side too', () => {
+    const t = initialTurntable(2 * Math.PI - 0.3)
+    const turning = run(t, 0.1, { spin: false, holdYaw: 0 })
+    expect(turning.angle).toBeGreaterThan(t.angle)
     expect(run(t, 3, { spin: false, holdYaw: 0 }).angle).toBeCloseTo(2 * Math.PI, 3)
   })
 

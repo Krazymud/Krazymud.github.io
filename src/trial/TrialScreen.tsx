@@ -141,7 +141,7 @@ export function TrialScreen({ source, now = () => new Date() }: TrialScreenProps
   return (
     <section className="flex flex-col items-center">
       {correct && <TrackStreak key={`streak-${cursor}`} />}
-      {correct && NITRO_COMBOS.includes(nextCombo) && <NitroFlash key={`nitro-${cursor}`} />}
+      {nitro && <NitroFlash key={`nitro-${cursor}`} />}
       <Gauge value={cursor} total={session.items.length} combo={correct ? nextCombo : session.combo} boost={correct} />
       <div className="mt-6 w-full">
         <QuestionCard question={question} picked={picked} onPick={setPicked} />

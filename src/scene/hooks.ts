@@ -5,6 +5,10 @@ const REDUCED_QUERY = '(prefers-reduced-motion: reduce)'
 function subscribeReducedMotion(callback: () => void): () => void {
   if (typeof window.matchMedia !== 'function') return () => {}
   const query = window.matchMedia(REDUCED_QUERY)
+  if (typeof query.addEventListener !== 'function') {
+    query.addListener(callback)
+    return () => query.removeListener(callback)
+  }
   query.addEventListener('change', callback)
   return () => query.removeEventListener('change', callback)
 }

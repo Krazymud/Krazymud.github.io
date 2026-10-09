@@ -108,15 +108,53 @@ describe('TrialScreen', () => {
   it('fires the nitro event on the fifth correct answer in a row', async () => {
     const nitro = vi.fn()
     const off = onNitro(nitro)
-    renderTrial()
-    for (const [index, word] of WORDS.entries()) {
-      await screen.findByRole('heading', { name: word.w })
-      fireEvent.click(options().find((b) => b.textContent?.includes(word.m.slice(3)))!)
-      const good = await screen.findByRole('button', { name: '会了' })
-      expect(nitro).toHaveBeenCalledTimes(index === 4 ? 1 : 0)
-      fireEvent.click(good)
+    try {
+      renderTrial()
+      for (const [index, word] of WORDS.entries()) {
+        await screen.findByRole('heading', { name: word.w })
+        fireEvent.click(options().find((b) => b.textContent?.includes(word.m.slice(3)))!)
+        const good = await screen.findByRole('button', { name: '会了' })
+        expect(nitro).toHaveBeenCalledTimes(index === 4 ? 1 : 0)
+        fireEvent.click(good)
+      }
+    } finally {
+      off()
     }
-    off()
+  })
+
+  it('fires the nitro event again on the tenth correct answer in a row', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        schemaVersion: 1,
+        words: {},
+        history: [],
+        session: {
+          day: '2026-10-09',
+          items: [
+            { word: 'alpha', kind: 'new' },
+            { word: 'bravo', kind: 'new' },
+          ],
+          cursor: 0,
+          correct: 9,
+          combo: 9,
+          bestCombo: 9,
+          startedAt: 1000,
+        },
+      }),
+    )
+    const nitro = vi.fn()
+    const off = onNitro(nitro)
+    try {
+      renderTrial()
+      await screen.findByRole('heading', { name: 'alpha' })
+      fireEvent.click(options().find((b) => b.textContent?.includes('阿尔法'))!)
+      await screen.findByRole('button', { name: '会了' })
+      expect(nitro).toHaveBeenCalledTimes(1)
+      expect(vi.mocked(play)).toHaveBeenCalledWith('rev')
+    } finally {
+      off()
+    }
   })
 
   it('revs on the nitro combo and again when the lap is finished', async () => {
