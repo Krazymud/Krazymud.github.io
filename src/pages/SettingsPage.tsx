@@ -141,6 +141,21 @@ export function SettingsPage() {
           </a>
           （MIT 协议）。
         </p>
+        <p>
+          音效来自 Freesound（CC0）：EwanPenman11「
+          <a href="https://freesound.org/people/EwanPenman11/sounds/659560/" target="_blank" rel="noreferrer" className="underline">
+            Ferrari start up and drive off
+          </a>
+          」、richwise「
+          <a href="https://freesound.org/people/richwise/sounds/478756/" target="_blank" rel="noreferrer" className="underline">
+            Supercar rev
+          </a>
+          」、hz37「
+          <a href="https://freesound.org/people/hz37/sounds/396448/" target="_blank" rel="noreferrer" className="underline">
+            Car Lock
+          </a>
+          」。
+        </p>
         <p>英文字体 Rajdhani，采用 SIL Open Font License 1.1。</p>
       </section>
     </section>
