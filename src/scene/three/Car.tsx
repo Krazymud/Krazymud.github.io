@@ -5,6 +5,7 @@ import { Box3, Group, Mesh, Texture, Vector3, type Object3D } from 'three'
 import { damp, WHEEL_SPEED } from '../motion'
 import type { Pose } from '../poses'
 import { initialTurntable, stepTurntable } from '../turntable'
+import { useCarDrag } from './useCarDrag'
 
 export const CAR_URL = `${import.meta.env.BASE_URL}models/car.glb`
 
@@ -63,6 +64,7 @@ export function Car({ pose, deterministic }: CarProps) {
   const group = useRef<Group>(null)
   const turntable = useRef(initialTurntable(pose.carYaw ?? 0))
   const wheelSpeed = useRef(0)
+  useCarDrag(turntable, pose.spin && !deterministic)
 
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.1)
