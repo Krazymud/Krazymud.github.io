@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { DecryptError } from './crypto'
+import { DecryptError, toBase64 } from './crypto'
 import { fetchVaultBytes, loadVaultFile, readBlob, unlockWithKey, unlockWithPassphrase } from './repo'
 import { makeTestVault, TEST_PASSPHRASE } from './testVault'
 
@@ -40,6 +40,14 @@ describe('vault repo', () => {
   it('rejects a wrong passphrase', async () => {
     const vault = await makeTestVault()
     await expect(unlockWithPassphrase(vault.file, 'iceland aurora penguin goodbye')).rejects.toBeInstanceOf(DecryptError)
+  })
+
+  it('does not blame the passphrase when the manifest is damaged', async () => {
+    const vault = await makeTestVault()
+    const file = { ...vault.file, manifest: toBase64(new Uint8Array(40)) }
+    const error = await unlockWithPassphrase(file, TEST_PASSPHRASE).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(Error)
+    expect(error).not.toBeInstanceOf(DecryptError)
   })
 
   it('unlocks with a remembered key', async () => {

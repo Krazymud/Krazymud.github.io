@@ -5,3 +5,4 @@ scripts/.cache/
 .worktrees/
 *.local
 vault-src/
+public/vault/vault.json.tmp

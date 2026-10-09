@@ -100,25 +100,43 @@ export function vaultExists(outDir: string): boolean {
   return existsSync(join(outDir, VAULT_FILE))
 }
 
+const DAMAGED = 'vault.json 已损坏，请从 git 里恢复上一个版本'
+
 async function readVaultFile(outDir: string): Promise<VaultFile | null> {
   if (!vaultExists(outDir)) return null
-  return JSON.parse(await readFile(join(outDir, VAULT_FILE), 'utf8')) as VaultFile
+  const text = await readFile(join(outDir, VAULT_FILE), 'utf8')
+  try {
+    return JSON.parse(text) as VaultFile
+  } catch {
+    throw new VaultError(DAMAGED)
+  }
 }
 
-async function writeVaultFile(outDir: string, file: VaultFile): Promise<void> {
+export async function writeVaultFile(outDir: string, file: VaultFile): Promise<void> {
   const target = join(outDir, VAULT_FILE)
-  await writeFile(`${target}.tmp`, `${JSON.stringify(file, null, 2)}\n`)
-  await rename(`${target}.tmp`, target)
+  const tmp = `${target}.tmp`
+  await writeFile(tmp, `${JSON.stringify(file, null, 2)}\n`)
+  try {
+    await rename(tmp, target)
+  } catch (error) {
+    await rm(tmp, { force: true }).catch(() => undefined)
+    throw error
+  }
 }
 
 async function openVault(file: VaultFile, passphrase: string): Promise<{ dek: VaultKey; manifest: VaultManifest }> {
   const kek = await deriveKek(passphrase, file.kdf)
+  let dek: VaultKey
   try {
-    const dek = await unwrapDek(file.wrappedKey, kek, true)
-    return { dek, manifest: await decryptJson<VaultManifest>(dek, file.manifest) }
+    dek = await unwrapDek(file.wrappedKey, kek, true)
   } catch (error) {
     if (error instanceof DecryptError) throw new WrongPassphraseError()
     throw error
+  }
+  try {
+    return { dek, manifest: await decryptJson<VaultManifest>(dek, file.manifest) }
+  } catch {
+    throw new VaultError(DAMAGED)
   }
 }
 

@@ -28,9 +28,15 @@ export async function unlockWithKey(file: VaultFile, dek: VaultKey): Promise<Vau
   return { dek, manifest: await decryptJson<VaultManifest>(dek, file.manifest) }
 }
 
+// Only a failed unwrap means a wrong passphrase; a DecryptError after that is a damaged manifest.
 export async function unlockWithPassphrase(file: VaultFile, passphrase: string): Promise<VaultSession> {
   const kek = await deriveKek(passphrase, file.kdf)
-  return unlockWithKey(file, await unwrapDek(file.wrappedKey, kek, false))
+  const dek = await unwrapDek(file.wrappedKey, kek, false)
+  try {
+    return await unlockWithKey(file, dek)
+  } catch {
+    throw new Error('vault manifest is damaged')
+  }
 }
 
 export async function readBlob(fetchBytes: FetchBytes, dek: VaultKey, name: string): Promise<Uint8Array<ArrayBuffer>> {

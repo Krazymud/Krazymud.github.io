@@ -4,9 +4,19 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import sharp from 'sharp'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { decryptBytes, DecryptError, decryptJson, deriveKek, unwrapDek, type VaultKey } from '../../src/vault/crypto.ts'
+import {
+  decryptBytes,
+  DecryptError,
+  decryptJson,
+  deriveKek,
+  newKdfParams,
+  toBase64,
+  unwrapDek,
+  type VaultKey,
+} from '../../src/vault/crypto.ts'
 import type { VaultFile, VaultManifest } from '../../src/vault/types.ts'
-import { runRekey, runVault, WrongPassphraseError } from './vaultCommand.ts'
+import { runRekey, runVault, writeVaultFile, WrongPassphraseError } from './vaultCommand.ts'
+import { VaultError } from './vaultSource.ts'
 
 const PASS = 'iceland aurora penguin goodnight'
 let root = ''
@@ -86,6 +96,31 @@ describe('runVault', () => {
     expect(await vaultText()).toBe(before)
   })
 
+  it('reports a damaged manifest instead of a wrong passphrase', async () => {
+    await run()
+    const file = JSON.parse(await vaultText()) as VaultFile
+    await writeFile(join(out, 'vault.json'), JSON.stringify({ ...file, manifest: toBase64(new Uint8Array(40)) }))
+    const error = await run().catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(VaultError)
+    expect(error).not.toBeInstanceOf(WrongPassphraseError)
+    expect((error as Error).message).toContain('vault.json 已损坏')
+  })
+
+  it('reports a vault.json that is not valid JSON', async () => {
+    await run()
+    await writeFile(join(out, 'vault.json'), '{ broken')
+    const error = await run().catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(VaultError)
+    expect((error as Error).message).toContain('vault.json 已损坏')
+  })
+
+  it('stores blobs the browser code can decrypt', async () => {
+    await run()
+    const { dek, manifest } = await openAsBrowserWithKey(PASS)
+    const sealed = await readFile(join(out, 'blobs', `${manifest.notes[0].blob}.bin`))
+    expect(new TextDecoder().decode(await decryptBytes(dek, sealed))).toBe('今天的风很温柔。')
+  })
+
   it('refuses a weak passphrase for a new vault', async () => {
     await expect(run('short')).rejects.toThrow('口令至少要 16 个字符')
     await expect(readdir(out)).rejects.toThrow()
@@ -95,6 +130,15 @@ describe('runVault', () => {
     await writeFile(join(src, 'photos', 'b.gif'), 'gif')
     await expect(run()).rejects.toThrow('不支持的图片格式：photos/b.gif')
     await expect(readFile(join(out, 'vault.json'))).rejects.toThrow()
+  })
+})
+
+describe('writeVaultFile', () => {
+  it('removes its temp file when the final rename fails', async () => {
+    await mkdir(join(out, 'vault.json', 'occupied'), { recursive: true })
+    const file: VaultFile = { version: 1, kdf: newKdfParams(1000), wrappedKey: '', manifest: '' }
+    await expect(writeVaultFile(out, file)).rejects.toThrow()
+    expect(await readdir(out)).not.toContain('vault.json.tmp')
   })
 })
 

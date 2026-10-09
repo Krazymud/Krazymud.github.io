@@ -3,6 +3,7 @@ import { IDBFactory } from 'fake-indexeddb'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { HOLD_MS } from './components/UnlockPanel'
+import { toBase64 } from './crypto'
 import { createKeyStore, type KeyStore } from './keyStore'
 import type { FetchBytes } from './repo'
 import { makeTestVault, TEST_PASSPHRASE } from './testVault'
@@ -50,6 +51,14 @@ describe('VaultScreen', () => {
     renderVault(vault.fetchBytes, null)
     await enter('iceland aurora penguin goodbye')
     expect(await screen.findByRole('alert')).toHaveTextContent('口令不对')
+  })
+
+  it('does not say 口令不对 when the manifest is damaged', async () => {
+    const vault = await makeTestVault()
+    const damaged = new TextEncoder().encode(JSON.stringify({ ...vault.file, manifest: toBase64(new Uint8Array(40)) }))
+    renderVault(async (path) => (path === 'vault.json' ? damaged : vault.fetchBytes(path)), null)
+    await enter(TEST_PASSPHRASE)
+    expect(await screen.findByRole('alert')).toHaveTextContent('出了点问题，请再试一次')
   })
 
   it('opens the photos tab with the right passphrase', async () => {

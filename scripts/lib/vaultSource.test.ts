@@ -83,6 +83,28 @@ describe('checkConfigRefs', () => {
       'manifest.yaml 提到了不存在的清单：x.md',
     )
   })
+
+  it('rejects a list named twice in lists.order', () => {
+    expect(() => checkConfigRefs({ photos: {}, listOrder: ['a.md', 'b.md', 'a.md'] }, [], ['a.md', 'b.md'])).toThrow(
+      new VaultError('manifest.yaml 的 lists.order 里重复写了清单：a.md'),
+    )
+  })
+})
+
+describe('dates', () => {
+  const note = (date: string) => parseNote('notes/a.md', `---\ntitle: hi\ndate: ${date}\n---\nhi`)
+
+  it('rejects dates that do not exist', () => {
+    expect(() => note('2024-13-45')).toThrow('notes/a.md：date 必须是 YYYY-MM-DD 格式')
+    expect(() => note('2023-02-29')).toThrow('notes/a.md：date 必须是 YYYY-MM-DD 格式')
+    expect(() => parseConfig('photos:\n  a.jpg:\n    date: 2024-02-30\n')).toThrow(
+      'manifest.yaml 里的 a.jpg：date 必须是 YYYY-MM-DD 格式',
+    )
+  })
+
+  it('accepts a leap day', () => {
+    expect(note('2024-02-29').date).toBe('2024-02-29')
+  })
 })
 
 describe('sortLists', () => {

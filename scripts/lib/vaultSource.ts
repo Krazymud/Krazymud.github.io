@@ -53,8 +53,16 @@ function requireTitle(file: string, data: Record<string, unknown>): string {
   return String(title).trim()
 }
 
+function isRealDay(value: string): boolean {
+  const [y, m, d] = value.split('-').map(Number)
+  const date = new Date(Date.UTC(y, m - 1, d))
+  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d
+}
+
 function requireDate(label: string, value: unknown): string {
-  if (typeof value !== 'string' || !DAY_RE.test(value)) throw new VaultError(`${label}：date 必须是 YYYY-MM-DD 格式`)
+  if (typeof value !== 'string' || !DAY_RE.test(value) || !isRealDay(value)) {
+    throw new VaultError(`${label}：date 必须是 YYYY-MM-DD 格式`)
+  }
   return value
 }
 
@@ -133,7 +141,10 @@ export function checkConfigRefs(config: SourceConfig, photoNames: string[], list
   for (const name of Object.keys(config.photos)) {
     if (!photoNames.includes(name)) throw new VaultError(`manifest.yaml 提到了不存在的照片：${name}`)
   }
+  const seen = new Set<string>()
   for (const name of config.listOrder) {
+    if (seen.has(name)) throw new VaultError(`manifest.yaml 的 lists.order 里重复写了清单：${name}`)
+    seen.add(name)
     if (!listNames.includes(name)) throw new VaultError(`manifest.yaml 提到了不存在的清单：${name}`)
   }
 }
