@@ -16,7 +16,9 @@
 - 界面文案一律中文；`PRIVATE VAULT`、`START` 等品牌/装饰字样为英文。
 - 保险库配色：大面积 `#A8894F`（`--accent`），关键元素 `#BF9F62`（`--accent-hi`）；`/vault` 路由已自动切换到 `data-theme="vault"`，组件里只用 `accent` / `accent-hi` 类，不写死颜色（`GoldSweep` 的渐变除外）。
 - 加密参数：PBKDF2-SHA256，600,000 次迭代，16 字节随机盐；AES-GCM 256；每个密文独立的 12 字节随机 IV，存放格式为 `IV + 密文`。
-- 口令要求：至少 16 个字符，或至少 4 个以空格分隔的词；派生密钥前先 `trim()` 再 `normalize('NFC')`。
+- 口令规范化：`normalizePassphrase` = `trim()` → `normalize('NFC')` → 内部连续空白合并成一个空格；派生密钥和强度检查都只用它。
+- 口令要求：规范化后至少 16 个字符（按码点计），没有「4 个词」的例外。
+- `vault:rekey` 轮换数据密钥：新 DEK、所有 blob 重新加密并换新随机名、新盐新 `wrappedKey`；顺序为新 blob → 原子写 `vault.json` → 删旧 blob。旧口令和记住过的设备随之失效；已推送到 git 历史的旧版本仍可用旧口令解开。
 - 口令只能在终端隐藏回显输入，不能来自命令行参数、环境变量或文件。
 - 照片：最长边 ≤ 2000 像素（不放大），WebP 质量 82；缩略图 400×400 居中裁切，WebP 质量 70；输出不含任何元数据。支持 `jpg/jpeg/png/webp/heic/heif`（不区分大小写）。
 - `public/vault/` 总大小超过 300 MB 时打印警告。
@@ -3062,8 +3064,10 @@ Expected:
 - 笔记卡片能展开，`温柔` 加粗；清单显示「已完成 1 / 2」。
 - 刷新页面后直接进入（记住设备）；点「锁上」后回到口令页，再刷新仍需口令。
 - 在开发者工具里打开 `public/vault/blobs/` 任意文件，内容是乱码；`vault.json` 里看不到任何标题或文件名。
+- HEIC 照片：方向正确，颜色没有发灰或褪色（iPhone 照片是 Display-P3 色域，转换出错时会显得发白）。
+- 在 iPhone 上输入口令时故意在某个词后面多打一个空格（两个空格），仍能解锁。
 
-看完按 `Ctrl+C` 停止。
+看完按 `Ctrl+C` 停止。推送上线后（Step 6），再在线上 GitHub Pages 站点直接刷新 `/vault`：可能会被重定向到 `/vault/`，页面必须仍然正常打开保险库。
 
 - [ ] **Step 4: 增量和换口令验收（用户在终端执行）**
 
@@ -3073,7 +3077,7 @@ npm run vault:rekey
 npm run vault
 ```
 
-Expected: 第一次 `npm run vault` 全部显示「沿用」，`新写入 0 个`；`vault:rekey` 输入旧口令和两次新口令后提示「口令已更换」；之后用旧口令运行 `npm run vault` 提示「口令不对」并退出，用新口令则全部「沿用」。
+Expected: 第一次 `npm run vault` 全部显示「沿用」，`新写入 0 个`；`vault:rekey` 输入旧口令和两次新口令后提示「口令已更换」，`public/vault/blobs/` 下的文件名全部变了；之后用旧口令运行 `npm run vault` 提示「口令不对」并退出，用新口令则全部「沿用」。浏览器里之前「记住」的设备刷新后回到口令页。
 
 - [ ] **Step 5: 清理验收产物**
 
