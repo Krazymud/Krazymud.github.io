@@ -9,7 +9,20 @@ const VaultPage = lazy(() => import('../pages/VaultPage').then((m) => ({ default
 
 const vaultFallback = <p className="mt-10 text-center text-sm text-muted">正在打开保险库…</p>
 
+const devRoutes: RouteObject[] = import.meta.env.DEV
+  ? [
+      {
+        path: '/__stills',
+        lazy: async () => {
+          const { StillsPage } = await import('../scene/three/StillsPage')
+          return { Component: StillsPage }
+        },
+      },
+    ]
+  : []
+
 export const routes: RouteObject[] = [
+  ...devRoutes,
   {
     path: '/',
     element: <Layout />,
