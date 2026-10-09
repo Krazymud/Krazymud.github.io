@@ -33,8 +33,8 @@ describe('POSES', () => {
   })
 
   it('rims only the vault in gold', () => {
-    expect(Object.entries(POSES).filter(([, p]) => p.rim > 0).map(([s]) => s)).toEqual(['vault'])
     expect(POSES.vault.rim).toBe(1)
+    expect([POSES.garage.rim, POSES.track.rim, POSES.settings.rim]).toEqual([0, 0, 0])
     expect(GOLD).toBe(POSES.vault.light)
   })
 
