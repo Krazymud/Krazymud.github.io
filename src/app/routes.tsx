@@ -1,9 +1,13 @@
+import { lazy, Suspense } from 'react'
 import { Navigate, type RouteObject } from 'react-router'
 import { HomePage } from '../pages/HomePage'
 import { SettingsPage } from '../pages/SettingsPage'
 import { TrialPage } from '../pages/TrialPage'
-import { VaultPage } from '../pages/VaultPage'
 import { Layout } from './Layout'
+
+const VaultPage = lazy(() => import('../pages/VaultPage').then((m) => ({ default: m.VaultPage })))
+
+const vaultFallback = <p className="mt-10 text-center text-sm text-muted">正在打开保险库…</p>
 
 export const routes: RouteObject[] = [
   {
@@ -12,7 +16,14 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <HomePage /> },
       { path: 'trial', element: <TrialPage /> },
-      { path: 'vault', element: <VaultPage /> },
+      {
+        path: 'vault',
+        element: (
+          <Suspense fallback={vaultFallback}>
+            <VaultPage />
+          </Suspense>
+        ),
+      },
       { path: 'settings', element: <SettingsPage /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],

@@ -1,7 +1,11 @@
 import { useState } from 'react'
-import Markdown from 'react-markdown'
+import Markdown, { type Components } from 'react-markdown'
 import type { NoteEntry } from '../types'
 import { useBlobText, type ReadBlob } from '../useBlob'
+
+const markdownComponents: Components = {
+  a: ({ node: _node, ...props }) => <a {...props} target="_blank" rel="noreferrer" />,
+}
 
 function preview(markdown: string): string {
   return markdown.replace(/[#*_`>]/g, '').replace(/\s+/g, ' ').trim()
@@ -21,7 +25,7 @@ function NoteCard({ note, read }: { note: NoteEntry; read: ReadBlob }) {
       </button>
       {open && body.status === 'ready' && (
         <div className="vault-markdown border-t border-line px-4 py-3 text-sm leading-relaxed">
-          <Markdown>{body.text}</Markdown>
+          <Markdown components={markdownComponents}>{body.text}</Markdown>
         </div>
       )}
     </li>

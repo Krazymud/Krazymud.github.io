@@ -49,6 +49,7 @@ export function UnlockPanel({ canRemember, onUnlock }: UnlockPanelProps) {
 
   function startHold() {
     if (busy || reduced) return
+    if (holdTimer.current) clearTimeout(holdTimer.current)
     setHolding(true)
     holdTimer.current = setTimeout(() => {
       holdTimer.current = null
@@ -81,7 +82,7 @@ export function UnlockPanel({ canRemember, onUnlock }: UnlockPanelProps) {
         口令
         <input
           type="password"
-          autoComplete="current-password"
+          autoComplete="off"
           value={passphrase}
           disabled={busy}
           onChange={(event) => {

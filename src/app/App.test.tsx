@@ -29,7 +29,7 @@ describe('app shell', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 404 })))
     renderAt('/vault')
     expect(document.querySelector('[data-theme="vault"]')).not.toBeNull()
-    expect(await screen.findByText('保险库还是空的。')).toBeInTheDocument()
+    expect(await screen.findByText('保险库还是空的。', {}, { timeout: 5000 })).toBeInTheDocument()
   })
 
   it('redirects unknown paths to the garage', async () => {

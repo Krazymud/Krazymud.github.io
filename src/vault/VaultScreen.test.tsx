@@ -117,6 +117,16 @@ describe('VaultScreen', () => {
     expect(await store.load()).toBeNull()
   })
 
+  it('does not remember the key when the box is unchecked', async () => {
+    const vault = await makeTestVault()
+    const store = createKeyStore(new IDBFactory())!
+    renderVault(vault.fetchBytes, store)
+    fireEvent.click(await screen.findByLabelText('在这台设备上记住'))
+    await enter(TEST_PASSPHRASE)
+    await screen.findByRole('tab', { name: '照片' })
+    expect(await store.load()).toBeNull()
+  })
+
   it('forgets a remembered key that no longer opens the vault', async () => {
     const store = createKeyStore(new IDBFactory())!
     const stale = await crypto.subtle.importKey('raw', crypto.getRandomValues(new Uint8Array(32)), 'AES-GCM', false, [

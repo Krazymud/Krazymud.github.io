@@ -77,6 +77,16 @@ describe('NotesTab', () => {
     expect(screen.getByText('温柔').tagName).toBe('STRONG')
   })
 
+  it('opens links in a new tab', async () => {
+    render(<NotesTab notes={notes.slice(0, 1)} read={reader({ n1: '看 [x](https://example.com)' })} />)
+    await screen.findByText('看 [x](https://example.com)')
+    fireEvent.click(screen.getByRole('button', { name: /晚安/ }))
+    const link = screen.getByRole('link', { name: 'x' })
+    expect(link).toHaveAttribute('href', 'https://example.com')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noreferrer')
+  })
+
   it('says so when there are no notes', () => {
     render(<NotesTab notes={[]} read={reader({})} />)
     expect(screen.getByText('还没有笔记')).toBeInTheDocument()
