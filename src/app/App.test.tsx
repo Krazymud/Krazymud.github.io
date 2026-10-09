@@ -32,6 +32,12 @@ describe('app shell', () => {
     expect(await screen.findByText('保险库还是空的。', {}, { timeout: 5000 })).toBeInTheDocument()
   })
 
+  it('shows the garage still behind the page when WebGL 2 is unavailable', () => {
+    renderAt('/')
+    expect(screen.getByTestId('scene-still')).toBeInTheDocument()
+    expect(screen.getByTestId('scene-dim').style.opacity).toBe('0')
+  })
+
   it('redirects unknown paths to the garage', async () => {
     renderAt('/2018/09/05/leetcode05/')
     expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(`HELLO, ${site.nickname}`)
