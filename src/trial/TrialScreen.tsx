@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useProgress } from '../progress/ProgressProvider'
+import { emitNitro } from '../scene/events'
 import { addDays, studyDay } from './day'
 import { currentItem, dueOn, ensureSession, isFinished, masteredCount, recordAnswer, skipItem } from './engine'
 import { buildQuestion } from './question'
@@ -94,6 +95,12 @@ export function TrialScreen({ source, now = () => new Date() }: TrialScreenProps
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [question, picked])
+
+  const nitro = correct && session !== undefined && NITRO_COMBOS.includes(session.combo + 1)
+
+  useEffect(() => {
+    if (nitro) emitNitro()
+  }, [nitro, cursor])
 
   if (lookupFailed) {
     return (
