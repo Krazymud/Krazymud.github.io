@@ -126,6 +126,30 @@ describe('plate', () => {
     expect(bright).toBeGreaterThan(50)
   })
 
+  it('mirrors the plate vertically to match the flipped plate UVs', async () => {
+    const width = 80
+    const height = 48
+    const plate = { x: 4, y: 4, width: 60, height: 40 }
+    const painted = await paintPlate(new Uint8Array(width * height * 3), width, height, plate, 'WE-456')
+    const upright = await sharp(Buffer.from(plateSvg('WE-456', plate.width, plate.height)))
+      .flatten({ background: '#000000' })
+      .removeAlpha()
+      .raw()
+      .toBuffer()
+    let dark = 0
+    let mismatched = 0
+    for (let y = 0; y < plate.height; y++) {
+      for (let x = 0; x < plate.width; x++) {
+        const [r] = rgbAt(painted, plate.x + x, plate.y + y, width)
+        const expected = upright[((plate.height - 1 - y) * plate.width + x) * 3]
+        if (r < 80) dark++
+        if (Math.abs(r - expected) > 8) mismatched++
+      }
+    }
+    expect(dark).toBeGreaterThan(100)
+    expect(mismatched).toBe(0)
+  })
+
   it('refuses a plate area outside the texture', async () => {
     await expect(paintPlate(new Uint8Array(16 * 8 * 3), 16, 8, { x: 10, y: 0, width: 10, height: 4 }, 'WE-456')).rejects.toThrow(CarError)
   })

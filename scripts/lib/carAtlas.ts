@@ -133,7 +133,8 @@ export async function paintPlate(rgb: Uint8Array, width: number, height: number,
   if (plate.x < 0 || plate.y < 0 || plate.x + plate.width > width || plate.y + plate.height > height) {
     throw new CarError(`车牌区域 ${plate.x},${plate.y} ${plate.width}×${plate.height} 超出贴图 ${width}×${height}`)
   }
-  const overlay = await sharp(Buffer.from(plateSvg(text, plate.width, plate.height))).flop().png().toBuffer()
+  // The plate UVs are mirrored vertically, so the overlay is flipped to read upright on the car.
+  const overlay = await sharp(Buffer.from(plateSvg(text, plate.width, plate.height))).flip().png().toBuffer()
   const { data, info } = await sharp(rgb, { raw: { width, height, channels: 3 } })
     .composite([{ input: overlay, left: plate.x, top: plate.y }])
     .removeAlpha()
