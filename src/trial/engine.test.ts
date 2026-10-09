@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { emptyProgress, type ProgressData } from '../progress/store'
-import { currentItem, dueOn, ensureSession, isFinished, masteredCount, recordAnswer } from './engine'
+import {
+  currentItem,
+  dueOn,
+  ensureSession,
+  isFinished,
+  MAX_ANSWER_GAP_MS,
+  masteredCount,
+  recordAnswer,
+} from './engine'
 
 const TODAY = '2026-10-09'
 const ORDER = ['alpha', 'bravo', 'charlie']
@@ -50,8 +58,47 @@ describe('recordAnswer', () => {
     expect(data.session?.finishedAt).toBe(61000)
     expect(isFinished(data.session!)).toBe(true)
     expect(data.history).toEqual([
-      { day: TODAY, total: 3, correct: 2, newCount: 3, reviewCount: 0, bestCombo: 1, durationMs: 60000 },
+      { day: TODAY, total: 3, correct: 2, newCount: 3, reviewCount: 0, bestCombo: 1, durationMs: 59000 },
     ])
+  })
+
+  it('starts the lap timer at the first answer', () => {
+    const data = recordAnswer(started(), 'good', 5_000_000)
+    expect(data.session).toMatchObject({ activeMs: 0, lastAnswerAt: 5_000_000 })
+  })
+
+  it('accumulates the gaps between answers', () => {
+    let data = recordAnswer(started(), 'good', 2000)
+    data = recordAnswer(data, 'ok', 5000)
+    expect(data.session).toMatchObject({ activeMs: 3000, lastAnswerAt: 5000 })
+  })
+
+  it('caps each gap at MAX_ANSWER_GAP_MS', () => {
+    let data = recordAnswer(started(), 'good', 2000)
+    data = recordAnswer(data, 'ok', 2000 + 3_600_000)
+    expect(MAX_ANSWER_GAP_MS).toBe(60_000)
+    expect(data.session?.activeMs).toBe(60_000)
+  })
+
+  it('ignores negative gaps from clock changes', () => {
+    let data = recordAnswer(started(), 'good', 9000)
+    data = recordAnswer(data, 'ok', 4000)
+    expect(data.session).toMatchObject({ activeMs: 0, lastAnswerAt: 4000 })
+  })
+
+  it('records the active time as the day stat duration', () => {
+    let data = started()
+    data = recordAnswer(data, 'good', 10_000_000)
+    data = recordAnswer(data, 'ok', 10_004_000)
+    data = recordAnswer(data, 'ok', 10_500_000)
+    expect(data.session?.activeMs).toBe(64_000)
+    expect(data.history[0].durationMs).toBe(64_000)
+  })
+
+  it('records zero duration for a single-question session', () => {
+    let data = ensureSession(emptyProgress(), TODAY, ['alpha'], 1000)
+    data = recordAnswer(data, 'good', 9_000_000)
+    expect(data.history[0].durationMs).toBe(0)
   })
 
   it('ignores answers after the session is finished', () => {

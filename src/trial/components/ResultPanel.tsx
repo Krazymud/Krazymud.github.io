@@ -20,7 +20,7 @@ export function ResultPanel({ session, dueTomorrow, mastered }: ResultPanelProps
 
   const newCount = session.items.filter((item) => item.kind === 'new').length
   const stats = [
-    { label: '圈速', value: formatLap((session.finishedAt ?? session.startedAt) - session.startedAt) },
+    { label: '圈速', value: formatLap(session.activeMs ?? 0) },
     { label: '正确率', value: `${Math.round((session.correct / total) * 100)}%` },
     { label: '最高连击', value: `×${session.bestCombo}` },
     { label: '新词 / 复习', value: `${newCount} / ${total - newCount}` },

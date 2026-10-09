@@ -13,6 +13,8 @@ export interface DaySession {
   bestCombo: number
   startedAt: number
   finishedAt?: number
+  activeMs?: number
+  lastAnswerAt?: number
 }
 
 export interface DayStat {
@@ -54,6 +56,10 @@ function isNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value)
 }
 
+function isNonNegative(value: unknown): value is number {
+  return isNumber(value) && value >= 0
+}
+
 function isCount(value: unknown): value is number {
   return Number.isInteger(value) && (value as number) >= 0
 }
@@ -90,7 +96,9 @@ function isDaySession(value: unknown): value is DaySession {
     isCount(value.combo) &&
     isCount(value.bestCombo) &&
     isNumber(value.startedAt) &&
-    (value.finishedAt === undefined || isNumber(value.finishedAt))
+    (value.finishedAt === undefined || isNumber(value.finishedAt)) &&
+    (value.activeMs === undefined || isNonNegative(value.activeMs)) &&
+    (value.lastAnswerAt === undefined || isNonNegative(value.lastAnswerAt))
   )
 }
 

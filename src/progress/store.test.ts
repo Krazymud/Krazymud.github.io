@@ -48,6 +48,19 @@ describe('parseProgress', () => {
     expect(parseProgress(JSON.stringify(broken))).toEqual({ ok: false, reason: '进度数据已损坏' })
   })
 
+  it('keeps a session without lap timer fields', () => {
+    expect(sample.session).not.toHaveProperty('activeMs')
+    expect(sample.session).not.toHaveProperty('lastAnswerAt')
+    const result = parseProgress(serializeProgress(sample))
+    expect(result.ok && result.data.session).toEqual(sample.session)
+  })
+
+  it('keeps a session with lap timer fields', () => {
+    const session = { ...sample.session!, activeMs: 42000, lastAnswerAt: 61000 }
+    const result = parseProgress(JSON.stringify({ ...sample, session }))
+    expect(result.ok && result.data.session).toEqual(session)
+  })
+
   it('drops an invalid session but keeps words', () => {
     const result = parseProgress(JSON.stringify({ ...sample, session: { day: 'yesterday' } }))
     expect(result.ok && result.data.session).toBeUndefined()
@@ -61,6 +74,9 @@ describe('parseProgress', () => {
     { correct: -1 },
     { combo: 0.5 },
     { bestCombo: -2 },
+    { activeMs: -1 },
+    { activeMs: 'x' },
+    { lastAnswerAt: -5 },
   ])('drops a session with out-of-range counters %o but keeps words', (patch) => {
     const result = parseProgress(JSON.stringify({ ...sample, session: { ...sample.session, ...patch } }))
     expect(result.ok && result.data.session).toBeUndefined()
