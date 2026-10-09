@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useProgress } from '../progress/ProgressProvider'
 import { addDays, studyDay } from './day'
-import { currentItem, dueOn, ensureSession, isFinished, masteredCount, recordAnswer } from './engine'
+import { currentItem, dueOn, ensureSession, isFinished, masteredCount, recordAnswer, skipItem } from './engine'
 import { buildQuestion } from './question'
 import type { Grade } from './srs'
 import type { ResolvedWord, WordSource } from './wordsRepo'
@@ -61,7 +61,7 @@ export function TrialScreen({ source, now = () => new Date() }: TrialScreenProps
     return item && entry ? buildQuestion(entry.word, item.kind, entry.pool, Math.random) : null
   }, [item, resolved])
 
-  const wordMissing = item !== undefined && resolved !== null && !resolved.has(item.word)
+  const missingWord = item !== undefined && resolved !== null && !resolved.has(item.word) ? item.word : null
   const correct = picked !== null && question !== null && picked === question.answerIndex
 
   const commit = useCallback(
@@ -73,6 +73,11 @@ export function TrialScreen({ source, now = () => new Date() }: TrialScreenProps
     },
     [cursor, update],
   )
+
+  useEffect(() => {
+    if (missingWord === null) return
+    update((d) => skipItem(d, missingWord, Date.now()))
+  }, [missingWord, update])
 
   useEffect(() => {
     if (picked === null) return
@@ -90,7 +95,7 @@ export function TrialScreen({ source, now = () => new Date() }: TrialScreenProps
     return () => window.removeEventListener('keydown', onKey)
   }, [question, picked])
 
-  if (lookupFailed || wordMissing) {
+  if (lookupFailed) {
     return (
       <LoadError
         onRetry={() => {

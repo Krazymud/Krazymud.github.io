@@ -73,6 +73,19 @@ export function recordAnswer(data: ProgressData, grade: Grade, now: number): Pro
   return { ...data, words, session: next, history: [...data.history, toStat(next)] }
 }
 
+// Drops a word the word source cannot resolve, so it neither blocks the lap nor counts towards it.
+export function skipItem(data: ProgressData, word: string, now: number): ProgressData {
+  const session = data.session
+  if (!session || currentItem(session)?.word !== word) return data
+
+  const items = session.items.filter((_, i) => i !== session.cursor)
+  const next: DaySession = { ...session, items }
+  if (next.cursor < items.length) return { ...data, session: next }
+  next.finishedAt = now
+  if (items.length === 0) return { ...data, session: next }
+  return { ...data, session: next, history: [...data.history, toStat(next)] }
+}
+
 export function dueOn(words: Readonly<Record<string, WordProgress>>, day: string): number {
   return Object.values(words).filter((p) => p.due <= day).length
 }

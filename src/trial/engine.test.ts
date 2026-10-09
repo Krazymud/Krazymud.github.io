@@ -8,6 +8,7 @@ import {
   MAX_ANSWER_GAP_MS,
   masteredCount,
   recordAnswer,
+  skipItem,
 } from './engine'
 
 const TODAY = '2026-10-09'
@@ -105,6 +106,39 @@ describe('recordAnswer', () => {
     let data = started()
     for (const grade of ['ok', 'ok', 'ok'] as const) data = recordAnswer(data, grade, 2000)
     expect(recordAnswer(data, 'good', 3000)).toBe(data)
+  })
+})
+
+describe('skipItem', () => {
+  it('drops the current word from the session without grading it', () => {
+    const data = skipItem(recordAnswer(started(), 'good', 2000), 'bravo', 2500)
+    expect(data.words).not.toHaveProperty('bravo')
+    expect(data.session?.items.map((i) => i.word)).toEqual(['alpha', 'charlie'])
+    expect(data.session).toMatchObject({ cursor: 1, correct: 1, combo: 1 })
+    expect(currentItem(data.session)).toEqual({ word: 'charlie', kind: 'new' })
+  })
+
+  it('ignores a word that is not the current one', () => {
+    const data = started()
+    expect(skipItem(data, 'charlie', 2000)).toBe(data)
+  })
+
+  it('finishes the session when the last word is skipped', () => {
+    let data = recordAnswer(started(), 'good', 2000)
+    data = recordAnswer(data, 'ok', 3000)
+    data = skipItem(data, 'charlie', 4000)
+    expect(isFinished(data.session!)).toBe(true)
+    expect(data.session?.finishedAt).toBe(4000)
+    expect(data.history).toEqual([
+      { day: TODAY, total: 2, correct: 2, newCount: 2, reviewCount: 0, bestCombo: 2, durationMs: 1000 },
+    ])
+  })
+
+  it('records no day stat when every word was skipped', () => {
+    let data = ensureSession(emptyProgress(), TODAY, ['alpha'], 1000)
+    data = skipItem(data, 'alpha', 2000)
+    expect(isFinished(data.session!)).toBe(true)
+    expect(data.history).toEqual([])
   })
 })
 

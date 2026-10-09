@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProgressProvider } from '../progress/ProgressProvider'
@@ -100,9 +100,58 @@ describe('TrialScreen', () => {
     expect(saved().history).toHaveLength(1)
   })
 
-  it('shows the load error when the current word is missing from the word pack', async () => {
-    renderTrial({ order: source.order, lookup: async () => new Map() })
+  it('skips a word that is missing from the word pack without grading it', async () => {
+    const lookup: WordSource['lookup'] = async (words) => {
+      const map = await source.lookup(words)
+      map.delete('alpha')
+      return map
+    }
+    renderTrial({ order: source.order, lookup })
+    await screen.findByRole('heading', { name: 'bravo' })
+    expect(screen.queryByText('词库加载失败')).not.toBeInTheDocument()
+    await waitFor(() =>
+      expect(saved().session.items.map((i: { word: string }) => i.word)).toEqual(['bravo', 'charlie', 'delta', 'echo']),
+    )
+    expect(saved().words).not.toHaveProperty('alpha')
+  })
+
+  it('recovers a stored session whose words were removed from the word list', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        schemaVersion: 1,
+        words: {},
+        history: [],
+        session: {
+          day: '2026-10-09',
+          items: [
+            { word: 'gone', kind: 'new' },
+            { word: 'alpha', kind: 'new' },
+          ],
+          cursor: 0,
+          correct: 0,
+          combo: 0,
+          bestCombo: 0,
+          startedAt: 1000,
+        },
+      }),
+    )
+    renderTrial()
+    await screen.findByRole('heading', { name: 'alpha' })
+    await waitFor(() => expect(saved().session.items).toEqual([{ word: 'alpha', kind: 'new' }]))
+    expect(saved().words).not.toHaveProperty('gone')
+  })
+
+  it('shows the load error when the lookup fails and retries it', async () => {
+    let fail = true
+    const lookup: WordSource['lookup'] = async (words) => {
+      if (fail) throw new Error('network')
+      return source.lookup(words)
+    }
+    renderTrial({ order: source.order, lookup })
     expect(await screen.findByText('词库加载失败')).toBeInTheDocument()
-    expect(screen.queryByText('正在加载词库…')).not.toBeInTheDocument()
+    fail = false
+    fireEvent.click(screen.getByRole('button', { name: /重试/ }))
+    expect(await screen.findByRole('heading', { name: 'alpha' })).toBeInTheDocument()
   })
 })
