@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "words": "tsx scripts/build-words.ts"
+    "words": "tsx scripts/build-words.ts",
+    "vault": "tsx scripts/vault.ts",
+    "vault:rekey": "tsx scripts/vault-rekey.ts"
   },
   "dependencies": {
     "@fontsource/rajdhani": "^5.3.0",
