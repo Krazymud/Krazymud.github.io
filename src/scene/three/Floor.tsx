@@ -19,7 +19,7 @@ function trackLinesTexture(): CanvasTexture {
   }
   const texture = new CanvasTexture(canvas)
   texture.wrapT = RepeatWrapping
-  texture.repeat.set(1, 10)
+  texture.repeat.set(1, 33)
   texture.colorSpace = SRGBColorSpace
   texture.anisotropy = 4
   return texture
@@ -49,7 +49,7 @@ export function Floor({ pose, deterministic }: FloorProps) {
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.002, 0]}>
-        <planeGeometry args={[60, 60]} />
+        <planeGeometry args={[200, 200]} />
         <MeshReflectorMaterial
           resolution={512}
           blur={[300, 80]}
@@ -64,7 +64,7 @@ export function Floor({ pose, deterministic }: FloorProps) {
         />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, 0]}>
-        <planeGeometry args={[6, 60]} />
+        <planeGeometry args={[6, 200]} />
         <meshBasicMaterial ref={linesMaterial} map={lines} transparent opacity={pose.trackLines ? 1 : 0} depthWrite={false} toneMapped={false} />
       </mesh>
     </group>

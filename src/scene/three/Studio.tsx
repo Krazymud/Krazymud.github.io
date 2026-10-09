@@ -39,7 +39,7 @@ export function Studio({ pose, deterministic }: StudioProps) {
         <Lightformer form="rect" intensity={1.5} color="#ffffff" position={[8, 2.5, 0]} rotation={[0, -Math.PI / 2, 0]} scale={[10, 3, 1]} />
         <Lightformer form="rect" intensity={1.5} color="#ffffff" position={[0, 2.5, -8]} rotation={[0, 0, 0]} scale={[10, 3, 1]} />
         <Lightformer form="rect" intensity={1.5} color="#ffffff" position={[0, 2.5, 8]} rotation={[0, Math.PI, 0]} scale={[10, 3, 1]} />
-        <Lightformer ref={sweep} form="rect" intensity={4} color="#C1272D" position={[0, 4, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[0.8, 14, 1]} />
+        <Lightformer ref={sweep} form="rect" intensity={4} color="#C1272D" visible={pose.sweep} position={[deterministic ? STILL_SWEEP_X : (sweepX(0) ?? 0), 4, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[0.8, 14, 1]} />
       </Environment>
     </>
   )
