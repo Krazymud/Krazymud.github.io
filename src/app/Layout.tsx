@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { useProgress } from '../progress/ProgressProvider'
-import { GarageBackdrop, type Scene } from './GarageBackdrop'
+import { sceneFor } from '../scene/poses'
+import { SceneHost } from '../scene/SceneHost'
 
 const NAV = [
   { to: '/', label: '车库', end: true },
@@ -9,20 +10,21 @@ const NAV = [
   { to: '/settings', label: '设置', end: false },
 ]
 
-function sceneFor(pathname: string): Scene {
-  if (pathname.startsWith('/vault')) return 'vault'
-  if (pathname.startsWith('/trial')) return 'track'
-  return 'garage'
-}
-
 export function Layout() {
   const { pathname } = useLocation()
   const { saveFailed } = useProgress()
   const scene = sceneFor(pathname)
 
   return (
-    <div data-theme={scene === 'vault' ? 'vault' : undefined} className="relative min-h-dvh bg-ink text-fg">
-      <GarageBackdrop scene={scene} />
+    <div
+      data-theme={scene === 'vault' ? 'vault' : undefined}
+      className={
+        scene === 'garage'
+          ? 'relative min-h-dvh bg-ink text-fg touch-pan-y touch-pinch-zoom select-none'
+          : 'relative min-h-dvh bg-ink text-fg'
+      }
+    >
+      <SceneHost scene={scene} />
       <header className="relative z-10 flex items-center justify-between gap-3 px-5 pt-4 text-xs">
         <span className="font-display tracking-[0.35em] text-accent-hi">MIDNIGHT GARAGE</span>
         <nav className="flex gap-4">

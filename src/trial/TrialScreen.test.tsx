@@ -3,6 +3,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProgressProvider } from '../progress/ProgressProvider'
 import { STORAGE_KEY } from '../progress/store'
+import { onNitro } from '../scene/events'
 import { TrialScreen } from './TrialScreen'
 import type { Word } from './types'
 import type { WordSource } from './wordsRepo'
@@ -98,6 +99,20 @@ describe('TrialScreen', () => {
     expect(await screen.findByText('圈速')).toBeInTheDocument()
     expect(screen.getByText('100%')).toBeInTheDocument()
     expect(saved().history).toHaveLength(1)
+  })
+
+  it('fires the nitro event on the fifth correct answer in a row', async () => {
+    const nitro = vi.fn()
+    const off = onNitro(nitro)
+    renderTrial()
+    for (const [index, word] of WORDS.entries()) {
+      await screen.findByRole('heading', { name: word.w })
+      fireEvent.click(options().find((b) => b.textContent?.includes(word.m.slice(3)))!)
+      const good = await screen.findByRole('button', { name: '会了' })
+      expect(nitro).toHaveBeenCalledTimes(index === 4 ? 1 : 0)
+      fireEvent.click(good)
+    }
+    off()
   })
 
   it('skips a word that is missing from the word pack without grading it', async () => {

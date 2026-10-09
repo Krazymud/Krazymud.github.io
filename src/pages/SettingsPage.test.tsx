@@ -1,5 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { PREFS_KEY } from '../prefs/prefs'
 import { ProgressProvider } from '../progress/ProgressProvider'
 import { emptyProgress, STORAGE_KEY } from '../progress/store'
 import { SettingsPage } from './SettingsPage'
@@ -46,5 +47,30 @@ describe('SettingsPage', () => {
     fireEvent.change(input, { target: { files: [file] } })
     expect(await screen.findByRole('alert')).toHaveTextContent('无法读取文件')
     expect(screen.queryByRole('button', { name: '确认导入' })).not.toBeInTheDocument()
+  })
+
+  it('turns the 3D garage off and on', () => {
+    renderSettings()
+    const toggle = screen.getByRole('switch', { name: /3D 车库/ })
+    expect(toggle).toBeChecked()
+    fireEvent.click(toggle)
+    expect(toggle).not.toBeChecked()
+    expect(JSON.parse(localStorage.getItem(PREFS_KEY)!)).toEqual({ scene3d: false })
+    fireEvent.click(toggle)
+    expect(toggle).toBeChecked()
+  })
+
+  it('credits the car model and other third-party assets', () => {
+    renderSettings()
+    const credits = within(screen.getByRole('region', { name: '鸣谢' }))
+    expect(credits.getByRole('link', { name: 'Fictional supercar - V12 Goblin' })).toHaveAttribute(
+      'href',
+      'https://sketchfab.com/3d-models/fictional-supercar-v12-goblin-0a20e49ad5774d778567cb5c3f345786',
+    )
+    expect(credits.getByText(/ollitei/)).toBeInTheDocument()
+    expect(credits.getByRole('link', { name: 'CC BY 4.0' })).toHaveAttribute('href', 'https://creativecommons.org/licenses/by/4.0/')
+    expect(credits.getByText(/已修改：材质、配色和压缩/)).toBeInTheDocument()
+    expect(credits.getByRole('link', { name: 'ECDICT' })).toBeInTheDocument()
+    expect(credits.getByText(/Rajdhani/)).toBeInTheDocument()
   })
 })
