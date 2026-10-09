@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { damp, dampFactor, NITRO_DURATION, NITRO_OFFSET, nitroOffset, SWEEP_DURATION, SWEEP_RANGE, sweepX, TRANSITION_LAMBDA } from './motion'
+import { damp, dampFactor, IGNITION_FLICKER_S, ignitionLevel, NITRO_DURATION, NITRO_OFFSET, nitroOffset, SWEEP_DURATION, SWEEP_RANGE, sweepX, TRANSITION_LAMBDA } from './motion'
 
 describe('damp', () => {
   it('settles within 1% in about 1.2 seconds', () => {
@@ -35,5 +35,23 @@ describe('nitroOffset', () => {
     expect(nitroOffset(NITRO_DURATION)).toBe(0)
     expect(nitroOffset(-1)).toBe(0)
     expect(nitroOffset(Infinity)).toBe(0)
+  })
+})
+
+describe('ignitionLevel', () => {
+  it('is dark before ignition and fully on after the flicker', () => {
+    expect(ignitionLevel(-1)).toBe(0)
+    expect(ignitionLevel(IGNITION_FLICKER_S)).toBe(1)
+    expect(ignitionLevel(10)).toBe(1)
+  })
+
+  it('flickers on twice before settling', () => {
+    const samples = [0.05, 0.15, 0.27, 0.4].map(ignitionLevel)
+    expect(samples).toEqual([1, 0.1, 1, 0.1])
+  })
+
+  it('ramps up steadily after the second flicker', () => {
+    const ramp = [0.5, 0.6, 0.7, 0.79].map(ignitionLevel)
+    for (let i = 1; i < ramp.length; i++) expect(ramp[i]).toBeGreaterThan(ramp[i - 1])
   })
 })

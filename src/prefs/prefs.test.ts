@@ -9,13 +9,13 @@ describe('prefs', () => {
   })
   afterEach(() => vi.restoreAllMocks())
 
-  it('turns the 3D garage on by default', () => {
-    expect(getPrefs()).toEqual({ scene3d: true })
+  it('turns the 3D garage and sound on, and has not shown the intro yet', () => {
+    expect(getPrefs()).toEqual({ scene3d: true, muted: false, introSeen: false })
   })
 
   it('saves the switch apart from the progress data', () => {
     setPrefs({ scene3d: false })
-    expect(JSON.parse(localStorage.getItem(PREFS_KEY)!)).toEqual({ scene3d: false })
+    expect(JSON.parse(localStorage.getItem(PREFS_KEY)!)).toEqual({ scene3d: false, muted: false, introSeen: false })
     resetPrefsCache()
     expect(getPrefs().scene3d).toBe(false)
   })
@@ -25,6 +25,13 @@ describe('prefs', () => {
     expect(readPrefs()).toEqual(DEFAULT_PREFS)
     localStorage.setItem(PREFS_KEY, '{"scene3d":"no"}')
     expect(readPrefs()).toEqual(DEFAULT_PREFS)
+  })
+
+  it('checks each field on its own', () => {
+    localStorage.setItem(PREFS_KEY, '{"scene3d":false,"muted":"yes","introSeen":1}')
+    expect(readPrefs()).toEqual({ scene3d: false, muted: false, introSeen: false })
+    localStorage.setItem(PREFS_KEY, '{"muted":true,"introSeen":true}')
+    expect(readPrefs()).toEqual({ scene3d: true, muted: true, introSeen: true })
   })
 
   it('still works for this visit when storage is unavailable', () => {

@@ -4,9 +4,11 @@ export const PREFS_KEY = 'midnight-garage/prefs'
 
 export interface Prefs {
   scene3d: boolean
+  muted: boolean
+  introSeen: boolean
 }
 
-export const DEFAULT_PREFS: Prefs = { scene3d: true }
+export const DEFAULT_PREFS: Prefs = { scene3d: true, muted: false, introSeen: false }
 
 export function readPrefs(): Prefs {
   try {
@@ -14,8 +16,12 @@ export function readPrefs(): Prefs {
     if (!raw) return { ...DEFAULT_PREFS }
     const parsed: unknown = JSON.parse(raw)
     if (typeof parsed !== 'object' || parsed === null) return { ...DEFAULT_PREFS }
-    const scene3d = (parsed as Record<string, unknown>).scene3d
-    return { scene3d: typeof scene3d === 'boolean' ? scene3d : DEFAULT_PREFS.scene3d }
+    const record = parsed as Record<string, unknown>
+    const pick = (key: keyof Prefs): boolean => {
+      const value = record[key]
+      return typeof value === 'boolean' ? value : DEFAULT_PREFS[key]
+    }
+    return { scene3d: pick('scene3d'), muted: pick('muted'), introSeen: pick('introSeen') }
   } catch {
     return { ...DEFAULT_PREFS }
   }

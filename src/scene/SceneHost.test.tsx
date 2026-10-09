@@ -2,6 +2,7 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import { useEffect } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetPrefsCache, setPrefs } from '../prefs/prefs'
+import { getLoading, resetLoading } from './loading'
 import { resetSceneFailure, sceneFailed } from './mode'
 import { SceneHost } from './SceneHost'
 import type { StageModule, StageProps } from './types'
@@ -26,6 +27,7 @@ describe('SceneHost', () => {
     localStorage.clear()
     resetPrefsCache()
     resetSceneFailure()
+    resetLoading()
   })
   afterEach(() => vi.unstubAllGlobals())
 
@@ -104,6 +106,30 @@ describe('SceneHost', () => {
     expect(still()).toBeInTheDocument()
     await waitFor(() => expect(still()).toBeNull(), { timeout: 2000 })
     expect(sceneFailed()).toBe(false)
+  })
+
+  it('reports still mode to the loading progress', async () => {
+    render(<SceneHost scene="garage" webgl2={() => false} />)
+    await waitFor(() => expect(getLoading()).toEqual({ kind: 'still', fraction: 1 }))
+  })
+
+  it('reports 3D loading progress until the first frame', async () => {
+    let report: ((fraction: number) => void) | undefined
+    let ready: (() => void) | undefined
+    function Stage({ onReady, onProgress }: StageProps) {
+      report = onProgress
+      ready = onReady
+      return <div data-testid="fake-stage" />
+    }
+    render(<SceneHost scene="garage" loadStage={async () => ({ Stage })} webgl2={yes} />)
+    await screen.findByTestId('fake-stage')
+    await waitFor(() => expect(getLoading()).toEqual({ kind: '3d', fraction: 0.3 }))
+    act(() => report?.(0.5))
+    expect(getLoading().fraction).toBeCloseTo(0.65)
+    act(() => report?.(0.2))
+    expect(getLoading().fraction).toBeCloseTo(0.65)
+    act(() => ready?.())
+    expect(getLoading()).toEqual({ kind: '3d', fraction: 1 })
   })
 
   it('dims the scene for each page', () => {

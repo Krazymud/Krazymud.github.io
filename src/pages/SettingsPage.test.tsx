@@ -55,7 +55,7 @@ describe('SettingsPage', () => {
     expect(toggle).toBeChecked()
     fireEvent.click(toggle)
     expect(toggle).not.toBeChecked()
-    expect(JSON.parse(localStorage.getItem(PREFS_KEY)!)).toEqual({ scene3d: false })
+    expect(JSON.parse(localStorage.getItem(PREFS_KEY)!)).toEqual({ scene3d: false, muted: false, introSeen: false })
     fireEvent.click(toggle)
     expect(toggle).toBeChecked()
   })
@@ -72,5 +72,11 @@ describe('SettingsPage', () => {
     expect(credits.getByText(/已修改：材质、配色和压缩/)).toBeInTheDocument()
     expect(credits.getByRole('link', { name: 'ECDICT' })).toBeInTheDocument()
     expect(credits.getByText(/Rajdhani/)).toBeInTheDocument()
+    expect(credits.getByRole('link', { name: 'Ferrari start up and drive off' })).toHaveAttribute(
+      'href',
+      'https://freesound.org/people/EwanPenman11/sounds/659560/',
+    )
+    expect(credits.getByRole('link', { name: 'Supercar rev' })).toHaveAttribute('href', 'https://freesound.org/people/richwise/sounds/478756/')
+    expect(credits.getByRole('link', { name: 'Car Lock' })).toHaveAttribute('href', 'https://freesound.org/people/hz37/sounds/396448/')
   })
 })

@@ -8,6 +8,7 @@ export interface StageProps {
   scene: Scene
   onReady: () => void
   onFail: (reason: string) => void
+  onProgress?: (fraction: number) => void
   deterministic?: boolean
 }
 
