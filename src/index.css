@@ -76,3 +76,26 @@ body {
 .vault-markdown a {
   text-decoration: underline;
 }
+
+@theme {
+  --animate-vault-shake: vault-shake 0.4s ease-in-out;
+
+  @keyframes vault-shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    20% {
+      transform: translateX(-12px);
+    }
+    40% {
+      transform: translateX(12px);
+    }
+    60% {
+      transform: translateX(-8px);
+    }
+    80% {
+      transform: translateX(8px);
+    }
+  }
+}

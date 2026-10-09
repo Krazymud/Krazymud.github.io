@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { site } from '../config/site'
 import { ProgressProvider } from '../progress/ProgressProvider'
 import { routes } from './routes'
@@ -16,6 +16,7 @@ function renderAt(path: string) {
 
 describe('app shell', () => {
   beforeEach(() => localStorage.clear())
+  afterEach(() => vi.unstubAllGlobals())
 
   it('greets her in the garage with today\'s trial status', () => {
     renderAt('/')
@@ -24,10 +25,11 @@ describe('app shell', () => {
     expect(screen.getByText('到期复习 0 个')).toBeInTheDocument()
   })
 
-  it('switches to the gold theme inside the vault', () => {
+  it('switches to the gold theme inside the vault', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 404 })))
     renderAt('/vault')
     expect(document.querySelector('[data-theme="vault"]')).not.toBeNull()
-    expect(screen.getByText('保险库将在下一阶段开放。')).toBeInTheDocument()
+    expect(await screen.findByText('保险库还是空的。')).toBeInTheDocument()
   })
 
   it('redirects unknown paths to the garage', async () => {
