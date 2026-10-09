@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { site } from '../config/site'
+import { PREFS_KEY, resetPrefsCache } from '../prefs/prefs'
 import { ProgressProvider } from '../progress/ProgressProvider'
 import { routes } from './routes'
 
@@ -15,7 +16,10 @@ function renderAt(path: string) {
 }
 
 describe('app shell', () => {
-  beforeEach(() => localStorage.clear())
+  beforeEach(() => {
+    localStorage.clear()
+    resetPrefsCache()
+  })
   afterEach(() => vi.unstubAllGlobals())
 
   it('greets her in the garage with today\'s trial status', () => {
@@ -41,5 +45,33 @@ describe('app shell', () => {
   it('redirects unknown paths to the garage', async () => {
     renderAt('/2018/09/05/leetcode05/')
     expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(`HELLO, ${site.nickname}`)
+  })
+
+  it('shows the ignition intro on the first visit to the garage only', () => {
+    renderAt('/')
+    expect(screen.getByRole('dialog', { name: '点火开场' })).toBeInTheDocument()
+  })
+
+  it('skips the intro once it has been seen, and on other pages', () => {
+    localStorage.setItem(PREFS_KEY, JSON.stringify({ introSeen: true }))
+    renderAt('/')
+    expect(screen.queryByRole('dialog', { name: '点火开场' })).toBeNull()
+  })
+
+  it('skips the intro when a visit starts on another page', () => {
+    renderAt('/settings')
+    expect(screen.queryByRole('dialog', { name: '点火开场' })).toBeNull()
+  })
+
+  it('mutes and unmutes from the top bar', () => {
+    renderAt('/settings')
+    const mute = screen.getByRole('button', { name: '静音' })
+    expect(mute).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(mute)
+    const unmute = screen.getByRole('button', { name: '取消静音' })
+    expect(unmute).toHaveAttribute('aria-pressed', 'true')
+    expect(JSON.parse(localStorage.getItem(PREFS_KEY)!).muted).toBe(true)
+    fireEvent.click(unmute)
+    expect(screen.getByRole('button', { name: '静音' })).toBeInTheDocument()
   })
 })
