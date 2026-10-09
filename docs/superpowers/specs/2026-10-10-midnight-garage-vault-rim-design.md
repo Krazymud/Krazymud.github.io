@@ -1,6 +1,6 @@
 # Midnight Garage 保险库金色轮廓光 设计
 
-状态：草稿
+状态：已确认
 
 上级文档：`docs/superpowers/specs/2026-10-10-midnight-garage-scene-design.md`（3D 场景）。本文只补充保险库镜头的灯光，其余不变。
 
