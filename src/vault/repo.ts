@@ -34,8 +34,8 @@ export async function unlockWithPassphrase(file: VaultFile, passphrase: string):
   const dek = await unwrapDek(file.wrappedKey, kek, false)
   try {
     return await unlockWithKey(file, dek)
-  } catch {
-    throw new Error('vault manifest is damaged')
+  } catch (error) {
+    throw new Error('vault manifest is damaged', { cause: error })
   }
 }
 

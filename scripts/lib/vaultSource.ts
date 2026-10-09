@@ -3,8 +3,8 @@ import { parse as parseYaml } from 'yaml'
 import type { ListItem } from '../../src/vault/types.ts'
 
 export class VaultError extends Error {
-  constructor(message: string) {
-    super(message)
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options)
     this.name = 'VaultError'
   }
 }

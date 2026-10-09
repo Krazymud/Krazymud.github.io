@@ -48,6 +48,7 @@ describe('vault repo', () => {
     const error = await unlockWithPassphrase(file, TEST_PASSPHRASE).catch((e: unknown) => e)
     expect(error).toBeInstanceOf(Error)
     expect(error).not.toBeInstanceOf(DecryptError)
+    expect((error as Error).cause).toBeInstanceOf(DecryptError)
   })
 
   it('unlocks with a remembered key', async () => {

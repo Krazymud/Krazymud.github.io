@@ -135,8 +135,9 @@ async function openVault(file: VaultFile, passphrase: string): Promise<{ dek: Va
   }
   try {
     return { dek, manifest: await decryptJson<VaultManifest>(dek, file.manifest) }
-  } catch {
-    throw new VaultError(DAMAGED)
+  } catch (error) {
+    if (error instanceof DecryptError) throw new VaultError(DAMAGED, { cause: error })
+    throw error
   }
 }
 
@@ -215,6 +216,10 @@ export interface RunRekeyOptions {
   iterations?: number
 }
 
+export interface RunRekeyResult {
+  undeleted: string[]
+}
+
 function renameBlobs(manifest: VaultManifest, names: Map<string, string>): VaultManifest {
   const rename = (name: string) => names.get(name)!
   return {
@@ -225,7 +230,7 @@ function renameBlobs(manifest: VaultManifest, names: Map<string, string>): Vault
 }
 
 // Order matters for crash safety: new blobs, then vault.json, then the old blobs.
-export async function runRekey(options: RunRekeyOptions): Promise<void> {
+export async function runRekey(options: RunRekeyOptions): Promise<RunRekeyResult> {
   const { outDir } = options
   const existing = await readVaultFile(outDir)
   if (!existing) throw new VaultError('还没有保险库，先运行 npm run vault')
@@ -260,8 +265,16 @@ export async function runRekey(options: RunRekeyOptions): Promise<void> {
       manifest: await encryptJson(dek, renameBlobs(manifest, names)),
     })
   } catch (error) {
-    for (const newName of names.values()) await rm(join(blobDir, `${newName}.bin`), { force: true })
+    for (const newName of names.values()) {
+      await rm(join(blobDir, `${newName}.bin`), { force: true }).catch(() => undefined)
+    }
     throw error
   }
-  for (const oldName of names.keys()) await rm(join(blobDir, `${oldName}.bin`), { force: true })
+
+  // The rekey has succeeded at this point; leftovers are removed by the next `npm run vault`.
+  const undeleted: string[] = []
+  for (const oldName of names.keys()) {
+    await rm(join(blobDir, `${oldName}.bin`), { force: true }).catch(() => undeleted.push(`${BLOB_DIR}/${oldName}.bin`))
+  }
+  return { undeleted }
 }

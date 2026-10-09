@@ -3,12 +3,13 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promis
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import sharp from 'sharp'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   decryptBytes,
   DecryptError,
   decryptJson,
   deriveKek,
+  encryptBytes,
   newKdfParams,
   toBase64,
   unwrapDek,
@@ -17,6 +18,15 @@ import {
 import type { VaultFile, VaultManifest } from '../../src/vault/types.ts'
 import { runRekey, runVault, writeVaultFile, WrongPassphraseError } from './vaultCommand.ts'
 import { VaultError } from './vaultSource.ts'
+
+const rmFault = vi.hoisted(() => ({ fails: null as ((fileName: string) => boolean) | null }))
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>()
+  const rm: typeof actual.rm = (path, options) =>
+    rmFault.fails?.(String(path).split(/[\\/]/).pop()!) ? Promise.reject(new Error('injected rm failure')) : actual.rm(path, options)
+  return { ...actual, rm, default: { ...actual, rm } }
+})
 
 const PASS = 'iceland aurora penguin goodnight'
 let root = ''
@@ -35,6 +45,7 @@ beforeEach(async () => {
 })
 
 afterEach(async () => {
+  rmFault.fails = null
   await rm(root, { recursive: true, force: true })
 })
 
@@ -104,6 +115,16 @@ describe('runVault', () => {
     expect(error).toBeInstanceOf(VaultError)
     expect(error).not.toBeInstanceOf(WrongPassphraseError)
     expect((error as Error).message).toContain('vault.json 已损坏')
+    expect((error as Error).cause).toBeInstanceOf(DecryptError)
+  })
+
+  it('passes through manifest errors other than a failed decrypt', async () => {
+    await run()
+    const file = JSON.parse(await vaultText()) as VaultFile
+    const { dek } = await openAsBrowserWithKey(PASS)
+    const notJson = toBase64(await encryptBytes(dek, new TextEncoder().encode('not json')))
+    await writeFile(join(out, 'vault.json'), JSON.stringify({ ...file, manifest: notJson }))
+    await expect(run()).rejects.toBeInstanceOf(SyntaxError)
   })
 
   it('reports a vault.json that is not valid JSON', async () => {
@@ -166,11 +187,14 @@ describe('runRekey', () => {
     const oldFiles = await blobs()
     const oldContents = await contents(PASS)
 
-    await runRekey({ outDir: out, oldPassphrase: PASS, newPassphrase: NEW_PASS, iterations: 1000 })
+    expect(await runRekey({ outDir: out, oldPassphrase: PASS, newPassphrase: NEW_PASS, iterations: 1000 })).toEqual({
+      undeleted: [],
+    })
     const after = JSON.parse(await vaultText()) as VaultFile
 
     expect(after.kdf.salt).not.toBe(before.kdf.salt)
     await expect(openAsBrowser(PASS)).rejects.toBeInstanceOf(DecryptError)
+    await expect(run(PASS)).rejects.toBeInstanceOf(WrongPassphraseError)
     expect((await openAsBrowser(NEW_PASS)).notes).toHaveLength(1)
     await expect(decryptJson(oldDek, after.manifest)).rejects.toBeInstanceOf(DecryptError)
 
@@ -190,6 +214,34 @@ describe('runRekey', () => {
     expect(await vaultText()).toBe(before)
     expect(await blobs()).toEqual(files)
     expect((await openAsBrowser(PASS)).notes).toHaveLength(1)
+  })
+
+  it('tries to remove every new blob and rethrows the original error when cleanup also fails', async () => {
+    await run()
+    const files = await blobs()
+    const stuck = new Set<string>()
+    rmFault.fails = (name) => {
+      if (files.includes(name) || stuck.size > 0) return false
+      stuck.add(name)
+      return true
+    }
+    await mkdir(join(out, 'vault.json.tmp'))
+    const error = await runRekey({ outDir: out, oldPassphrase: PASS, newPassphrase: NEW_PASS, iterations: 1000 }).catch(
+      (e: unknown) => e,
+    )
+    expect((error as Error).message).not.toBe('injected rm failure')
+    expect(await blobs()).toEqual([...files, ...stuck].sort())
+  })
+
+  it('still succeeds when an old blob cannot be removed', async () => {
+    await run()
+    const [stuck] = await blobs()
+    rmFault.fails = (name) => name === stuck
+    const result = await runRekey({ outDir: out, oldPassphrase: PASS, newPassphrase: NEW_PASS, iterations: 1000 })
+    expect(result).toEqual({ undeleted: [`blobs/${stuck}`] })
+    expect((await openAsBrowser(NEW_PASS)).notes).toHaveLength(1)
+    rmFault.fails = null
+    expect(await run(NEW_PASS)).toMatchObject({ written: 0, removed: 1 })
   })
 
   it('keeps working with later runs after a rekey', async () => {
