@@ -59,6 +59,22 @@ describe('runVault', () => {
     expect(await run()).toMatchObject({ notes: 2, lists: 0, written: 1, removed: 1 })
   })
 
+  it('leaves no temp file behind', async () => {
+    await run()
+    expect(await readdir(out)).not.toContain('vault.json.tmp')
+  })
+
+  it('keeps old blobs when vault.json cannot be written', async () => {
+    await run()
+    const before = await vaultText()
+    const files = await blobs()
+    await rm(join(src, 'lists', 'a.md'))
+    await mkdir(join(out, 'vault.json.tmp'))
+    await expect(run()).rejects.toThrow()
+    expect(await vaultText()).toBe(before)
+    expect(await blobs()).toEqual(expect.arrayContaining(files))
+  })
+
   it('refuses a wrong passphrase without touching anything', async () => {
     await run()
     const before = await vaultText()
@@ -91,6 +107,7 @@ describe('runRekey', () => {
     expect(after.manifest).toBe(before.manifest)
     expect(after.kdf.salt).not.toBe(before.kdf.salt)
     expect(await blobs()).toEqual(files)
+    expect(await readdir(out)).not.toContain('vault.json.tmp')
     expect((await openAsBrowser(NEW_PASS)).notes).toHaveLength(1)
     await expect(openAsBrowser(PASS)).rejects.toThrow()
   })

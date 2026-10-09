@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs'
-import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
   checkPassphrase,
@@ -104,7 +104,9 @@ async function readVaultFile(outDir: string): Promise<VaultFile | null> {
 }
 
 async function writeVaultFile(outDir: string, file: VaultFile): Promise<void> {
-  await writeFile(join(outDir, VAULT_FILE), `${JSON.stringify(file, null, 2)}\n`)
+  const target = join(outDir, VAULT_FILE)
+  await writeFile(`${target}.tmp`, `${JSON.stringify(file, null, 2)}\n`)
+  await rename(`${target}.tmp`, target)
 }
 
 async function openVault(file: VaultFile, passphrase: string): Promise<{ dek: VaultKey; manifest: VaultManifest }> {
@@ -163,6 +165,8 @@ export async function runVault(options: RunVaultOptions): Promise<RunVaultResult
   const blobDir = join(outDir, BLOB_DIR)
   await mkdir(blobDir, { recursive: true })
   for (const [name, bytes] of writes) await writeFile(join(blobDir, `${name}.bin`), bytes)
+  await writeVaultFile(outDir, { version: 1, kdf: kdf!, wrappedKey: wrappedKey!, manifest: await encryptJson(dek, manifest) })
+
   const keep = referencedBlobs(manifest)
   let removed = 0
   for (const file of await readdir(blobDir)) {
@@ -171,7 +175,6 @@ export async function runVault(options: RunVaultOptions): Promise<RunVaultResult
       removed++
     }
   }
-  await writeVaultFile(outDir, { version: 1, kdf: kdf!, wrappedKey: wrappedKey!, manifest: await encryptJson(dek, manifest) })
 
   let totalBytes = (await stat(join(outDir, VAULT_FILE))).size
   for (const file of await readdir(blobDir)) totalBytes += (await stat(join(blobDir, file))).size
