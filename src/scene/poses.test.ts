@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CAMERA_FOV, CAR_RADIUS, framedCamera, POSES, sceneFor, type Pose } from './poses'
+import { CAMERA_FOV, CAR_RADIUS, framedCamera, GOLD, POSES, sceneFor, type Pose } from './poses'
 
 const distance = (a: number[], b: number[]) => Math.hypot(...a.map((v, i) => v - b[i]))
 
@@ -30,6 +30,12 @@ describe('POSES', () => {
     expect(POSES.vault.light).toBe('#A8894F')
     expect(POSES.garage.light).toBe('#9E1C22')
     expect(POSES.track.light).toBe('#9E1C22')
+  })
+
+  it('rims only the vault in gold', () => {
+    expect(Object.entries(POSES).filter(([, p]) => p.rim > 0).map(([s]) => s)).toEqual(['vault'])
+    expect(POSES.vault.rim).toBe(1)
+    expect(GOLD).toBe(POSES.vault.light)
   })
 
   it('shows the settings page from the garage camera without spinning', () => {

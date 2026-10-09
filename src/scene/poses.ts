@@ -11,11 +11,12 @@ export interface Pose {
   carYaw: number | null
   trackLines: boolean
   sweep: boolean
+  rim: number
   still: StillScene
 }
 
 const RED = '#9E1C22'
-const GOLD = '#A8894F'
+export const GOLD = '#A8894F'
 const GARAGE_CAMERA: Vec3 = [-4.6, 2.3, 6.4]
 const GARAGE_TARGET: Vec3 = [0, -0.6, 0]
 
@@ -29,6 +30,7 @@ export const POSES: Record<Scene, Pose> = {
     carYaw: null,
     trackLines: false,
     sweep: true,
+    rim: 0,
     still: 'garage',
   },
   track: {
@@ -40,6 +42,7 @@ export const POSES: Record<Scene, Pose> = {
     carYaw: 0,
     trackLines: true,
     sweep: false,
+    rim: 0,
     still: 'track',
   },
   vault: {
@@ -51,6 +54,7 @@ export const POSES: Record<Scene, Pose> = {
     carYaw: 0,
     trackLines: false,
     sweep: false,
+    rim: 1,
     still: 'vault',
   },
   settings: {
@@ -62,6 +66,7 @@ export const POSES: Record<Scene, Pose> = {
     carYaw: null,
     trackLines: false,
     sweep: false,
+    rim: 0,
     still: 'garage',
   },
 }
