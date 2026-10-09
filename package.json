@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "words": "tsx scripts/build-words.ts",
     "vault": "tsx scripts/vault.ts",
-    "vault:rekey": "tsx scripts/vault-rekey.ts"
+    "vault:rekey": "tsx scripts/vault-rekey.ts",
+    "car": "tsx scripts/car.ts"
   },
   "dependencies": {
     "@fontsource/rajdhani": "^5.3.0",
