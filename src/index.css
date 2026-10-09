@@ -1,0 +1,35 @@
+@import 'tailwindcss';
+@import '@fontsource/rajdhani/500.css';
+@import '@fontsource/rajdhani/700.css';
+
+@theme {
+  --color-ink: #050506;
+  --color-panel: #0e0e10;
+  --color-line: #2a2a2e;
+  --color-fg: #e4e4e6;
+  --color-muted: #86868c;
+  --font-display: 'Rajdhani', system-ui, sans-serif;
+}
+
+:root {
+  --accent: #9e1c22;
+  --accent-hi: #c1272d;
+}
+
+[data-theme='vault'] {
+  --accent: #a8894f;
+  --accent-hi: #bf9f62;
+}
+
+@theme inline {
+  --color-accent: var(--accent);
+  --color-accent-hi: var(--accent-hi);
+}
+
+html,
+body {
+  background: var(--color-ink);
+  color: var(--color-fg);
+  font-family: system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
