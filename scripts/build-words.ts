@@ -1,7 +1,7 @@
 import { createReadStream, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parse } from 'csv-parse'
-import { isCetWord, rankOf, toEntry, type EcdictRow, type WordEntry } from './lib/ecdict.ts'
+import { isCetWord, rankOf, toPackEntry, type EcdictRow, type WordEntry } from './lib/ecdict.ts'
 
 const CHUNK_SIZE = 500
 const csvPath = process.argv[2] ?? 'scripts/.cache/ecdict.csv'
@@ -10,9 +10,9 @@ const outDir = process.argv[3] ?? 'public/words'
 const picked = new Map<string, { entry: WordEntry; rank: number }>()
 const parser = createReadStream(csvPath).pipe(parse({ columns: true, relax_quotes: true }))
 for await (const row of parser as AsyncIterable<EcdictRow>) {
-  if (!isCetWord(row.tag) || picked.has(row.word)) continue
-  const entry = toEntry(row)
-  if (entry) picked.set(row.word, { entry, rank: rankOf(row) })
+  if (!isCetWord(row.tag)) continue
+  const entry = toPackEntry(row)
+  if (entry && !picked.has(entry.w)) picked.set(entry.w, { entry, rank: rankOf(row) })
 }
 
 const sorted = [...picked.values()]

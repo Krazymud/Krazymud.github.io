@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { isCetWord, parseTranslation, rankOf, toEntry, type EcdictRow } from './ecdict.ts'
+import { CASE_OVERRIDES } from './caseOverrides.ts'
+import {
+  isCetWord,
+  isLowercaseWord,
+  parseTranslation,
+  rankOf,
+  toEntry,
+  toPackEntry,
+  type EcdictRow,
+} from './ecdict.ts'
 
 function row(overrides: Partial<EcdictRow>): EcdictRow {
   return { word: 'x', phonetic: '', translation: '', tag: 'cet4', frq: '0', bnc: '0', ...overrides }
@@ -14,7 +23,71 @@ describe('isCetWord', () => {
   })
 })
 
+describe('isLowercaseWord', () => {
+  it.each(['polish', 'x-ray', "o'clock", 'up-to-date'])('accepts %s', (word) => {
+    expect(isLowercaseWord(word)).toBe(true)
+  })
+
+  it.each(['Polish', 'CORE', 'France', 'i.e.', 'B.C.', 'x--ray', '-ray', "o'", 'ice cream', ''])('rejects %s', (word) => {
+    expect(isLowercaseWord(word)).toBe(false)
+  })
+})
+
+describe('toPackEntry', () => {
+  const overrides = {
+    Polish: { w: 'polish', pos: 'v.', m: 'v. 擦亮，使完美；n. 上光剂，光泽' },
+    FAX: { w: 'fax' },
+  }
+
+  it('keeps a lowercase row as is', () => {
+    const entry = toPackEntry(row({ word: 'abandon', translation: 'vt. 放弃, 抛弃' }), overrides)
+    expect(entry).toEqual({ w: 'abandon', p: '', pos: 'v.', m: 'v. 放弃，抛弃' })
+  })
+
+  it('files a listed capitalized row under its lowercase word with the overridden meaning', () => {
+    const polish = row({ word: 'Polish', phonetic: "'pәliʃ", translation: 'a. 波兰的\\nvt. 擦亮, 擦去' })
+    expect(toPackEntry(polish, overrides)).toEqual({
+      w: 'polish',
+      p: "'pəliʃ",
+      pos: 'v.',
+      m: 'v. 擦亮，使完美；n. 上光剂，光泽',
+    })
+  })
+
+  it('keeps the row meaning when the override has none', () => {
+    const fax = row({ word: 'FAX', translation: 'n. 传真\\nvt. 发传真' })
+    expect(toPackEntry(fax, overrides)).toEqual({ w: 'fax', p: '', pos: 'n.', m: 'n. 传真；v. 发传真' })
+  })
+
+  it('drops capitalized rows that are not listed', () => {
+    expect(toPackEntry(row({ word: 'France', translation: 'n. 法国' }), overrides)).toBeNull()
+    expect(toPackEntry(row({ word: 'i.e.', translation: 'adv. 也就是' }), overrides)).toBeNull()
+  })
+
+  it('uses the curated overrides by default', () => {
+    expect(toPackEntry(row({ word: 'Pole', translation: 'n. 波兰人, 极点' }))).toMatchObject({
+      w: 'pole',
+      pos: 'n.',
+      m: 'n. 杆，柱；极，电极',
+    })
+  })
+})
+
+describe('CASE_OVERRIDES', () => {
+  it('maps non-lowercase rows to valid lowercase words', () => {
+    for (const [word, override] of Object.entries(CASE_OVERRIDES)) {
+      expect(isLowercaseWord(word)).toBe(false)
+      expect(isLowercaseWord(override.w)).toBe(true)
+      expect(override.w).toBe(word.toLowerCase())
+    }
+  })
+})
+
 describe('parseTranslation', () => {
+  it('maps the plural part of speech to n.', () => {
+    expect(parseTranslation('pl. 人们, 民族')).toEqual({ pos: 'n.', meaning: 'n. 人们，民族' })
+  })
+
   it('normalizes the part of speech and drops domain lines', () => {
     expect(parseTranslation('a. 不明确的, 模棱两可的\\n[法] 意思含糊的, 模棱两可的')).toEqual({
       pos: 'adj.',

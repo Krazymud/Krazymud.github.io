@@ -1,3 +1,5 @@
+import { CASE_OVERRIDES, type CaseOverride } from './caseOverrides.ts'
+
 export interface EcdictRow {
   word: string
   phonetic: string
@@ -31,14 +33,20 @@ const POS_MAP: Record<string, string> = {
   'interj.': 'int.',
   'art.': 'art.',
   'aux.': 'aux.',
+  'pl.': 'n.',
 }
 
 const MAX_SENSES = 2
 const MAX_MEANINGS_PER_SENSE = 3
+const LOWERCASE_WORD_RE = /^[a-z]+(?:[-'][a-z]+)*$/
 
 export function isCetWord(tag: string): boolean {
   const tags = tag.split(' ')
   return tags.includes('cet4') || tags.includes('cet6')
+}
+
+export function isLowercaseWord(word: string): boolean {
+  return LOWERCASE_WORD_RE.test(word)
 }
 
 export function parseTranslation(translation: string): { pos: string; meaning: string } | null {
@@ -70,6 +78,17 @@ export function toEntry(row: EcdictRow): WordEntry | null {
   const parsed = parseTranslation(row.translation)
   if (!parsed) return null
   return { w: row.word, p: row.phonetic.replace(/ә/g, 'ə'), pos: parsed.pos, m: parsed.meaning }
+}
+
+export function toPackEntry(
+  row: EcdictRow,
+  overrides: Readonly<Record<string, CaseOverride>> = CASE_OVERRIDES,
+): WordEntry | null {
+  if (isLowercaseWord(row.word)) return toEntry(row)
+  const override = overrides[row.word]
+  const entry = override ? toEntry(row) : null
+  if (!override || !entry) return null
+  return { ...entry, w: override.w, pos: override.pos ?? entry.pos, m: override.m ?? entry.m }
 }
 
 export function rankOf(row: EcdictRow): number {
