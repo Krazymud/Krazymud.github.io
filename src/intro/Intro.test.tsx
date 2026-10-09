@@ -48,7 +48,7 @@ describe('Intro', () => {
     render(<Intro onDone={() => {}} />)
     act(() => setLoading({ kind: '3d', fraction: 0.4 }))
     advance(INTRO_FALLBACK_MS)
-    expect(ignite()).toBeInTheDocument()
+    expect(ignite()).toHaveFocus()
   })
 
   it('starts the engine, lights up and remembers the intro', () => {
@@ -67,5 +67,16 @@ describe('Intro', () => {
     advance(INTRO_FADE_MS)
     expect(onDone).toHaveBeenCalledTimes(1)
     off()
+  })
+
+  it('does not finish after it has been removed mid-fade', () => {
+    const onDone = vi.fn()
+    setLoading({ kind: 'still', fraction: 1 })
+    const { unmount } = render(<Intro onDone={onDone} />)
+    advance(INTRO_MIN_MS)
+    fireEvent.click(ignite()!)
+    unmount()
+    advance(INTRO_FADE_MS)
+    expect(onDone).not.toHaveBeenCalled()
   })
 })

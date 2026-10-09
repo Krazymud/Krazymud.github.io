@@ -52,6 +52,7 @@ export function Layout() {
     <div
       data-theme={scene === 'vault' ? 'vault' : undefined}
       onPointerDownCapture={unlockAudio}
+      onClickCapture={unlockAudio}
       onKeyDownCapture={unlockAudio}
       className={
         scene === 'garage'
@@ -60,7 +61,7 @@ export function Layout() {
       }
     >
       <SceneHost scene={scene} />
-      <header className="relative z-10 flex items-center justify-between gap-3 px-5 pt-4 text-xs">
+      <header inert={intro} className="relative z-10 flex items-center justify-between gap-3 px-5 pt-4 text-xs">
         <span className="font-display tracking-[0.35em] text-accent-hi">MIDNIGHT GARAGE</span>
         <nav className="flex items-center gap-4">
           {NAV.map((item) => (
@@ -89,7 +90,7 @@ export function Layout() {
           进度暂时无法保存到这台设备，建议去「设置」导出进度。
         </p>
       )}
-      <main className="relative z-10 mx-auto flex w-full max-w-md flex-col px-5 pt-6 pb-10">
+      <main inert={intro} className="relative z-10 mx-auto flex w-full max-w-md flex-col px-5 pt-6 pb-10">
         <Outlet />
       </main>
       {intro && <Intro onDone={() => setIntro(false)} />}

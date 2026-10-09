@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { play, unlockAudio } from '../audio/sound'
 import { setPrefs } from '../prefs/prefs'
 import { emitIgnition } from '../scene/events'
@@ -22,10 +22,14 @@ export function Intro({ onDone }: IntroProps) {
   const [startedAt] = useState(() => Date.now())
   const [now, setNow] = useState(startedAt)
   const [leaving, setLeaving] = useState(false)
+  const fade = useRef<number | undefined>(undefined)
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), TICK_MS)
-    return () => window.clearInterval(id)
+    return () => {
+      window.clearInterval(id)
+      window.clearTimeout(fade.current)
+    }
   }, [])
 
   const elapsed = now - startedAt
@@ -39,12 +43,13 @@ export function Intro({ onDone }: IntroProps) {
     void play('ignition')
     emitIgnition()
     setPrefs({ introSeen: true })
-    window.setTimeout(onDone, reduced ? 0 : INTRO_FADE_MS)
+    fade.current = window.setTimeout(onDone, reduced ? 0 : INTRO_FADE_MS)
   }
 
   return (
     <div
       role="dialog"
+      aria-modal="true"
       aria-label="点火开场"
       className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ink text-fg transition-opacity ease-out"
       style={{ opacity: leaving ? 0 : 1, transitionDuration: reduced ? '0ms' : `${INTRO_FADE_MS}ms` }}
@@ -58,6 +63,7 @@ export function Intro({ onDone }: IntroProps) {
         {canIgnite ? (
           <button
             type="button"
+            autoFocus
             onClick={ignite}
             disabled={leaving}
             className="flex h-28 w-28 items-center justify-center rounded-full border border-accent-hi bg-accent/20 font-display text-lg tracking-[0.3em]"

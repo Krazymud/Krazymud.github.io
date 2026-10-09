@@ -49,10 +49,12 @@ describe('app shell', () => {
 
   it('shows the ignition intro on the first visit to the garage only', () => {
     renderAt('/')
-    expect(screen.getByRole('dialog', { name: '点火开场' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: '点火开场' })).toHaveAttribute('aria-modal', 'true')
+    expect(document.querySelector('header')).toHaveAttribute('inert')
+    expect(document.querySelector('main')).toHaveAttribute('inert')
   })
 
-  it('skips the intro once it has been seen, and on other pages', () => {
+  it('skips the intro once it has been seen', () => {
     localStorage.setItem(PREFS_KEY, JSON.stringify({ introSeen: true }))
     renderAt('/')
     expect(screen.queryByRole('dialog', { name: '点火开场' })).toBeNull()
