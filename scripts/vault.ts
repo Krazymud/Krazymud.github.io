@@ -10,7 +10,7 @@ try {
   if (vaultExists(OUT_DIR)) {
     passphrase = await askHidden('保险库口令：')
   } else {
-    console.log('第一次创建保险库。口令至少 16 个字符，或至少 4 个用空格分开的词。')
+    console.log('第一次创建保险库。口令至少 16 个字符（空格也算，连续的空格算一个）。')
     passphrase = await askHidden('设置口令：')
     if ((await askHidden('再输入一遍：')) !== passphrase) throw new VaultError('两次输入的口令不一样')
   }

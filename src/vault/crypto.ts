@@ -13,7 +13,6 @@ export const PBKDF2_ITERATIONS = 600_000
 const IV_BYTES = 12
 const SALT_BYTES = 16
 const MIN_CHARS = 16
-const MIN_WORDS = 4
 
 export class DecryptError extends Error {
   constructor() {
@@ -39,12 +38,13 @@ export function fromBase64(text: string): Uint8Array<ArrayBuffer> {
   return bytes
 }
 
+export function normalizePassphrase(passphrase: string): string {
+  return passphrase.trim().normalize('NFC').replace(/\s+/g, ' ')
+}
+
 export function checkPassphrase(passphrase: string): string | null {
-  const trimmed = passphrase.trim()
-  const chars = [...trimmed].length
-  const words = trimmed.split(/\s+/).filter(Boolean).length
-  if (chars >= MIN_CHARS || words >= MIN_WORDS) return null
-  return `口令至少要 ${MIN_CHARS} 个字符，或至少 ${MIN_WORDS} 个用空格分开的词`
+  if ([...normalizePassphrase(passphrase)].length >= MIN_CHARS) return null
+  return `口令至少要 ${MIN_CHARS} 个字符`
 }
 
 export function newKdfParams(iterations = PBKDF2_ITERATIONS): KdfParams {
@@ -57,7 +57,7 @@ export function newKdfParams(iterations = PBKDF2_ITERATIONS): KdfParams {
 }
 
 export async function deriveKek(passphrase: string, kdf: KdfParams): Promise<VaultKey> {
-  const secret = new TextEncoder().encode(passphrase.trim().normalize('NFC'))
+  const secret = new TextEncoder().encode(normalizePassphrase(passphrase))
   const base = await crypto.subtle.importKey('raw', secret, 'PBKDF2', false, ['deriveKey'])
   return crypto.subtle.deriveKey(
     { name: 'PBKDF2', hash: kdf.hash, salt: fromBase64(kdf.salt), iterations: kdf.iterations },

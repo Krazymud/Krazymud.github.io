@@ -95,7 +95,7 @@ describe('runVault', () => {
 })
 
 describe('runRekey', () => {
-  const NEW_PASS = '新的 口令 也要 够长'
+  const NEW_PASS = '新的口令也要足够长 才能通过检查'
 
   it('switches the passphrase without touching the content', async () => {
     await run()

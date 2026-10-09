@@ -10,6 +10,7 @@ import {
   fromBase64,
   generateDek,
   newKdfParams,
+  normalizePassphrase,
   PBKDF2_ITERATIONS,
   toBase64,
   unwrapDek,
@@ -27,15 +28,28 @@ describe('base64', () => {
   })
 })
 
+describe('normalizePassphrase', () => {
+  it('trims, applies NFC and collapses internal whitespace to one space', () => {
+    expect(normalizePassphrase('  iceland  aurora\tpenguin\n goodnight ')).toBe(PASS)
+    expect(normalizePassphrase('cafe\u0301')).toBe('caf\u00e9')
+  })
+})
+
 describe('checkPassphrase', () => {
-  it('accepts 16 characters or 4 words', () => {
+  it('accepts 16 characters', () => {
     expect(checkPassphrase('abcdefghijklmnop')).toBeNull()
-    expect(checkPassphrase('冰岛 极光 企鹅 晚安')).toBeNull()
+    expect(checkPassphrase(PASS)).toBeNull()
   })
 
-  it('rejects shorter passphrases with a reason', () => {
-    expect(checkPassphrase('abcdefghijklmno')).toBe('口令至少要 16 个字符，或至少 4 个用空格分开的词')
-    expect(checkPassphrase('冰岛 极光 企鹅')).not.toBeNull()
+  it('rejects shorter passphrases with a reason, however many words', () => {
+    expect(checkPassphrase('abcdefghijklmno')).toBe('口令至少要 16 个字符')
+    expect(checkPassphrase('a b c d')).toBe('口令至少要 16 个字符')
+    expect(checkPassphrase('冰岛 极光 企鹅 晚安')).not.toBeNull()
+  })
+
+  it('counts characters after normalization', () => {
+    expect(checkPassphrase('abcdefg        hijklmn')).not.toBeNull()
+    expect(checkPassphrase('  abcdefghijklmno  ')).not.toBeNull()
   })
 
   it('counts Chinese characters one by one', () => {
@@ -60,6 +74,7 @@ describe('encryptBytes / decryptBytes', () => {
     await expect(decryptBytes(key, tampered)).rejects.toBeInstanceOf(DecryptError)
     await expect(decryptBytes(await generateDek(), sealed)).rejects.toBeInstanceOf(DecryptError)
     await expect(decryptBytes(key, new Uint8Array(5))).rejects.toBeInstanceOf(DecryptError)
+    await expect(decryptBytes(key, sealed.slice(0, 12))).rejects.toBeInstanceOf(DecryptError)
   })
 
   it('round-trips JSON', async () => {
@@ -95,6 +110,18 @@ describe('passphrase key wrapping', () => {
     const dek = await generateDek()
     const wrapped = await wrapDek(dek, await deriveKek(PASS, kdf))
     await expect(unwrapDek(wrapped, await deriveKek(`  ${PASS}  `, kdf), false)).resolves.toBeDefined()
+  })
+
+  it('treats runs of whitespace inside the passphrase as one space', async () => {
+    const kdf = newKdfParams(1000)
+    const wrapped = await wrapDek(await generateDek(), await deriveKek('iceland  aurora\tpenguin goodnight', kdf))
+    await expect(unwrapDek(wrapped, await deriveKek(PASS, kdf), false)).resolves.toBeDefined()
+  })
+
+  it('treats composed and decomposed accents as the same passphrase', async () => {
+    const kdf = newKdfParams(1000)
+    const wrapped = await wrapDek(await generateDek(), await deriveKek(`caf\u00e9 ${PASS}`, kdf))
+    await expect(unwrapDek(wrapped, await deriveKek(`cafe\u0301 ${PASS}`, kdf), false)).resolves.toBeDefined()
   })
 
   it('can make the unwrapped key non-extractable', async () => {
