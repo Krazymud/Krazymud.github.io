@@ -14,7 +14,7 @@
 4. 新增几张照片后重新运行脚本，只有新照片产生新的密文文件，旧密文文件不变。
 5. 开启「减少动态效果」时，所有功能照常可用。
 
-**不做：** 引擎声、3D 柜门和镜头动画（计划 3）；在网页上编辑内容；HEIC 等 `sharp` 预编译包不支持的图片格式。
+**不做：** 引擎声、3D 柜门和镜头动画（计划 3）；在网页上编辑内容；实况照片的视频部分；JPG、PNG、WebP、HEIC 以外的图片格式。
 
 ## 2. 内容来源 `vault-src/`
 
@@ -22,7 +22,7 @@
 
 | 路径 | 内容 | 元数据 |
 |---|---|---|
-| `photos/*.{jpg,jpeg,png,webp}` | 照片 | 日期取 EXIF 拍摄时间，读不到就用文件修改时间；标题默认为空 |
+| `photos/*.{jpg,jpeg,png,webp,heic,heif}` | 照片（扩展名不区分大小写） | 日期取 EXIF 拍摄时间，读不到就用文件修改时间；标题默认为空 |
 | `notes/*.md` | 笔记，正文为 Markdown | 文件开头的 front matter：`title`（必填）、`date`（必填，`YYYY-MM-DD`） |
 | `lists/*.md` | 清单，每行 `- [x] 文字` 或 `- [ ] 文字` | front matter：`title`（必填） |
 | `manifest.yaml`（可选） | 照片补充信息和排序 | 见下 |
@@ -82,7 +82,8 @@ interface VaultManifest {
 1. 在终端隐藏回显地输入口令。`vault.json` 不存在时要求输入两遍并检查强度；存在时输入一遍，用它解开旧 DEK 和旧清单，解不开就报「口令不对」并退出。
 2. 扫描 `vault-src/`，为每项计算 `hash`。
 3. 对每项：旧清单里有相同 `source` 和 `hash` 时沿用旧的 blob 名；否则重新处理并加密，写入新的随机 blob 名。
-4. 照片处理（`sharp`）：按 EXIF 方向转正；最长边缩到 2000 像素（不放大），转 WebP（质量 82）；缩略图为 400×400 居中裁切的 WebP（质量 70）；输出不保留任何元数据。日期用 `exifr` 在处理前读取。
+4. 照片处理（`sharp`）：按 EXIF 方向转正；最长边缩到 2000 像素（不放大），转 WebP（质量 82）；缩略图为 400×400 居中裁切的 WebP（质量 70）；输出不保留任何元数据。日期用 `exifr` 在处理前读取（支持 HEIC）。
+   - HEIC/HEIF：先用 `heic-decode`（libheif 的 WebAssembly 版本，无需系统组件）解码主图为 RGBA 像素（libheif 已按容器里的旋转信息转正），再作为原始像素交给 `sharp`，后续步骤相同。解码较慢（每张约 1–3 秒），处理时逐张打印进度。实况照片只取静态图。
 5. 删除 `blobs/` 下不再被清单引用的文件。
 6. 写入新的 `vault.json`（沿用原盐和 DEK）。
 7. 打印照片、笔记、清单数量，新增和删除的 blob 数，`public/vault/` 总大小；超过 300 MB 时打印警告。
@@ -136,12 +137,12 @@ interface VaultManifest {
 | `src/vault/keyStore.ts` | IndexedDB 存取 DEK |
 | `src/vault/VaultScreen.tsx` 及 `components/` | 解锁页、标签页、照片网格和查看器、笔记、清单 |
 | `scripts/lib/vaultSource.ts` | 扫描 `vault-src/`、解析 front matter、清单、`manifest.yaml`、计算哈希（纯函数为主） |
-| `scripts/lib/photo.ts` | `sharp` 处理照片、`exifr` 读日期 |
+| `scripts/lib/photo.ts` | `heic-decode` 解码 HEIC、`sharp` 处理照片、`exifr` 读日期 |
 | `scripts/lib/vaultBuild.ts` | 增量构建：给定源、旧清单、DEK，产出新清单、要写和要删的 blob |
 | `scripts/lib/prompt.ts` | 隐藏回显的口令输入 |
 | `scripts/vault.ts`、`scripts/vault-rekey.ts` | 命令行入口 |
 
-新增依赖：`sharp`、`exifr`、`yaml`（解析 `manifest.yaml` 和 front matter）为开发依赖；`react-markdown` 为运行时依赖。
+新增依赖：`sharp`、`heic-decode`、`exifr`、`yaml`（解析 `manifest.yaml` 和 front matter）为开发依赖；`react-markdown` 为运行时依赖。
 
 ## 8. 测试
 
@@ -149,9 +150,9 @@ interface VaultManifest {
 - **口令强度**：边界值（15/16 个字符，3/4 个词）。
 - **源解析**：front matter、清单勾选、`manifest.yaml` 覆盖、缺字段和引用不存在文件时报错。
 - **增量构建**：第二次构建未变项沿用 blob 名；修改项换新 blob；删除项列入待删。
-- **照片**：输出长边 ≤ 2000、缩略图 400×400、输出无 EXIF/GPS（测试中用 `sharp` 生成带 GPS 的小图）。
+- **照片**：输出长边 ≤ 2000、缩略图 400×400、输出无 EXIF/GPS（测试中用 `sharp` 生成带 GPS 的小图）。HEIC 分支通过注入解码函数测试「原始像素 → WebP」这条路径；`sharp` 无法生成 HEIC，所以真实 HEIC 文件放在手动验收里验证。
 - **界面**（jsdom，用 `fake-indexeddb` 和测试内生成的小保险库）：正确口令进入照片栏；错误口令提示；勾选记住后重新挂载直接进入；锁上回到解锁页；单个 blob 损坏只影响该项；`vault.json` 404 显示空占位。
-- **手动验收**：用示例内容跑一遍 `npm run vault`，在手机上解锁、看照片、看笔记、锁上。
+- **手动验收**：用示例内容（含至少一张 iPhone 拍的 HEIC 竖拍照片）跑一遍 `npm run vault`，确认 HEIC 方向正确、日期正确；在手机上解锁、看照片、看笔记、锁上。
 
 ## 9. 发布流程（人工）
 
