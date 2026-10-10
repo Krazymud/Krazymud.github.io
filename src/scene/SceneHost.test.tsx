@@ -200,7 +200,7 @@ describe('SceneHost', () => {
     vi.setSystemTime(new Date(2026, 9, 10, 13, 0))
     const { rerender } = render(<SceneHost scene="garage" webgl2={() => false} />)
     const tint = screen.getByTestId('scene-tint')
-    expect(tint).toHaveStyle({ backgroundColor: '#fff2e0', opacity: '0.12' })
+    expect(tint).toHaveStyle({ backgroundColor: '#fff2e0', opacity: '0.16' })
     rerender(<SceneHost scene="vault" webgl2={() => false} />)
     expect(screen.getByTestId('scene-tint')).toHaveStyle({ opacity: '0' })
   })

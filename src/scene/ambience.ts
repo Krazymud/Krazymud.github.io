@@ -13,9 +13,9 @@ export const NIGHT: Ambience = { key: '#9e1c22', keyScale: 1, env: 1, strips: 1,
 
 const KEYS: readonly { hour: number; value: Ambience }[] = [
   { hour: 2, value: NIGHT },
-  { hour: 7, value: { key: '#b4442a', keyScale: 1.1, env: 1.15, strips: 0.7, tint: '#ff9a55', tintAlpha: 0.1 } },
-  { hour: 13, value: { key: '#b85a4e', keyScale: 1.3, env: 1.4, strips: 0.45, tint: '#fff2e0', tintAlpha: 0.12 } },
-  { hour: 19, value: { key: '#a8361f', keyScale: 1.1, env: 1.1, strips: 0.85, tint: '#ffb347', tintAlpha: 0.1 } },
+  { hour: 7, value: { key: '#d2643a', keyScale: 1.35, env: 1.5, strips: 0.55, tint: '#ff9a55', tintAlpha: 0.14 } },
+  { hour: 13, value: { key: '#e2b49c', keyScale: 1.7, env: 2, strips: 0.3, tint: '#fff2e0', tintAlpha: 0.16 } },
+  { hour: 19, value: { key: '#cc4a1c', keyScale: 1.3, env: 1.3, strips: 0.8, tint: '#ffb347', tintAlpha: 0.14 } },
 ]
 
 const toLinear = (c: number) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)

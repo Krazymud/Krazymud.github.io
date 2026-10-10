@@ -10,21 +10,21 @@ describe('ambienceAt', () => {
   })
 
   it('hits each key moment exactly', () => {
-    expect(at(7)).toMatchObject({ key: '#b4442a', keyScale: 1.1, env: 1.15, strips: 0.7, tintAlpha: 0.1 })
-    expect(at(13)).toMatchObject({ key: '#b85a4e', keyScale: 1.3, env: 1.4, strips: 0.45, tintAlpha: 0.12 })
-    expect(at(19)).toMatchObject({ key: '#a8361f', keyScale: 1.1, env: 1.1, strips: 0.85, tintAlpha: 0.1 })
+    expect(at(7)).toMatchObject({ key: '#d2643a', keyScale: 1.35, env: 1.5, strips: 0.55, tint: '#ff9a55', tintAlpha: 0.14 })
+    expect(at(13)).toMatchObject({ key: '#e2b49c', keyScale: 1.7, env: 2, strips: 0.3, tint: '#fff2e0', tintAlpha: 0.16 })
+    expect(at(19)).toMatchObject({ key: '#cc4a1c', keyScale: 1.3, env: 1.3, strips: 0.8, tint: '#ffb347', tintAlpha: 0.14 })
   })
 
   it('blends halfway between key moments', () => {
     const mid = at(10)
-    expect(mid.keyScale).toBeCloseTo(1.2)
-    expect(mid.env).toBeCloseTo(1.275)
-    expect(mid.strips).toBeCloseTo(0.575)
+    expect(mid.keyScale).toBeCloseTo(1.525)
+    expect(mid.env).toBeCloseTo(1.75)
+    expect(mid.strips).toBeCloseTo(0.425)
   })
 
   it('wraps from dusk through midnight to deep night', () => {
-    expect(at(22, 30).strips).toBeCloseTo(0.85 + (1 - 0.85) * 0.5)
-    expect(at(0, 45).strips).toBeCloseTo(0.85 + (1 - 0.85) * (5.75 / 7))
+    expect(at(22, 30).strips).toBeCloseTo(0.8 + (1 - 0.8) * 0.5)
+    expect(at(0, 45).strips).toBeCloseTo(0.8 + (1 - 0.8) * (5.75 / 7))
   })
 
   it('blends colours smoothly', () => {
