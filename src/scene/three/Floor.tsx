@@ -32,7 +32,7 @@ interface FloorProps {
   reflection: 512 | 256 | null
 }
 
-export function Floor({ pose, deterministic }: FloorProps) {
+export function Floor({ pose, deterministic, reflection }: FloorProps) {
   const concrete = useTiledTextures(TEXTURE_URLS.floor, [50, 50])
   const lines = useMemo(trackLinesTexture, [])
   const linesMaterial = useRef<MeshBasicMaterial>(null)
@@ -53,22 +53,36 @@ export function Floor({ pose, deterministic }: FloorProps) {
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.002, 0]}>
         <planeGeometry args={[200, 200]} />
-        <MeshReflectorMaterial
-          resolution={512}
-          blur={[300, 80]}
-          mixBlur={1}
-          mixStrength={0.6}
-          metalness={0.2}
-          depthScale={0.6}
-          minDepthThreshold={0.4}
-          maxDepthThreshold={1.2}
-          map={concrete.map}
-          roughnessMap={concrete.roughnessMap}
-          normalMap={concrete.normalMap}
-          normalScale={[0.4, 0.4]}
-          color="#2a2a2e"
-          roughness={1}
-        />
+        {reflection === null ? (
+          <meshStandardMaterial
+            map={concrete.map}
+            roughnessMap={concrete.roughnessMap}
+            normalMap={concrete.normalMap}
+            normalScale={[0.4, 0.4]}
+            color="#2a2a2e"
+            metalness={0.2}
+            roughness={1}
+          />
+        ) : (
+          <MeshReflectorMaterial
+            // drei 只在创建反射器时读取 resolution，换 key 才能按新分辨率重建
+            key={reflection}
+            resolution={reflection}
+            blur={[300, 80]}
+            mixBlur={1}
+            mixStrength={0.6}
+            metalness={0.2}
+            depthScale={0.6}
+            minDepthThreshold={0.4}
+            maxDepthThreshold={1.2}
+            map={concrete.map}
+            roughnessMap={concrete.roughnessMap}
+            normalMap={concrete.normalMap}
+            normalScale={[0.4, 0.4]}
+            color="#2a2a2e"
+            roughness={1}
+          />
+        )}
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, 0]}>
         <planeGeometry args={[6, 200]} />
