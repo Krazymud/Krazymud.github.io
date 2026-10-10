@@ -1,6 +1,4 @@
 /// <reference lib="dom" />
-import { mkdir, rename, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
 import { chromium } from 'playwright'
 import { createServer } from 'vite'
 import {
@@ -10,6 +8,7 @@ import {
   STILL_SCENES,
   stillFileName,
   StillsError,
+  writeStills,
   type Orientation,
 } from './lib/stills.ts'
 
@@ -39,11 +38,15 @@ async function capture(): Promise<{ name: string; data: Uint8Array }[]> {
           null,
           { timeout: READY_TIMEOUT_MS },
         )
-        const failure = await page.evaluate(() => document.body.dataset.stillError)
-        if (failure !== undefined || errors.length > 0) {
-          throw new StillsError(`${label}：页面渲染失败（${failure ?? errors.join('；')}）`)
+        const checkRendered = async () => {
+          const failure = await page.evaluate(() => document.body.dataset.stillError)
+          if (failure !== undefined || errors.length > 0) {
+            throw new StillsError(`${label}：页面渲染失败（${failure ?? errors.join('；')}）`)
+          }
         }
+        await checkRendered()
         await page.waitForTimeout(SETTLE_MS)
+        await checkRendered()
         const png = await page.screenshot({ type: 'png' })
         await checkNotBlack(png, label)
         results.push({ name: stillFileName(scene, orientation), data: await encodeStill(png, label) })
@@ -59,14 +62,7 @@ async function capture(): Promise<{ name: string; data: Uint8Array }[]> {
 }
 
 async function main() {
-  const stills = await capture()
-  await mkdir(OUT_DIR, { recursive: true })
-  for (const { name, data } of stills) {
-    const target = join(OUT_DIR, name)
-    await writeFile(`${target}.tmp`, data)
-    await rename(`${target}.tmp`, target)
-    console.log(`${target}  ${(data.length / 1024).toFixed(1)} KB`)
-  }
+  await writeStills(OUT_DIR, await capture(), (line) => console.log(line))
 }
 
 main().catch((error: unknown) => {

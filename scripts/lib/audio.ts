@@ -1,4 +1,4 @@
-import { access, rename, stat, unlink } from 'node:fs/promises'
+import { access, readdir, rename, stat, unlink } from 'node:fs/promises'
 import path from 'node:path'
 
 export interface AudioClip {
@@ -25,6 +25,9 @@ export function validateClips(clips: readonly AudioClip[]): void {
   for (const clip of clips) {
     if (names.has(clip.name)) throw new AudioError(`音效名重复：${clip.name}`)
     names.add(clip.name)
+    if (![clip.start, clip.end, clip.fadeIn, clip.fadeOut, clip.loudness].every(Number.isFinite)) {
+      throw new AudioError(`${clip.name}：时间或响度不是有效数字`)
+    }
     const length = clip.end - clip.start
     if (clip.start < 0 || length <= 0) throw new AudioError(`${clip.name}：截取范围不对（${clip.start}–${clip.end} 秒）`)
     if (clip.fadeIn < 0 || clip.fadeOut < 0 || clip.fadeIn + clip.fadeOut > length) {
@@ -83,10 +86,16 @@ export async function runAudio({ sourceDir, outDir, clips, encode, log }: RunAud
     }
     const total = jobs.reduce((sum, job) => sum + job.bytes, 0)
     if (total > MAX_TOTAL_BYTES) throw new AudioError(`音效合计 ${(total / 1024).toFixed(0)} KB，超过 ${MAX_TOTAL_BYTES / 1024} KB`)
+    for (const job of jobs) await rename(job.tmp, job.out)
   } catch (error) {
     await Promise.all(jobs.map((job) => unlink(job.tmp).catch(() => undefined)))
     throw error
   }
-  for (const job of jobs) await rename(job.tmp, job.out)
+  const configured = new Set(jobs.map((job) => path.basename(job.out)))
+  for (const name of await readdir(outDir)) {
+    if (!name.endsWith('.mp3') || configured.has(name)) continue
+    await unlink(path.join(outDir, name))
+    log(`已删除不再使用的 ${name}`)
+  }
   return jobs.map((job) => ({ name: job.clip.name, bytes: job.bytes }))
 }

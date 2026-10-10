@@ -1,3 +1,5 @@
+import { mkdir, rename, unlink, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import sharp from 'sharp'
 
 export const STILL_SCENES = ['garage', 'track', 'vault'] as const
@@ -36,4 +38,24 @@ export async function encodeStill(png: Uint8Array, label: string): Promise<Uint8
     if (webp.length <= MAX_STILL_BYTES) return webp
   }
   throw new StillsError(`${label}：WebP 质量降到 ${QUALITY_FLOOR} 仍超过 ${MAX_STILL_BYTES / 1024} KB`)
+}
+
+export async function writeStills(
+  outDir: string,
+  stills: readonly { name: string; data: Uint8Array }[],
+  log: (line: string) => void,
+): Promise<void> {
+  await mkdir(outDir, { recursive: true })
+  for (const { name, data } of stills) {
+    const target = join(outDir, name)
+    const temporary = `${target}.tmp`
+    try {
+      await writeFile(temporary, data)
+      await rename(temporary, target)
+    } catch (error) {
+      await unlink(temporary).catch(() => undefined)
+      throw error
+    }
+    log(`${target}  ${(data.length / 1024).toFixed(1)} KB`)
+  }
 }

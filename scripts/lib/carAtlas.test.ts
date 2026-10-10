@@ -109,6 +109,12 @@ describe('plate', () => {
     expect(svg).not.toMatch(/NEW YORK|EMPIRE/)
   })
 
+  it('escapes plate text before putting it into the SVG', async () => {
+    const svg = plateSvg(`<R&D "1">'`, 302, 200)
+    expect(svg).toContain('&lt;R&amp;D &quot;1&quot;&gt;&apos;</text>')
+    await expect(paintPlate(new Uint8Array(64 * 32 * 3), 64, 32, { x: 8, y: 8, width: 30, height: 20 }, 'R&D <1>')).resolves.toBeDefined()
+  })
+
   it('draws inside the plate area and nowhere else', async () => {
     const width = 64
     const height = 32
@@ -170,9 +176,9 @@ describe('buildBodyTextures', () => {
 
   it('fails when the taillight area has no lamp pixels', async () => {
     const dark = image(() => [0, 0, 0, 255])
-    await expect(
-      buildBodyTextures({ diffuse: await png(dark), specularGlossiness: await png(specGloss), occlusion: await png(occlusion) }, config),
-    ).rejects.toThrow(/尾灯/)
+    const images = { diffuse: await png(dark), specularGlossiness: await png(specGloss), occlusion: await png(occlusion) }
+    await expect(buildBodyTextures(images, config)).rejects.toThrow(CarError)
+    await expect(buildBodyTextures(images, config)).rejects.toThrow(/尾灯/)
   })
 })
 

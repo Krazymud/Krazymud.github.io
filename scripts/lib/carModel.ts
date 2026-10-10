@@ -1,4 +1,4 @@
-import { Node, type Document, type Material, type Texture } from '@gltf-transform/core'
+import { Node, type Accessor, type Document, type Material, type Texture } from '@gltf-transform/core'
 import {
   EXTTextureWebP,
   KHRMaterialsClearcoat,
@@ -8,7 +8,7 @@ import {
 import { flatten, getBounds, join, prune } from '@gltf-transform/functions'
 import { groundOffset, groundScale, headingYaw, unionBounds, yawQuaternion, type Bounds, type Vec3 } from './carAlign.ts'
 import { buildBodyTextures, fitWebp } from './carAtlas.ts'
-import { assignRoles } from './carRoles.ts'
+import { assignRoles, stateless } from './carRoles.ts'
 import { CarError, type CarConfig, type Role } from './carTypes.ts'
 
 export function linearColor(hex: string): [number, number, number, number] {
@@ -98,8 +98,9 @@ async function createMaterials(doc: Document, config: CarConfig): Promise<Record
 }
 
 function removeMeshes(doc: Document, patterns: RegExp[]) {
+  const removals = patterns.map(stateless)
   for (const mesh of doc.getRoot().listMeshes()) {
-    if (!patterns.some((pattern) => pattern.test(mesh.getName()))) continue
+    if (!removals.some((pattern) => pattern.test(mesh.getName()))) continue
     for (const parent of mesh.listParents()) if (parent instanceof Node) parent.setMesh(null)
     mesh.dispose()
   }
@@ -158,6 +159,31 @@ function alignCar(doc: Document, targetLength: number, shadow: Material) {
   car.setTranslation(groundOffset(solidBounds()))
 }
 
+// meshopt's quantize skips (and warns about) any UV set outside [0,1]. Sets that overshoot by less than this
+// (the Goblin's tires reach -0.008) are clamped; anything wider is real tiling and stays as it is.
+const TEXCOORD_SLACK = 0.01
+
+export function clampTexcoords(doc: Document): void {
+  const accessors = new Set<Accessor>()
+  for (const mesh of doc.getRoot().listMeshes()) {
+    for (const primitive of mesh.listPrimitives()) {
+      for (const semantic of primitive.listSemantics()) {
+        if (semantic.startsWith('TEXCOORD_')) accessors.add(primitive.getAttribute(semantic)!)
+      }
+    }
+  }
+  for (const accessor of accessors) {
+    const min = Math.min(...accessor.getMinNormalized([]))
+    const max = Math.max(...accessor.getMaxNormalized([]))
+    if (min >= 0 && max <= 1) continue
+    if (min < -TEXCOORD_SLACK || max > 1 + TEXCOORD_SLACK) continue
+    const element: number[] = []
+    for (let i = 0; i < accessor.getCount(); i++) {
+      accessor.setElement(i, accessor.getElement(i, element).map((value) => Math.min(Math.max(value, 0), 1)))
+    }
+  }
+}
+
 export async function processCar(doc: Document, config: CarConfig): Promise<void> {
   const root = doc.getRoot()
   const roles = assignRoles(root.listMeshes().map((mesh) => mesh.getName()), config.roles, config.remove)
@@ -175,5 +201,6 @@ export async function processCar(doc: Document, config: CarConfig): Promise<void
   mergeWheels(doc, config.wheels)
   await doc.transform(prune(), flatten(), join({ filter: (node) => node.getExtras().wheel === undefined }))
   alignCar(doc, config.targetLength, materials.shadow)
+  clampTexcoords(doc)
   await doc.transform(prune())
 }

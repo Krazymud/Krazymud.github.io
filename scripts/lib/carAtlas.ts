@@ -117,6 +117,9 @@ export function convertAtlas(diffuse: RawImage, specGloss: RawImage, occlusion: 
   return { baseColor, orm, emissive, emissivePixels, width, height }
 }
 
+const XML_ENTITIES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }
+const escapeXml = (text: string) => text.replace(/[&<>"']/g, (char) => XML_ENTITIES[char])
+
 export function plateSvg(text: string, width: number, height: number): string {
   const border = Math.max(1, Math.round(height * 0.05))
   const radius = Math.round(height * 0.07)
@@ -124,7 +127,7 @@ export function plateSvg(text: string, width: number, height: number): string {
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">`,
     `<rect width="${width}" height="${height}" rx="${radius}" fill="#1c1c1f"/>`,
     `<rect x="${border}" y="${border}" width="${width - 2 * border}" height="${height - 2 * border}" rx="${Math.max(0, radius - border)}" fill="#d4d4d8"/>`,
-    `<text x="${width / 2}" y="${height / 2}" dominant-baseline="central" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="${Math.round(height * 0.36)}" textLength="${Math.round(width * 0.8)}" lengthAdjust="spacingAndGlyphs" fill="#1c1c1f">${text}</text>`,
+    `<text x="${width / 2}" y="${height / 2}" dominant-baseline="central" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="${Math.round(height * 0.36)}" textLength="${Math.round(width * 0.8)}" lengthAdjust="spacingAndGlyphs" fill="#1c1c1f">${escapeXml(text)}</text>`,
     '</svg>',
   ].join('')
 }

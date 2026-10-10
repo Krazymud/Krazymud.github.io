@@ -1,10 +1,10 @@
 // @vitest-environment node
-import type { Document, Node } from '@gltf-transform/core'
+import { Document, type Node } from '@gltf-transform/core'
 import { getBounds } from '@gltf-transform/functions'
 import { describe, expect, it } from 'vitest'
 import { carConfig } from '../car.config.ts'
 import { buildCarFixture, fixtureConfig } from './carFixture.ts'
-import { describeCar, linearColor, processCar } from './carModel.ts'
+import { clampTexcoords, describeCar, linearColor, processCar } from './carModel.ts'
 import { CarError } from './carTypes.ts'
 
 async function processed(): Promise<Document> {
@@ -30,6 +30,22 @@ describe('describeCar', () => {
     const report = describeCar(await buildCarFixture())
     expect(report.meshes).toContain('car_wheel_FL_car_tire_0')
     expect(report.materials).toEqual(expect.arrayContaining(['car_body', 'clearcoat']))
+  })
+})
+
+describe('clampTexcoords', () => {
+  it('pulls UVs that barely overshoot [0,1] back in so they can be quantized, and leaves tiling UVs alone', () => {
+    const doc = new Document()
+    const uv = (values: number[]) => doc.createAccessor().setType('VEC2').setArray(new Float32Array(values))
+    const nudged = uv([-0.008, 0.5, 1.004, 1])
+    const tiled = uv([0, 0, 2, 3])
+    doc
+      .createMesh()
+      .addPrimitive(doc.createPrimitive().setAttribute('TEXCOORD_0', nudged))
+      .addPrimitive(doc.createPrimitive().setAttribute('TEXCOORD_0', tiled))
+    clampTexcoords(doc)
+    expect([...nudged.getArray()!]).toEqual([0, 0.5, 1, 1])
+    expect([...tiled.getArray()!]).toEqual([0, 0, 2, 3])
   })
 })
 
@@ -84,6 +100,12 @@ describe('processCar', () => {
     expect(wheelZ('FL')).toBeGreaterThan(0)
     expect(wheelZ('FR')).toBeGreaterThan(0)
     expect(wheelZ('BL')).toBeLessThan(0)
+  })
+
+  it('removes meshes the same way when a removal pattern carries the y flag', async () => {
+    const doc = await buildCarFixture()
+    await processCar(doc, fixtureConfig({ remove: [/clearcoat_0$/y] }))
+    expect(doc.getRoot().listMaterials().map((m) => m.getName())).not.toContain('clearcoat')
   })
 
   it('rejects a config rule that matches no mesh', async () => {
