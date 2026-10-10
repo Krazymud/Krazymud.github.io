@@ -204,4 +204,20 @@ describe('SceneHost', () => {
     rerender(<SceneHost scene="vault" webgl2={() => false} />)
     expect(screen.getByTestId('scene-tint')).toHaveStyle({ opacity: '0' })
   })
+
+  it('drops the tint as soon as the 3D stage is ready', async () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+    vi.setSystemTime(new Date(2026, 9, 10, 13, 0))
+    let ready: (() => void) | undefined
+    function Stage({ onReady }: StageProps) {
+      ready = onReady
+      return <div data-testid="fake-stage" />
+    }
+    render(<SceneHost scene="garage" loadStage={async () => ({ Stage })} webgl2={yes} />)
+    await screen.findByTestId('fake-stage')
+    expect(screen.getByTestId('scene-tint')).toHaveStyle({ opacity: '0.16' })
+    act(() => ready?.())
+    expect(still()).toBeInTheDocument()
+    expect(screen.getByTestId('scene-tint')).toHaveStyle({ opacity: '0' })
+  })
 })
