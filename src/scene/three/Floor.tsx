@@ -29,6 +29,7 @@ function trackLinesTexture(): CanvasTexture {
 interface FloorProps {
   pose: Pose
   deterministic: boolean
+  reflection: 512 | 256 | null
 }
 
 export function Floor({ pose, deterministic }: FloorProps) {

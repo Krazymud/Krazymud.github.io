@@ -4,9 +4,10 @@ import { BlendFunction, type ChromaticAberrationEffect } from 'postprocessing'
 import { useEffect, useMemo, useRef } from 'react'
 import { Vector2 } from 'three'
 import { onNitro } from '../events'
+import type { Fx } from '../fxTiers'
 import { nitroOffset } from '../motion'
 
-export function PostFx({ deterministic }: { deterministic: boolean }) {
+export function PostFx({ deterministic }: { deterministic: boolean; fx: Fx }) {
   const aberration = useRef<ChromaticAberrationEffect>(null)
   const nitroAt = useRef(-Infinity)
   const clock = useThree((state) => state.clock)

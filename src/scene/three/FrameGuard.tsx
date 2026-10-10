@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber'
-import { useEffect, useRef } from 'react'
-import { guardStep, initialGuard, type Quality } from '../frameGuard'
+import { useEffect, useRef, useState } from 'react'
+import { guardFrom, guardStep, type Quality } from '../frameGuard'
 import { usePageVisible } from '../hooks'
 
 const WARMUP_SECONDS = 2
@@ -8,12 +8,14 @@ const SAMPLE_SECONDS = 1
 const MAX_FRAME_GAP = 0.5
 
 interface FrameGuardProps {
+  initial: Quality
   onQuality: (quality: Quality) => void
   onGiveUp: () => void
 }
 
-export function FrameGuard({ onQuality, onGiveUp }: FrameGuardProps) {
-  const state = useRef(initialGuard)
+export function FrameGuard({ initial, onQuality, onGiveUp }: FrameGuardProps) {
+  const [start] = useState(() => guardFrom(initial))
+  const state = useRef(start)
   const frames = useRef(0)
   const elapsed = useRef(0)
   const visible = usePageVisible()

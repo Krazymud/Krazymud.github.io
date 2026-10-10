@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { perfMarks, programTimings } from './perf'
+import { perfMarks, perfState, programTimings } from './perf'
 
 const REFRESH_MS = 500
 const TOP_PROGRAMS = 10
@@ -38,6 +38,7 @@ export function PerfOverlay() {
     >
       {[
         `${browser} · 并行编译扩展：${parallel} · dpr ${window.devicePixelRatio}`,
+        `画质：${perfState.quality || '—'}`,
         '— 时间点（自页面打开）',
         ...perfMarks.map((mark) => `${mark.name}  ${ms(mark.at)}`),
         `— 着色器 ${programs.length} 个，阻塞合计 ${ms(compileTotal)}`,

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { instrumentWebGL, isPerfEnabled, perfMark, perfMarks, programTimings, shaderLabel } from './perf'
+import { instrumentWebGL, isPerfEnabled, perfMark, perfMarks, perfQuality, perfState, programTimings, shaderLabel } from './perf'
 
 describe('perf diagnostics', () => {
   it('turns on only with ?perf in the address', () => {
@@ -46,5 +46,14 @@ describe('perf diagnostics', () => {
     expect(proto.getProgramParameter(program, 0x8b82)).toBe(true)
     expect(programTimings).toEqual([{ name: 'body', ms: 35 }])
     now.mockRestore()
+  })
+})
+
+describe('perfQuality', () => {
+  it('shows the current quality and marks every change', () => {
+    perfQuality(1, true)
+    perfQuality(0, true)
+    expect(perfState.quality).toBe('高')
+    expect(perfMarks.map((mark) => mark.name).filter((name) => name.startsWith('画质'))).toEqual(['画质：中（1）', '画质：高（2）'])
   })
 })

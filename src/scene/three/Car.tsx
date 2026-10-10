@@ -74,6 +74,7 @@ function glowingMaterials(scene: Object3D): MeshStandardMaterial[] {
 interface CarProps {
   pose: Pose
   deterministic: boolean
+  lampGlow: boolean
 }
 
 export function Car({ pose, deterministic }: CarProps) {

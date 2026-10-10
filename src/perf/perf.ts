@@ -22,6 +22,18 @@ export function perfMark(name: string, enabled = perfEnabled): void {
   perfMarks.push({ name, at: performance.now() })
 }
 
+const QUALITY_NAMES = ['高', '中', '低'] as const
+
+export const perfState = { quality: '' }
+let qualityChanges = 0
+
+export function perfQuality(quality: 0 | 1 | 2, enabled = perfEnabled): void {
+  if (!enabled) return
+  perfState.quality = QUALITY_NAMES[quality]
+  qualityChanges += 1
+  perfMark(`画质：${perfState.quality}（${qualityChanges}）`, enabled)
+}
+
 type GL = WebGL2RenderingContext
 
 const BUILT_IN_UNIFORMS = new Set(['modelMatrix', 'modelViewMatrix', 'projectionMatrix', 'viewMatrix', 'normalMatrix', 'cameraPosition', 'isOrthographic'])

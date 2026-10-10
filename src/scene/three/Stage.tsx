@@ -1,9 +1,10 @@
 import { useProgress } from '@react-three/drei'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { perfMark } from '../../perf/perf'
+import { perfMark, perfQuality } from '../../perf/perf'
 import { NIGHT } from '../ambience'
-import { dprFor, type Quality } from '../frameGuard'
+import { dprFor, startQuality, type Quality } from '../frameGuard'
+import { fxFor } from '../fxTiers'
 import { usePageVisible } from '../hooks'
 import { CAMERA_FOV, POSES } from '../poses'
 import type { StageProps } from '../types'
@@ -16,6 +17,8 @@ import { FrameGuard } from './FrameGuard'
 import { PostFx } from './PostFx'
 import { Room } from './Room'
 import { Studio } from './Studio'
+
+const coarsePointer = () => typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
 
 function FirstFrame({ onReady }: { onReady: () => void }) {
   const done = useRef(false)
@@ -51,7 +54,10 @@ export function Stage({ scene, onReady, onFail, onProgress, deterministic = fals
   const liveAmbience = useAmbience()
   const ambience = deterministic ? NIGHT : liveAmbience
   const visible = usePageVisible()
-  const [quality, setQuality] = useState<Quality>(0)
+  const [initialQuality] = useState<Quality>(() => (deterministic ? 0 : startQuality(coarsePointer())))
+  const [quality, setQuality] = useState<Quality>(initialQuality)
+  const fx = fxFor(quality)
+  useEffect(() => perfQuality(quality), [quality])
   const detachContextLoss = useRef<(() => void) | null>(null)
   const latestOnFail = useRef(onFail)
 
@@ -81,17 +87,17 @@ export function Stage({ scene, onReady, onFail, onProgress, deterministic = fals
       <color attach="background" args={['#050506']} />
       <fog attach="fog" args={['#050506', 18, 45]} />
       <Studio pose={pose} ambience={ambience} deterministic={deterministic} />
-      {quality < 2 && <Atmosphere pose={pose} ambience={ambience} deterministic={deterministic} />}
+      {fx.atmosphere && <Atmosphere pose={pose} ambience={ambience} deterministic={deterministic} />}
       <CameraRig pose={pose} deterministic={deterministic} />
       {onProgress && <ReportProgress onProgress={onProgress} />}
       <Suspense fallback={null}>
-        <Floor pose={pose} deterministic={deterministic} />
+        <Floor pose={pose} deterministic={deterministic} reflection={fx.reflection} />
         <Room pose={pose} ambience={ambience} deterministic={deterministic} />
-        <Car pose={pose} deterministic={deterministic} />
+        <Car pose={pose} deterministic={deterministic} lampGlow={fx.lampGlow} />
         <FirstFrame onReady={onReady} />
       </Suspense>
-      {quality < 2 && <PostFx deterministic={deterministic} />}
-      {!deterministic && <FrameGuard onQuality={setQuality} onGiveUp={() => onFail('slow')} />}
+      {fx.postFx && <PostFx deterministic={deterministic} fx={fx} />}
+      {!deterministic && <FrameGuard initial={initialQuality} onQuality={setQuality} onGiveUp={() => onFail('slow')} />}
     </Canvas>
   )
 }
