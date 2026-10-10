@@ -45,6 +45,13 @@ describe('POSES', () => {
     expect(GOLD).toBe(POSES.vault.light)
   })
 
+  it('keeps the garage room for the garage camera only', () => {
+    expect(POSES.garage.room).toBe(1)
+    expect(POSES.settings.room).toBe(1)
+    expect(POSES.track.room).toBe(0)
+    expect(POSES.vault.room).toBe(0)
+  })
+
   it('shows the settings page from the garage camera without spinning', () => {
     expect(POSES.settings.camera).toEqual(POSES.garage.camera)
     expect(POSES.settings.target).toEqual(POSES.garage.target)

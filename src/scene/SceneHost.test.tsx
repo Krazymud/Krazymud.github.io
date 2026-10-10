@@ -189,4 +189,15 @@ describe('SceneHost', () => {
     rerender(<SceneHost scene="garage" webgl2={() => false} />)
     expect(screen.getByTestId('scene-dim').style.opacity).toBe('0')
   })
+
+  it('tints the still with the time of day in the garage only', () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+    vi.setSystemTime(new Date(2026, 9, 10, 13, 0))
+    const { rerender } = render(<SceneHost scene="garage" webgl2={() => false} />)
+    const tint = screen.getByTestId('scene-tint')
+    expect(tint).toHaveStyle({ backgroundColor: '#fff2e0', opacity: '0.12' })
+    rerender(<SceneHost scene="vault" webgl2={() => false} />)
+    expect(screen.getByTestId('scene-tint')).toHaveStyle({ opacity: '0' })
+    vi.useRealTimers()
+  })
 })
