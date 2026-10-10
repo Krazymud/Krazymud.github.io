@@ -9,6 +9,7 @@ import type { Pose } from '../poses'
 import { assetUrl, CAR_URL } from '../prefetch'
 import { initialTurntable, stepTurntable } from '../turntable'
 import { applyMods, finishCar } from './carPaint'
+import { LampGlow } from './LampGlow'
 import { Turntable, TURNTABLE_HEIGHT } from './Turntable'
 import { useCarDrag } from './useCarDrag'
 import { useIgnitionLevel } from './useIgnitionLevel'
@@ -77,7 +78,7 @@ interface CarProps {
   lampGlow: boolean
 }
 
-export function Car({ pose, deterministic }: CarProps) {
+export function Car({ pose, deterministic, lampGlow }: CarProps) {
   const { scene } = useGLTF(assetUrl(CAR_URL), false, true)
   const rig = useMemo(() => rigCar(scene), [scene])
   const glow = useMemo(() => glowingMaterials(scene), [scene])
@@ -105,6 +106,11 @@ export function Car({ pose, deterministic }: CarProps) {
     <group ref={group}>
       <Turntable pose={pose} deterministic={deterministic} />
       <primitive object={scene} position-y={TURNTABLE_HEIGHT} />
+      {lampGlow && (
+        <group position-y={TURNTABLE_HEIGHT}>
+          <LampGlow car={scene} />
+        </group>
+      )}
     </group>
   )
 }
