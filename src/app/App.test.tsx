@@ -68,6 +68,13 @@ describe('app shell', () => {
     expect(screen.queryByRole('dialog', { name: '点火开场' })).toBeNull()
   })
 
+  it('lets a returning visit straight in when there is no 3D garage to wait for', () => {
+    localStorage.setItem(PREFS_KEY, JSON.stringify({ introSeen: true }))
+    renderAt('/')
+    expect(screen.queryByRole('status', { name: '引擎预热' })).toBeNull()
+    expect(document.querySelector('main')).not.toHaveAttribute('inert')
+  })
+
   it('skips the intro when a visit starts on another page', () => {
     renderAt('/settings')
     expect(screen.queryByRole('dialog', { name: '点火开场' })).toBeNull()

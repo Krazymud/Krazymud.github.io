@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { stopAll, unlockAudio } from '../audio/sound'
 import { Intro } from '../intro/Intro'
+import { Warmup } from '../intro/Warmup'
 import { getPrefs, setPrefs, usePrefs } from '../prefs/prefs'
 import { useProgress } from '../progress/ProgressProvider'
 import { setIgnitionPending } from '../scene/events'
@@ -29,11 +30,13 @@ export function Layout() {
   const { saveFailed } = useProgress()
   const { muted } = usePrefs()
   const scene = sceneFor(pathname)
-  const [intro, setIntro] = useState(() => {
-    const show = !getPrefs().introSeen && pathname === '/'
-    if (show) setIgnitionPending(true)
-    return show
+  const [opening, setOpening] = useState<'ignition' | 'warmup' | null>(() => {
+    if (pathname !== '/') return null
+    if (getPrefs().introSeen) return 'warmup'
+    setIgnitionPending(true)
+    return 'ignition'
   })
+  const closeOpening = useCallback(() => setOpening(null), [])
 
   useEffect(() => {
     const onVisibility = () => {
@@ -62,7 +65,7 @@ export function Layout() {
       }
     >
       <SceneHost scene={scene} />
-      <header inert={intro} className="relative z-10 flex items-center justify-between gap-3 px-5 pt-4 text-xs">
+      <header inert={opening !== null} className="relative z-10 flex items-center justify-between gap-3 px-5 pt-4 text-xs">
         <span className="font-display tracking-[0.35em] text-accent-hi">MIDNIGHT GARAGE</span>
         <nav className="flex items-center gap-4">
           {NAV.map((item) => (
@@ -91,10 +94,11 @@ export function Layout() {
           进度暂时无法保存到这台设备，建议去「设置」导出进度。
         </p>
       )}
-      <main inert={intro} className="relative z-10 mx-auto flex w-full max-w-md flex-col px-5 pt-6 pb-10">
+      <main inert={opening !== null} className="relative z-10 mx-auto flex w-full max-w-md flex-col px-5 pt-6 pb-10">
         <Outlet />
       </main>
-      {intro && <Intro onDone={() => setIntro(false)} />}
+      {opening === 'ignition' && <Intro onDone={closeOpening} />}
+      {opening === 'warmup' && <Warmup onDone={closeOpening} />}
     </div>
   )
 }
