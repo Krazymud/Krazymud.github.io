@@ -7,6 +7,7 @@ import { usePageVisible } from '../hooks'
 import { CAMERA_FOV, POSES } from '../poses'
 import type { StageProps } from '../types'
 import { useAmbience } from '../useAmbience'
+import { Atmosphere } from './Atmosphere'
 import { CameraRig } from './CameraRig'
 import { Car } from './Car'
 import { Floor } from './Floor'
@@ -68,6 +69,7 @@ export function Stage({ scene, onReady, onFail, onProgress, deterministic = fals
       <color attach="background" args={['#050506']} />
       <fog attach="fog" args={['#050506', 18, 45]} />
       <Studio pose={pose} ambience={ambience} deterministic={deterministic} />
+      {quality < 2 && <Atmosphere pose={pose} ambience={ambience} deterministic={deterministic} />}
       <CameraRig pose={pose} deterministic={deterministic} />
       {onProgress && <ReportProgress onProgress={onProgress} />}
       <Suspense fallback={null}>

@@ -31,6 +31,7 @@ vi.mock('@react-three/fiber', () => ({
   },
 }))
 vi.mock('@react-three/drei', () => ({ useProgress: (select: (state: { progress: number }) => number) => select({ progress: 0 }) }))
+vi.mock('./three/Atmosphere', () => ({ Atmosphere: () => null }))
 vi.mock('./three/CameraRig', () => ({ CameraRig: () => null }))
 vi.mock('./three/Car', () => ({ Car: () => null }))
 vi.mock('./three/Floor', () => ({ Floor: () => null }))
