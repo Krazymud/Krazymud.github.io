@@ -166,6 +166,13 @@ export function SettingsPage() {
           </a>
           」。
         </p>
+        <p>
+          材质来自 Poly Haven（CC0）：Jenelle van Heerden「
+          <a href="https://polyhaven.com/a/garage_floor" target="_blank" rel="noreferrer" className="underline">Garage Floor</a>
+          」、Amal Kumar「
+          <a href="https://polyhaven.com/a/box_profile_metal_sheet" target="_blank" rel="noreferrer" className="underline">Box Profile Metal Sheet</a>
+          」。
+        </p>
         <p>英文字体 Rajdhani，采用 SIL Open Font License 1.1。</p>
       </section>
     </section>
