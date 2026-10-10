@@ -12,6 +12,7 @@ export interface Pose {
   trackLines: boolean
   sweep: boolean
   rim: number
+  room: number
   still: StillScene
 }
 
@@ -31,6 +32,7 @@ export const POSES: Record<Scene, Pose> = {
     trackLines: false,
     sweep: true,
     rim: 0,
+    room: 1,
     still: 'garage',
   },
   track: {
@@ -43,6 +45,7 @@ export const POSES: Record<Scene, Pose> = {
     trackLines: true,
     sweep: false,
     rim: 0,
+    room: 0,
     still: 'track',
   },
   vault: {
@@ -55,6 +58,7 @@ export const POSES: Record<Scene, Pose> = {
     trackLines: false,
     sweep: false,
     rim: 1,
+    room: 0,
     still: 'vault',
   },
   settings: {
@@ -67,6 +71,7 @@ export const POSES: Record<Scene, Pose> = {
     trackLines: false,
     sweep: false,
     rim: 0,
+    room: 1,
     still: 'garage',
   },
 }

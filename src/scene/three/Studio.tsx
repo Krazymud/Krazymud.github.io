@@ -2,6 +2,7 @@ import { Environment, Lightformer } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useMemo, useRef, useState } from 'react'
 import { Color, type Mesh, type MeshBasicMaterial, type SpotLight } from 'three'
+import type { Ambience } from '../ambience'
 import { dampFactor, STILL_SWEEP_X, sweepX, TRANSITION_LAMBDA } from '../motion'
 import { GOLD, type Pose } from '../poses'
 import { useIgnitionLevel } from './useIgnitionLevel'
@@ -13,10 +14,11 @@ const RIM_TARGET: [number, number, number] = [0, 0.6, 0]
 
 interface StudioProps {
   pose: Pose
+  ambience: Ambience
   deterministic: boolean
 }
 
-export function Studio({ pose, deterministic }: StudioProps) {
+export function Studio({ pose, ambience, deterministic }: StudioProps) {
   const lights = useIgnitionLevel()
   const scene = useThree((state) => state.scene)
   const key = useRef<SpotLight>(null)
@@ -27,13 +29,19 @@ export function Studio({ pose, deterministic }: StudioProps) {
   // Rim props must not follow pose.rim: Lightformer re-applies them on change and the reflections would snap for a frame.
   const [initialRim] = useState(pose.rim)
   const goal = useMemo(() => new Color(), [])
+  const keyScale = useRef(1)
+  const envScale = useRef(1)
 
   useFrame(({ clock }, delta) => {
     const k = dampFactor(TRANSITION_LAMBDA, Math.min(delta, 0.1))
-    goal.set(pose.light)
-    scene.environmentIntensity = lights.current
+    goal.set(pose.room > 0 ? ambience.key : pose.light)
+    const keyGoal = 1 + (ambience.keyScale - 1) * pose.room
+    const envGoal = 1 + (ambience.env - 1) * pose.room
+    keyScale.current = deterministic ? keyGoal : keyScale.current + (keyGoal - keyScale.current) * k
+    envScale.current = deterministic ? envGoal : envScale.current + (envGoal - envScale.current) * k
+    scene.environmentIntensity = lights.current * envScale.current
     if (key.current) {
-      key.current.intensity = KEY_INTENSITY * lights.current
+      key.current.intensity = KEY_INTENSITY * keyScale.current * lights.current
       if (deterministic) key.current.color.copy(goal)
       else key.current.color.lerp(goal, k)
     }

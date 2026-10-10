@@ -14,7 +14,8 @@
     "vault:rekey": "tsx scripts/vault-rekey.ts",
     "car": "tsx scripts/car.ts",
     "stills": "tsx scripts/stills.ts",
-    "audio": "tsx scripts/audio.ts"
+    "audio": "tsx scripts/audio.ts",
+    "textures": "tsx scripts/textures.ts"
   },
   "dependencies": {
     "@fontsource/rajdhani": "^5.3.0",

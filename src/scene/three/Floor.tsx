@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { CanvasTexture, RepeatWrapping, SRGBColorSpace, type MeshBasicMaterial } from 'three'
 import { damp, TRACK_SPEED, TRANSITION_LAMBDA } from '../motion'
 import type { Pose } from '../poses'
+import { TEXTURE_URLS, useTiledTextures } from './textures'
 
 function trackLinesTexture(): CanvasTexture {
   const canvas = document.createElement('canvas')
@@ -31,6 +32,7 @@ interface FloorProps {
 }
 
 export function Floor({ pose, deterministic }: FloorProps) {
+  const concrete = useTiledTextures(TEXTURE_URLS.floor, [50, 50])
   const lines = useMemo(trackLinesTexture, [])
   const linesMaterial = useRef<MeshBasicMaterial>(null)
 
@@ -55,12 +57,16 @@ export function Floor({ pose, deterministic }: FloorProps) {
           blur={[300, 80]}
           mixBlur={1}
           mixStrength={0.6}
-          roughness={0.9}
           metalness={0.2}
           depthScale={0.6}
           minDepthThreshold={0.4}
           maxDepthThreshold={1.2}
-          color="#08080a"
+          map={concrete.map}
+          roughnessMap={concrete.roughnessMap}
+          normalMap={concrete.normalMap}
+          normalScale={[0.4, 0.4]}
+          color="#2a2a2e"
+          roughness={1}
         />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, 0]}>

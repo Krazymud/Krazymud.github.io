@@ -81,5 +81,7 @@ describe('SettingsPage', () => {
     )
     expect(credits.getByRole('link', { name: 'Supercar rev' })).toHaveAttribute('href', 'https://freesound.org/people/richwise/sounds/478756/')
     expect(credits.getByRole('link', { name: 'Car Lock' })).toHaveAttribute('href', 'https://freesound.org/people/hz37/sounds/396448/')
+    expect(credits.getByRole('link', { name: 'Garage Floor' })).toHaveAttribute('href', 'https://polyhaven.com/a/garage_floor')
+    expect(credits.getByRole('link', { name: 'Box Profile Metal Sheet' })).toHaveAttribute('href', 'https://polyhaven.com/a/box_profile_metal_sheet')
   })
 })

@@ -7,6 +7,7 @@ import { POSES } from './poses'
 import { SceneErrorBoundary } from './SceneErrorBoundary'
 import { Still } from './Still'
 import type { Scene, StageModule, StageProps } from './types'
+import { useAmbience } from './useAmbience'
 
 export const FADE_MS = 600
 
@@ -29,6 +30,7 @@ interface SceneHostProps {
 
 export function SceneHost({ scene, loadStage = loadDefaultStage, webgl2 = supportsWebGL2 }: SceneHostProps) {
   const pose = POSES[scene]
+  const ambience = useAmbience()
   const reducedMotion = usePrefersReducedMotion()
   const { scene3d } = usePrefs()
   const [hasWebGL2] = useState(webgl2)
@@ -97,6 +99,11 @@ export function SceneHost({ scene, loadStage = loadDefaultStage, webgl2 = suppor
           </SceneErrorBoundary>
         </div>
       )}
+      <div
+        data-testid="scene-tint"
+        className="absolute inset-0 mix-blend-soft-light transition-opacity duration-[1200ms] ease-out"
+        style={{ backgroundColor: ambience.tint, opacity: showStage && stillGone ? 0 : ambience.tintAlpha * pose.room }}
+      />
       <div
         data-testid="scene-dim"
         className="absolute inset-0 bg-black transition-opacity duration-[1200ms] ease-out"

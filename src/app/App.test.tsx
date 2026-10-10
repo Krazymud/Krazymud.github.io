@@ -34,7 +34,7 @@ describe('app shell', () => {
     renderAt('/')
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(`HELLO, ${site.nickname}`)
     expect(screen.getByText('0 / 20')).toBeInTheDocument()
-    expect(screen.getByText('到期复习 0 个')).toBeInTheDocument()
+    expect(screen.getByText('今日试炼')).toBeInTheDocument()
   })
 
   it('switches to the gold theme inside the vault', async () => {

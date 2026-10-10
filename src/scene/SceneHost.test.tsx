@@ -31,11 +31,13 @@ vi.mock('@react-three/fiber', () => ({
   },
 }))
 vi.mock('@react-three/drei', () => ({ useProgress: (select: (state: { progress: number }) => number) => select({ progress: 0 }) }))
+vi.mock('./three/Atmosphere', () => ({ Atmosphere: () => null }))
 vi.mock('./three/CameraRig', () => ({ CameraRig: () => null }))
 vi.mock('./three/Car', () => ({ Car: () => null }))
 vi.mock('./three/Floor', () => ({ Floor: () => null }))
 vi.mock('./three/FrameGuard', () => ({ FrameGuard: () => null }))
 vi.mock('./three/PostFx', () => ({ PostFx: () => null }))
+vi.mock('./three/Room', () => ({ Room: () => null }))
 vi.mock('./three/Studio', () => ({ Studio: () => null }))
 
 function fakeStage(behaviour: 'ready' | 'fail' | 'wait'): StageModule {
@@ -61,7 +63,10 @@ describe('SceneHost', () => {
     resetLoading()
     renderer.disposed = 0
   })
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+  })
 
   it('shows only the still without WebGL 2', async () => {
     const loadStage = vi.fn(async () => fakeStage('ready'))
@@ -188,5 +193,15 @@ describe('SceneHost', () => {
     expect(screen.getByTestId('scene-dim').style.opacity).toBe('0.45')
     rerender(<SceneHost scene="garage" webgl2={() => false} />)
     expect(screen.getByTestId('scene-dim').style.opacity).toBe('0')
+  })
+
+  it('tints the still with the time of day in the garage only', () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+    vi.setSystemTime(new Date(2026, 9, 10, 13, 0))
+    const { rerender } = render(<SceneHost scene="garage" webgl2={() => false} />)
+    const tint = screen.getByTestId('scene-tint')
+    expect(tint).toHaveStyle({ backgroundColor: '#fff2e0', opacity: '0.16' })
+    rerender(<SceneHost scene="vault" webgl2={() => false} />)
+    expect(screen.getByTestId('scene-tint')).toHaveStyle({ opacity: '0' })
   })
 })
