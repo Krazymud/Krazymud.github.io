@@ -67,7 +67,7 @@ type Memory =
 
 ### 3.3 组件关系
 
-`VaultScreen` 在进入 `open` 状态时决定 `door: boolean`（未减少动态效果且今天未播），渲染 `VaultContent`，`door` 为真时叠加 `VaultDoor`，门结束时 `markDoorPlayed(today)` 并移除门；`VaultContent` 新增 `sweep: boolean` 属性控制是否挂载 `GoldSweep`：`VaultScreen` 在门播放期间传 `false`，门结束后传 `true`；不播门时一开始就传 `true`。
+`VaultScreen` 在进入 `open` 状态时决定 `door: boolean`（未减少动态效果且今天未播），渲染 `VaultContent`，`door` 为真时叠加 `VaultDoor`，决定播放时立即 `markDoorPlayed(today)`（中途离开也不会重播），门结束时移除门；`VaultContent` 新增 `sweep: boolean` 属性控制是否挂载 `GoldSweep`：`VaultScreen` 在门播放期间传 `false`，门结束后传 `true`；不播门时一开始就传 `true`。
 
 ## 4. 测试
 
