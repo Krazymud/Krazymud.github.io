@@ -42,6 +42,7 @@ export function Atmosphere({ pose, ambience, deterministic }: { pose: Pose; ambi
   const beam = useMemo(
     () =>
       new MeshBasicMaterial({
+        color: ambience.key,
         alphaMap: beamFade(),
         transparent: true,
         depthWrite: false,
