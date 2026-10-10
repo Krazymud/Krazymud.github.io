@@ -1,14 +1,14 @@
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
-import { AdditiveBlending, Box3, CanvasTexture, SpriteMaterial, Vector3, type Group, type Object3D } from 'three'
+import { AdditiveBlending, Box3, CanvasTexture, Matrix4, Mesh, SpriteMaterial, Vector3, type Group, type Object3D } from 'three'
 import { facingFade, FRONT, lampsFor } from './lamps'
 import { useIgnitionLevel } from './useIgnitionLevel'
 
 const HEAD_COLOR = '#fff4e0'
 const TAIL_COLOR = '#ff2a2a'
-const HALO_SIZE = { head: 0.45, tail: 0.3 }
-const STREAK_SIZE: [number, number] = [2.4, 0.05]
-const STRENGTH = { head: 1.6, tail: 1.2 }
+const HALO_SIZE = { head: 0.3, tail: 0.22 }
+const STREAK_SIZE: [number, number] = [1.2, 0.025]
+const STRENGTH = { head: 0.8, tail: 0.8 }
 
 function radialTexture(): CanvasTexture {
   const canvas = document.createElement('canvas')
@@ -29,14 +29,29 @@ function radialTexture(): CanvasTexture {
 const glowMaterial = (map: CanvasTexture, color: string) =>
   new SpriteMaterial({ map, color, blending: AdditiveBlending, transparent: true, depthWrite: false, toneMapped: false })
 
+// 在车模自身坐标里量包围盒；世界坐标的盒子会随转台角度变大，灯位就偏了。
+// 车模自带的阴影平面比车身大好几倍，不算在内。
+function carSpaceBox(car: Object3D): Box3 {
+  car.updateWorldMatrix(true, true)
+  const toCar = car.matrixWorld.clone().invert()
+  const box = new Box3()
+  const part = new Box3()
+  const transform = new Matrix4()
+  car.traverse((object) => {
+    if (!(object instanceof Mesh) || object.name.includes('shadow')) return
+    if (!object.geometry.boundingBox) object.geometry.computeBoundingBox()
+    box.union(part.copy(object.geometry.boundingBox!).applyMatrix4(transform.multiplyMatrices(toCar, object.matrixWorld)))
+  })
+  return box
+}
+
 export function LampGlow({ car }: { car: Object3D }) {
   const lights = useIgnitionLevel()
   const root = useRef<Group>(null)
   const texture = useMemo(radialTexture, [])
   const materials = useMemo(() => ({ head: glowMaterial(texture, HEAD_COLOR), tail: glowMaterial(texture, TAIL_COLOR) }), [texture])
   const lamps = useMemo(() => {
-    const box = new Box3().setFromObject(car)
-    const local = box.applyMatrix4(car.matrixWorld.clone().invert())
+    const local = carSpaceBox(car)
     return lampsFor({ min: local.min.toArray(), max: local.max.toArray() })
   }, [car])
   const forward = useMemo(() => new Vector3(), [])

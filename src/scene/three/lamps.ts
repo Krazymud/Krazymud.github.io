@@ -11,8 +11,8 @@ export interface CarBox {
 // 车头朝车模局部坐标 z 的哪一边；各比例是相对包围盒的位置。都在浏览器里对着车模核对。
 export const FRONT: 1 | -1 = 1
 const LAMP = {
-  head: { side: 0.72, height: 0.45, depth: 0.97 },
-  tail: { side: 0.75, height: 0.55, depth: 0.98 },
+  head: { side: 0.6, height: 0.5, depth: 0.87 },
+  tail: { side: 0.52, height: 0.62, depth: 0.96 },
 }
 
 const lerp = (from: number, to: number, t: number) => from + (to - from) * t
