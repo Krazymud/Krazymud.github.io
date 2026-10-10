@@ -1,10 +1,37 @@
 /// <reference types="vitest/config" />
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
+import { PREFS_KEY } from './src/prefs/key.ts'
+import { earlyFetchScript, STAGE_ASSET_PATHS } from './src/scene/stageAssets.ts'
+
+function earlyStageFetch(): Plugin {
+  let base = '/'
+  return {
+    name: 'early-stage-fetch',
+    configResolved(config) {
+      base = config.base
+    },
+    transformIndexHtml: {
+      order: 'post',
+      handler(_html, { bundle }) {
+        const chunks = Object.values(bundle ?? {}).filter((output) => output.type === 'chunk')
+        const stage = chunks.find((chunk) => chunk.facadeModuleId?.endsWith('/src/scene/three/Stage.tsx'))
+        const main = chunks.find((chunk) => chunk.isEntry)
+        const script = earlyFetchScript({
+          prefsKey: PREFS_KEY,
+          urls: STAGE_ASSET_PATHS.map((path) => base + path),
+          stageScript: stage && base + stage.fileName,
+          mainScript: main && base + main.fileName,
+        })
+        return [{ tag: 'script', children: script, injectTo: 'head' }]
+      },
+    },
+  }
+}
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), earlyStageFetch()],
   build: {
     // The lazy Stage chunk carries three.js (~1.15 MB raw); the index-*.js gzip budget is checked separately.
     chunkSizeWarningLimit: 1200,

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { assetUrl, CAR_URL, downloadAll, onPrefetchProgress, prefetchStageAssets, resetPrefetch, STAGE_ASSETS } from './prefetch'
+import { assetUrl, CAR_URL, downloadAll, onPrefetchProgress, prefetchStageAssets, resetPrefetch, STAGE_ASSETS, takeEarlyFetch } from './prefetch'
+import { EARLY_FETCHES } from './stageAssets'
 
 function streamed(chunks: number[], length: number | null): Response {
   const body = new ReadableStream<Uint8Array>({
@@ -51,6 +52,17 @@ describe('prefetchStageAssets', () => {
     expect(seen.at(-1)).toBe(1)
     off()
     create.mockRestore()
+  })
+
+  it('takes over the downloads the page head already started', async () => {
+    const early = Promise.resolve(streamed([10], 10))
+    ;(window as unknown as Record<string, unknown>)[EARLY_FETCHES] = { [CAR_URL]: early }
+    const fetcher = vi.fn(async () => streamed([10], 10))
+    vi.stubGlobal('fetch', fetcher)
+    expect(takeEarlyFetch(CAR_URL)).toBe(early)
+    await takeEarlyFetch(CAR_URL)
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    vi.unstubAllGlobals()
   })
 
   it('falls back to the plain addresses when the download fails', async () => {

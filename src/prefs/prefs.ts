@@ -1,7 +1,8 @@
 import { useSyncExternalStore } from 'react'
 import { isSwatchId, PALETTES, type ModPart } from '../garage/mods'
+import { PREFS_KEY } from './key'
 
-export const PREFS_KEY = 'midnight-garage/prefs'
+export { PREFS_KEY }
 
 export interface Prefs {
   scene3d: boolean
