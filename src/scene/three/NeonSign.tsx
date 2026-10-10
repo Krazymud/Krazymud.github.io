@@ -41,16 +41,16 @@ export function NeonSign({ level }: { level: MutableRefObject<RoomLevel> }) {
   const mesh = useRef<Mesh>(null)
   const material = useRef<MeshBasicMaterial>(null)
 
-  useFrame(() => {
+  useFrame(({ size }) => {
     const { presence, glow } = level.current
-    if (mesh.current) mesh.current.visible = presence > 0.01
+    if (mesh.current) mesh.current.visible = presence > 0.01 && size.width > size.height
     material.current?.color.copy(NEON).multiplyScalar(GLOW * glow)
     if (material.current) material.current.opacity = presence
   })
 
   return (
-    <mesh ref={mesh} position={[0, 1.3, 0.1]} renderOrder={1}>
-      <planeGeometry args={[3.2, 0.5]} />
+    <mesh ref={mesh} position={[-3.6, 1.5, 0.1]} renderOrder={1}>
+      <planeGeometry args={[2.2, 0.34]} />
       <meshBasicMaterial ref={material} map={texture} transparent depthWrite={false} toneMapped={false} />
     </mesh>
   )
