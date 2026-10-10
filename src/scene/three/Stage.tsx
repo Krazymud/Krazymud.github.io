@@ -26,11 +26,21 @@ function FirstFrame({ onReady }: { onReady: () => void }) {
   return null
 }
 
+// Loaders update the progress store while other components suspend mid-render, so report from a microtask instead.
 function ReportProgress({ onProgress }: { onProgress: (fraction: number) => void }) {
-  const progress = useProgress((state) => state.progress)
   useEffect(() => {
-    onProgress(progress / 100)
-  }, [progress, onProgress])
+    let active = true
+    const report = (progress: number) =>
+      queueMicrotask(() => {
+        if (active) onProgress(progress / 100)
+      })
+    report(useProgress.getState().progress)
+    const unsubscribe = useProgress.subscribe((state) => report(state.progress))
+    return () => {
+      active = false
+      unsubscribe()
+    }
+  }, [onProgress])
   return null
 }
 
