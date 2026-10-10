@@ -1,7 +1,8 @@
 // @vitest-environment node
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { Logger } from '@gltf-transform/core'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { buildCarFixture, fixtureConfig } from './carFixture.ts'
 import { createIO, runCar } from './carCommand.ts'
@@ -40,8 +41,24 @@ describe('runCar', () => {
     expect(wheels.sort()).toEqual(['BL', 'BR', 'FL', 'FR'])
   }, 30_000)
 
+  it('reads the model with warnings-only logging already in place', async () => {
+    const sourceDir = await writeFixture()
+    const doc = await (await createIO()).read(join(sourceDir, 'scene.gltf'))
+    expect(doc.getLogger()).toHaveProperty('verbosity', Logger.Verbosity.WARN)
+  })
+
   it('explains how to get the model when the folder is missing', async () => {
-    await expect(runCar({ sourceDir: join(dir, 'nope'), outFile: join(dir, 'car.glb'), config: fixtureConfig() })).rejects.toThrow(/Sketchfab/)
+    const run = () => runCar({ sourceDir: join(dir, 'nope'), outFile: join(dir, 'car.glb'), config: fixtureConfig() })
+    await expect(run()).rejects.toThrow(CarError)
+    await expect(run()).rejects.toThrow(/Sketchfab/)
+  })
+
+  it('passes on folder errors other than a missing folder', async () => {
+    const notAFolder = join(dir, 'scene.gltf')
+    await writeFile(notAFolder, '{}')
+    const error = await runCar({ sourceDir: notAFolder, outFile: join(dir, 'car.glb'), config: fixtureConfig() }).catch((caught: unknown) => caught)
+    expect(error).not.toBeInstanceOf(CarError)
+    expect(error).toHaveProperty('code', 'ENOTDIR')
   })
 
   it('explains a folder without a model file', async () => {
@@ -49,11 +66,31 @@ describe('runCar', () => {
     await expect(runCar({ sourceDir: join(dir, 'empty'), outFile: join(dir, 'car.glb'), config: fixtureConfig() })).rejects.toThrow(CarError)
   })
 
+  it('refuses to guess between several model files', async () => {
+    const sourceDir = await writeFixture()
+    await writeFile(join(sourceDir, 'a.glb'), '')
+    await writeFile(join(sourceDir, 'B.glb'), '')
+    const run = () => runCar({ sourceDir, outFile: join(dir, 'car.glb'), config: fixtureConfig() })
+    await expect(run()).rejects.toThrow(CarError)
+    await expect(run()).rejects.toThrow('B.glb、a.glb、scene.gltf')
+  })
+
   it('refuses to overwrite the old model with an oversized one', async () => {
     const sourceDir = await writeFixture()
     const outFile = join(dir, 'car.glb')
     await writeFile(outFile, 'old')
-    await expect(runCar({ sourceDir, outFile, config: fixtureConfig({ maxBytes: 100 }) })).rejects.toThrow(/超过上限/)
+    const error = await runCar({ sourceDir, outFile, config: fixtureConfig({ maxBytes: 100 }) }).catch((caught: unknown) => caught)
+    expect(error).toBeInstanceOf(CarError)
+    expect(error).toHaveProperty('message', expect.stringMatching(/超过上限/))
     expect(await readFile(outFile, 'utf8')).toBe('old')
+  }, 30_000)
+
+  it('leaves no temporary file behind when the model cannot be put in place', async () => {
+    const sourceDir = await writeFixture()
+    const outFile = join(dir, 'car.glb')
+    await mkdir(outFile)
+    await writeFile(join(outFile, 'keep'), '')
+    await expect(runCar({ sourceDir, outFile, config: fixtureConfig() })).rejects.toThrow()
+    expect(await readdir(dir)).not.toContain('car.glb.tmp')
   }, 30_000)
 })

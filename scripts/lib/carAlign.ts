@@ -19,10 +19,12 @@ export function yawQuaternion(yaw: number): [number, number, number, number] {
 }
 
 export function unionBounds(list: Bounds[]): Bounds {
+  const usable = list.filter((b) => [...b.min, ...b.max].every(Number.isFinite))
+  if (usable.length === 0) throw new CarError('车模型没有可用的包围盒，无法对齐')
   const axes = [0, 1, 2] as const
   return {
-    min: axes.map((i) => Math.min(...list.map((b) => b.min[i]))) as Vec3,
-    max: axes.map((i) => Math.max(...list.map((b) => b.max[i]))) as Vec3,
+    min: axes.map((i) => Math.min(...usable.map((b) => b.min[i]))) as Vec3,
+    max: axes.map((i) => Math.max(...usable.map((b) => b.max[i]))) as Vec3,
   }
 }
 

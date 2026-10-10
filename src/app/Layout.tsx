@@ -45,7 +45,8 @@ export function Layout() {
 
   function toggleMute() {
     setPrefs({ muted: !muted })
-    if (!muted) stopAll()
+    if (muted) unlockAudio()
+    else stopAll()
   }
 
   return (
@@ -76,7 +77,7 @@ export function Layout() {
           ))}
           <button
             type="button"
-            aria-label={muted ? '取消静音' : '静音'}
+            aria-label="静音"
             aria-pressed={muted}
             onClick={toggleMute}
             className="text-muted hover:text-fg"

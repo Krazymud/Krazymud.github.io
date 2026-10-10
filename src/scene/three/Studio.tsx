@@ -32,8 +32,8 @@ export function Studio({ pose, deterministic }: StudioProps) {
     const k = dampFactor(TRANSITION_LAMBDA, Math.min(delta, 0.1))
     goal.set(pose.light)
     scene.environmentIntensity = lights.current
-    if (key.current) key.current.intensity = KEY_INTENSITY * lights.current
     if (key.current) {
+      key.current.intensity = KEY_INTENSITY * lights.current
       if (deterministic) key.current.color.copy(goal)
       else key.current.color.lerp(goal, k)
     }

@@ -30,6 +30,10 @@ export function supportsWebGL2(): boolean {
   return webgl2
 }
 
+export function resetWebGL2Cache(): void {
+  webgl2 = null
+}
+
 let failed = false
 
 export function markSceneFailed(): void {

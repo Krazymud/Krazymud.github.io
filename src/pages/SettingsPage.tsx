@@ -64,13 +64,23 @@ export function SettingsPage() {
             <span className="block text-sm font-bold">3D 车库</span>
             <span className="mt-1 block text-xs text-muted">关闭后只显示静态画面，更省电。</span>
           </span>
-          <input
-            type="checkbox"
-            role="switch"
-            checked={scene3d}
-            onChange={(event) => setPrefs({ scene3d: event.target.checked })}
-            className="h-5 w-5 shrink-0 accent-[var(--accent-hi)]"
-          />
+          <span className="relative inline-flex shrink-0">
+            <input
+              type="checkbox"
+              role="switch"
+              checked={scene3d}
+              onChange={(event) => setPrefs({ scene3d: event.target.checked })}
+              className="peer sr-only"
+            />
+            <span
+              aria-hidden
+              className="h-6 w-11 border border-line bg-ink transition-colors peer-checked:border-accent-hi peer-checked:bg-accent/30 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent-hi motion-reduce:transition-none"
+            />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute top-1 left-1 h-4 w-4 bg-muted transition-transform peer-checked:translate-x-5 peer-checked:bg-fg motion-reduce:transition-none"
+            />
+          </span>
         </label>
       </div>
 

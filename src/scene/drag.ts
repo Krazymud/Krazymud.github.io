@@ -5,7 +5,8 @@ export function inCarBand(y: number, height: number): boolean {
   return y >= height * CAR_BAND[0] && y <= height * CAR_BAND[1]
 }
 
-const INTERACTIVE = 'a, button, input, select, textarea, label, [role="button"], [role="switch"], [contenteditable="true"]'
+const INTERACTIVE =
+  'a, button, input, select, textarea, label, summary, [role="button"], [role="link"], [role="switch"], [contenteditable="true"], [tabindex]:not([tabindex="-1"])'
 
 export function isInteractive(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest(INTERACTIVE) !== null

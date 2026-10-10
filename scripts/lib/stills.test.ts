@@ -1,8 +1,20 @@
 // @vitest-environment node
 import { randomBytes } from 'node:crypto'
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import sharp from 'sharp'
-import { describe, expect, it } from 'vitest'
-import { checkNotBlack, encodeStill, MAX_STILL_BYTES, ORIENTATIONS, STILL_SCENES, stillFileName, StillsError } from './stills.ts'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import {
+  checkNotBlack,
+  encodeStill,
+  MAX_STILL_BYTES,
+  ORIENTATIONS,
+  STILL_SCENES,
+  stillFileName,
+  StillsError,
+  writeStills,
+} from './stills.ts'
 
 function solid(width: number, height: number, value: number): Promise<Buffer> {
   return sharp({ create: { width, height, channels: 3, background: { r: value, g: value, b: value } } })
@@ -50,6 +62,37 @@ describe('stills', () => {
     const noise = await sharp(randomBytes(1600 * 900 * 3), { raw: { width: 1600, height: 900, channels: 3 } })
       .png()
       .toBuffer()
-    await expect(encodeStill(noise, 'vault-landscape')).rejects.toThrow(/vault-landscape/)
+    const error = await encodeStill(noise, 'vault-landscape').catch((caught: unknown) => caught)
+    expect(error).toBeInstanceOf(StillsError)
+    expect(error).toHaveProperty('message', expect.stringMatching(/vault-landscape/))
   }, 30_000)
+})
+
+describe('writeStills', () => {
+  let dir = ''
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'stills-test-'))
+  })
+
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  it('writes every still into the output folder', async () => {
+    const outDir = join(dir, 'stills')
+    await writeStills(outDir, [
+      { name: 'garage-portrait.webp', data: new Uint8Array([1]) },
+      { name: 'track-portrait.webp', data: new Uint8Array([2]) },
+    ], () => {})
+    expect((await readdir(outDir)).sort()).toEqual(['garage-portrait.webp', 'track-portrait.webp'])
+    expect([...(await readFile(join(outDir, 'track-portrait.webp')))]).toEqual([2])
+  })
+
+  it('leaves no temporary file behind when a still cannot be put in place', async () => {
+    await mkdir(join(dir, 'garage-portrait.webp'))
+    await writeFile(join(dir, 'garage-portrait.webp', 'keep'), '')
+    await expect(writeStills(dir, [{ name: 'garage-portrait.webp', data: new Uint8Array([1]) }], () => {})).rejects.toThrow()
+    expect(await readdir(dir)).toEqual(['garage-portrait.webp'])
+  })
 })

@@ -26,6 +26,12 @@ describe('sweepX', () => {
     expect(sweepX(6)).toBe(-SWEEP_RANGE)
     expect(sweepX(9)).toBeNull()
   })
+
+  it('stays hidden for times that are not finite numbers', () => {
+    expect(sweepX(NaN)).toBeNull()
+    expect(sweepX(Infinity)).toBeNull()
+    expect(sweepX(-Infinity)).toBeNull()
+  })
 })
 
 describe('nitroOffset', () => {

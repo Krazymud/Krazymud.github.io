@@ -1,10 +1,10 @@
 // @vitest-environment node
-import type { Document, Node } from '@gltf-transform/core'
+import { Document, type Node } from '@gltf-transform/core'
 import { getBounds } from '@gltf-transform/functions'
 import { describe, expect, it } from 'vitest'
 import { carConfig } from '../car.config.ts'
 import { buildCarFixture, fixtureConfig } from './carFixture.ts'
-import { describeCar, linearColor, processCar } from './carModel.ts'
+import { clampTexcoords, describeCar, linearColor, processCar } from './carModel.ts'
 import { CarError } from './carTypes.ts'
 
 async function processed(): Promise<Document> {
@@ -30,6 +30,22 @@ describe('describeCar', () => {
     const report = describeCar(await buildCarFixture())
     expect(report.meshes).toContain('car_wheel_FL_car_tire_0')
     expect(report.materials).toEqual(expect.arrayContaining(['car_body', 'clearcoat']))
+  })
+})
+
+describe('clampTexcoords', () => {
+  it('pulls UVs that barely overshoot [0,1] back in so they can be quantized, and leaves tiling UVs alone', () => {
+    const doc = new Document()
+    const uv = (values: number[]) => doc.createAccessor().setType('VEC2').setArray(new Float32Array(values))
+    const nudged = uv([-0.008, 0.5, 1.004, 1])
+    const tiled = uv([0, 0, 2, 3])
+    doc
+      .createMesh()
+      .addPrimitive(doc.createPrimitive().setAttribute('TEXCOORD_0', nudged))
+      .addPrimitive(doc.createPrimitive().setAttribute('TEXCOORD_0', tiled))
+    clampTexcoords(doc)
+    expect([...nudged.getArray()!]).toEqual([0, 0.5, 1, 1])
+    expect([...tiled.getArray()!]).toEqual([0, 0, 2, 3])
   })
 })
 
@@ -86,6 +102,12 @@ describe('processCar', () => {
     expect(wheelZ('BL')).toBeLessThan(0)
   })
 
+  it('removes meshes the same way when a removal pattern carries the y flag', async () => {
+    const doc = await buildCarFixture()
+    await processCar(doc, fixtureConfig({ remove: [/clearcoat_0$/y] }))
+    expect(doc.getRoot().listMaterials().map((m) => m.getName())).not.toContain('clearcoat')
+  })
+
   it('rejects a config rule that matches no mesh', async () => {
     const doc = await buildCarFixture()
     const roles = [...carConfig.roles, { role: 'body' as const, mesh: /^spoiler_/ }]
@@ -95,6 +117,20 @@ describe('processCar', () => {
   it('rejects wheel parts that carry their own offset', async () => {
     const doc = await buildCarFixture()
     doc.getRoot().listNodes().find((node) => node.getName() === 'car_wheel_FL_car_tire_0')!.setTranslation([0.1, 0, 0])
-    await expect(processCar(doc, fixtureConfig())).rejects.toThrow(/car_wheel_FL_car_tire_0/)
+    const result = processCar(doc, fixtureConfig())
+    await expect(result).rejects.toThrow(CarError)
+    await expect(result).rejects.toThrow(/car_wheel_FL_car_tire_0/)
+  })
+
+  it('pulls wheel UVs that barely overshoot [0,1] back in', async () => {
+    const doc = await buildCarFixture()
+    const rim = doc.getRoot().listMeshes().find((mesh) => mesh.getName() === 'car_wheel_FL_car_body_0')!.listPrimitives()[0]
+    const values = Array.from({ length: 8 }, (_, i) => [i % 2 ? 1.004 : -0.008, i / 7]).flat()
+    rim.setAttribute('TEXCOORD_0', doc.createAccessor().setType('VEC2').setArray(new Float32Array(values)).setBuffer(doc.getRoot().listBuffers()[0]))
+    await processCar(doc, fixtureConfig())
+    const wheel = meshNodes(doc).find((node) => node.getExtras().wheel === 'FL')!
+    const uv = wheel.getMesh()!.listPrimitives().find((p) => p.getMaterial()?.getName() === 'wheel')!.getAttribute('TEXCOORD_0')!
+    expect(Math.min(...uv.getArray()!)).toBe(0)
+    expect(Math.max(...uv.getArray()!)).toBe(1)
   })
 })

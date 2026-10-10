@@ -16,6 +16,7 @@ function fakeAudio(decode: (bytes: ArrayBuffer) => Promise<unknown> = async (byt
     state: 'suspended',
     destination: {},
     resume: vi.fn(async () => undefined),
+    close: vi.fn(async () => undefined),
     decodeAudioData: vi.fn(decode),
     createBufferSource: () => {
       const source: FakeSource = { buffer: null, onended: null, connect: vi.fn(), start: vi.fn(), stop: vi.fn() }
@@ -40,6 +41,7 @@ describe('sound', () => {
     setAudioContextFactory(null)
     vi.unstubAllGlobals()
     vi.useRealTimers()
+    vi.restoreAllMocks()
   })
 
   it('stays silent before the first tap', async () => {
@@ -83,6 +85,31 @@ describe('sound', () => {
     expect(sources).toHaveLength(0)
   })
 
+  it('does not download clips while muted and starts once unmuted', () => {
+    const { context, factory } = fakeAudio()
+    setPrefs({ muted: true })
+    unlockAudio()
+    expect(factory).toHaveBeenCalledTimes(1)
+    expect(context.resume).toHaveBeenCalled()
+    expect(fetch).not.toHaveBeenCalled()
+    setPrefs({ muted: false })
+    unlockAudio()
+    unlockAudio()
+    expect(factory).toHaveBeenCalledTimes(1)
+    expect(fetch).toHaveBeenCalledTimes(4)
+  })
+
+  it('swallows a clip the server refuses', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 404 })))
+    const { context, sources } = fakeAudio()
+    unlockAudio()
+    await expect(play('rev')).resolves.toBeUndefined()
+    expect(context.decodeAudioData).not.toHaveBeenCalled()
+    expect(sources).toHaveLength(0)
+    expect(warn).toHaveBeenCalledWith('[sound]', new Error('rev: HTTP 404'))
+  })
+
   it('swallows a clip that cannot be decoded', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const { sources } = fakeAudio(async () => {
@@ -92,7 +119,6 @@ describe('sound', () => {
     await expect(play('unlock')).resolves.toBeUndefined()
     expect(sources).toHaveLength(0)
     expect(warn).toHaveBeenCalled()
-    warn.mockRestore()
   })
 
   it('gives up on a clip that is not ready in time', async () => {
@@ -122,5 +148,23 @@ describe('sound', () => {
     await play('unlock')
     stopAll()
     expect(sources.every((source) => source.stop.mock.calls.length === 1)).toBe(true)
+    stopAll()
+    expect(sources.every((source) => source.stop.mock.calls.length === 1)).toBe(true)
+  })
+
+  it('closes the old context on reset', () => {
+    const { context } = fakeAudio()
+    unlockAudio()
+    resetSound()
+    expect(context.close).toHaveBeenCalledTimes(1)
+    unlockAudio()
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(8)
+  })
+
+  it('resets a context that cannot be closed', () => {
+    const { context } = fakeAudio()
+    Reflect.deleteProperty(context, 'close')
+    unlockAudio()
+    expect(() => resetSound()).not.toThrow()
   })
 })

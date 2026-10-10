@@ -43,8 +43,14 @@ export function getPrefs(): Prefs {
   return current
 }
 
+const PREF_KEYS = Object.keys(DEFAULT_PREFS) as (keyof Prefs)[]
+
 export function setPrefs(patch: Partial<Prefs>): void {
-  current = { ...getPrefs(), ...patch }
+  const previous = getPrefs()
+  const next = { ...previous }
+  for (const key of PREF_KEYS) next[key] = patch[key] ?? previous[key]
+  if (PREF_KEYS.every((key) => next[key] === previous[key])) return
+  current = next
   writePrefs(current)
   for (const listener of listeners) listener()
 }

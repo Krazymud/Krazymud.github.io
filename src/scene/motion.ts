@@ -15,7 +15,7 @@ export const STILL_SWEEP_X = 1.2
 
 export function sweepX(time: number): number | null {
   const phase = ((time % SWEEP_PERIOD) + SWEEP_PERIOD) % SWEEP_PERIOD
-  if (phase >= SWEEP_DURATION) return null
+  if (!(phase < SWEEP_DURATION)) return null
   return -SWEEP_RANGE + (2 * SWEEP_RANGE * phase) / SWEEP_DURATION
 }
 

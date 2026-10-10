@@ -38,14 +38,44 @@ describe('assignRoles', () => {
 
   it('rejects a rule that matches nothing', () => {
     const rules = [...carConfig.roles, { role: 'body' as const, mesh: /^spoiler_/ }]
+    expect(() => assignRoles(GOBLIN_MESHES, rules, carConfig.remove)).toThrow(CarError)
     expect(() => assignRoles(GOBLIN_MESHES, rules, carConfig.remove)).toThrow(/spoiler_/)
   })
 
+  it('rejects a rule that only matches removed meshes', () => {
+    const rules = [...carConfig.roles, { role: 'body' as const, mesh: /^clearcoat_/ }]
+    expect(() => assignRoles(GOBLIN_MESHES, rules, carConfig.remove)).toThrow(CarError)
+    expect(() => assignRoles(GOBLIN_MESHES, rules, carConfig.remove)).toThrow(/clearcoat_/)
+  })
+
   it('rejects a mesh that no rule covers', () => {
-    expect(() => assignRoles([...GOBLIN_MESHES, 'car_spoiler_0'], carConfig.roles, carConfig.remove)).toThrow(/car_spoiler_0/)
+    const meshes = [...GOBLIN_MESHES, 'car_spoiler_0']
+    expect(() => assignRoles(meshes, carConfig.roles, carConfig.remove)).toThrow(CarError)
+    expect(() => assignRoles(meshes, carConfig.roles, carConfig.remove)).toThrow(/car_spoiler_0/)
   })
 
   it('rejects a removal pattern that matches nothing', () => {
     expect(() => assignRoles(GOBLIN_MESHES, carConfig.roles, [/^roof_box_/])).toThrow(CarError)
+  })
+
+  it('lets removal win over a matching rule', () => {
+    const roles = assignRoles(['car_body_0', 'car_body_spoiler'], [{ role: 'body', mesh: /^car_body_/ }], [/spoiler/])
+    expect([...roles]).toEqual([['car_body_0', 'body']])
+  })
+
+  it('gives a mesh the role of the first rule that matches it', () => {
+    const rules = [
+      { role: 'caliper' as const, mesh: /_brake_/ },
+      { role: 'body' as const, mesh: /^car_/ },
+    ]
+    const roles = assignRoles(['car_brake_FL', 'car_body'], rules, [])
+    expect(roles.get('car_brake_FL')).toBe('caliper')
+    expect(roles.get('car_body')).toBe('body')
+  })
+
+  it('matches the same way when patterns carry the g or y flag', () => {
+    const tires = ['car_wheel_FL_car_tire_0', 'car_wheel_FR_car_tire_0', 'car_wheel_BL_car_tire_0', 'car_spare_0']
+    const roles = assignRoles(tires, [{ role: 'tire', mesh: /car_tire/g }], [/spare/y])
+    expect([...roles.keys()]).toEqual(tires.slice(0, 3))
   })
 })

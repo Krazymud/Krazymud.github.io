@@ -39,4 +39,19 @@ describe('isInteractive', () => {
     expect(isInteractive(document.getElementById('text'))).toBe(false)
     expect(isInteractive(null)).toBe(false)
   })
+
+  it('spots disclosure summaries, ARIA links and buttons, and focusable elements', () => {
+    document.body.innerHTML = [
+      '<details><summary id="summary">more</summary></details>',
+      '<div role="link" id="link">go</div>',
+      '<div role="button" id="button">go</div>',
+      '<div tabindex="0" id="focusable">x</div>',
+      '<div tabindex="-1" id="unfocusable">x</div>',
+    ].join('')
+    expect(isInteractive(document.getElementById('summary'))).toBe(true)
+    expect(isInteractive(document.getElementById('link'))).toBe(true)
+    expect(isInteractive(document.getElementById('button'))).toBe(true)
+    expect(isInteractive(document.getElementById('focusable'))).toBe(true)
+    expect(isInteractive(document.getElementById('unfocusable'))).toBe(false)
+  })
 })

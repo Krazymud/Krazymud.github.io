@@ -72,9 +72,10 @@ export const POSES: Record<Scene, Pose> = {
 }
 
 export function sceneFor(pathname: string): Scene {
-  if (pathname.startsWith('/vault')) return 'vault'
-  if (pathname.startsWith('/trial')) return 'track'
-  if (pathname.startsWith('/settings')) return 'settings'
+  const segment = pathname.split('/')[1]
+  if (segment === 'vault') return 'vault'
+  if (segment === 'trial') return 'track'
+  if (segment === 'settings') return 'settings'
   return 'garage'
 }
 
@@ -87,6 +88,7 @@ export function framedCamera(pose: Pose, aspect: number, fovDeg = CAMERA_FOV, ra
   const vHalf = (fovDeg * Math.PI) / 360
   const hHalf = Math.atan(Math.tan(vHalf) * aspect)
   const needed = radius / Math.sin(Math.min(vHalf, hHalf))
+  if (!(length > 0)) return [pose.target[0], pose.target[1], pose.target[2] + needed]
   const scale = Math.max(length, needed) / length
   return offset.map((v, i) => pose.target[i] + v * scale) as Vec3
 }

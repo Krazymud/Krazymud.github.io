@@ -1,4 +1,4 @@
-import { mkdir, readdir, rename, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, rename, unlink, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { Logger, NodeIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
@@ -11,17 +11,20 @@ export async function findSource(dir: string): Promise<string> {
   let names: string[]
   try {
     names = await readdir(dir)
-  } catch {
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
     throw new CarError(`找不到 ${dir}。请登录 Sketchfab，以 glTF 格式下载「Fictional supercar - V12 Goblin」，解压到这个文件夹。`)
   }
-  const model = names.find((name) => /\.(gltf|glb)$/i.test(name))
-  if (!model) throw new CarError(`${dir} 里没有 .gltf 或 .glb 文件。请把 Sketchfab 下载的压缩包完整解压到这里。`)
-  return join(dir, model)
+  const models = names.filter((name) => /\.(gltf|glb)$/i.test(name)).sort()
+  if (models.length === 0) throw new CarError(`${dir} 里没有 .gltf 或 .glb 文件。请把 Sketchfab 下载的压缩包完整解压到这里。`)
+  if (models.length > 1) throw new CarError(`${dir} 里有多个模型文件：${models.join('、')}。请只留下 Sketchfab 下载的那一个。`)
+  return join(dir, models[0])
 }
 
 export async function createIO(): Promise<NodeIO> {
   await Promise.all([MeshoptEncoder.ready, MeshoptDecoder.ready])
   return new NodeIO()
+    .setLogger(new Logger(Logger.Verbosity.WARN))
     .registerExtensions(ALL_EXTENSIONS)
     .registerDependencies({ 'meshopt.encoder': MeshoptEncoder, 'meshopt.decoder': MeshoptDecoder })
 }
@@ -45,7 +48,6 @@ export async function runCar({ sourceDir, outFile, config, log = () => {} }: Car
   const source = await findSource(sourceDir)
   const io = await createIO()
   const doc = await io.read(source)
-  doc.setLogger(new Logger(Logger.Verbosity.WARN))
   const report = describeCar(doc)
   log(`网格：${report.meshes.join('、')}`)
   log(`材质：${report.materials.join('、')}`)
@@ -58,7 +60,12 @@ export async function runCar({ sourceDir, outFile, config, log = () => {} }: Car
   }
   await mkdir(dirname(outFile), { recursive: true })
   const temporary = `${outFile}.tmp`
-  await writeFile(temporary, glb)
-  await rename(temporary, outFile)
+  try {
+    await writeFile(temporary, glb)
+    await rename(temporary, outFile)
+  } catch (error) {
+    await unlink(temporary).catch(() => undefined)
+    throw error
+  }
   return { bytes: glb.byteLength, ...report }
 }
