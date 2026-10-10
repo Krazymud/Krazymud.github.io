@@ -29,7 +29,7 @@ export function ModsPanel({ onClose }: { onClose: () => void }) {
       role="dialog"
       aria-label="改装"
       tabIndex={-1}
-      className="fixed inset-x-0 bottom-0 z-30 max-h-[40dvh] overflow-y-auto border-t border-accent/60 bg-panel/95 px-5 pb-6 pt-4 outline-none"
+      className="fixed inset-x-0 bottom-0 z-30 max-h-[40dvh] overflow-y-auto border-t border-accent/60 bg-panel px-5 pb-6 pt-4 outline-none"
     >
       <div className="mx-auto max-w-md">
         <div className="flex items-center justify-between">
