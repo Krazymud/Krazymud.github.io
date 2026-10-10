@@ -12,6 +12,7 @@ import { Car } from './Car'
 import { Floor } from './Floor'
 import { FrameGuard } from './FrameGuard'
 import { PostFx } from './PostFx'
+import { Room } from './Room'
 import { Studio } from './Studio'
 
 function FirstFrame({ onReady }: { onReady: () => void }) {
@@ -71,6 +72,7 @@ export function Stage({ scene, onReady, onFail, onProgress, deterministic = fals
       {onProgress && <ReportProgress onProgress={onProgress} />}
       <Suspense fallback={null}>
         <Floor pose={pose} deterministic={deterministic} />
+        <Room pose={pose} ambience={ambience} deterministic={deterministic} />
         <Car pose={pose} deterministic={deterministic} />
         <FirstFrame onReady={onReady} />
       </Suspense>

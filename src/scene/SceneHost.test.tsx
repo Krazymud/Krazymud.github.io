@@ -36,6 +36,7 @@ vi.mock('./three/Car', () => ({ Car: () => null }))
 vi.mock('./three/Floor', () => ({ Floor: () => null }))
 vi.mock('./three/FrameGuard', () => ({ FrameGuard: () => null }))
 vi.mock('./three/PostFx', () => ({ PostFx: () => null }))
+vi.mock('./three/Room', () => ({ Room: () => null }))
 vi.mock('./three/Studio', () => ({ Studio: () => null }))
 
 function fakeStage(behaviour: 'ready' | 'fail' | 'wait'): StageModule {
