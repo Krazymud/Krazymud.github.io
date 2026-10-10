@@ -44,7 +44,7 @@ function Ring({ id, fill, value, max, caption, label }: { id: string; fill: numb
 
 export function Dashboard({ stats }: { stats: GarageStats }) {
   const streakFill = stats.streak === 0 ? 0 : stats.streak % 7 === 0 ? 1 : (stats.streak % 7) / 7
-  const masteredFill = (stats.mastered % 100) / 100
+  const masteredFill = stats.mastered === 0 ? 0 : stats.mastered % 100 === 0 ? 1 : (stats.mastered % 100) / 100
   const lit = stats.week.filter(Boolean).length
   return (
     <div role="group" aria-label="车库仪表" className="flex items-center justify-between border border-line bg-panel/60 px-4 py-3">

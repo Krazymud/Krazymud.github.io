@@ -41,8 +41,12 @@ describe('Dashboard', () => {
   })
 
   it('fills the mastered ring towards the next hundred', () => {
-    render(<Dashboard stats={base} />)
+    const { rerender } = render(<Dashboard stats={base} />)
     expect(screen.getByTestId('ring-mastered')).toHaveAttribute('data-fill', '0.28')
+    rerender(<Dashboard stats={{ ...base, mastered: 300 }} />)
+    expect(screen.getByTestId('ring-mastered')).toHaveAttribute('data-fill', '1')
+    rerender(<Dashboard stats={{ ...base, mastered: 0 }} />)
+    expect(screen.getByTestId('ring-mastered')).toHaveAttribute('data-fill', '0')
   })
 
   it('breathes on today until the lap is done', () => {
