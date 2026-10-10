@@ -63,7 +63,10 @@ describe('SceneHost', () => {
     resetLoading()
     renderer.disposed = 0
   })
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+  })
 
   it('shows only the still without WebGL 2', async () => {
     const loadStage = vi.fn(async () => fakeStage('ready'))
@@ -200,6 +203,5 @@ describe('SceneHost', () => {
     expect(tint).toHaveStyle({ backgroundColor: '#fff2e0', opacity: '0.12' })
     rerender(<SceneHost scene="vault" webgl2={() => false} />)
     expect(screen.getByTestId('scene-tint')).toHaveStyle({ opacity: '0' })
-    vi.useRealTimers()
   })
 })

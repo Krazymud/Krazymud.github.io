@@ -28,7 +28,7 @@ export function Turntable({ pose, deterministic }: { pose: Pose; deterministic: 
         <cylinderGeometry args={[RADIUS, RADIUS, TURNTABLE_HEIGHT, 96]} />
         <meshStandardMaterial color="#141417" metalness={0.85} roughness={0.38} />
       </mesh>
-      <mesh position={[0, TURNTABLE_HEIGHT, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, TURNTABLE_HEIGHT + 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[RADIUS - 0.035, RADIUS, 128]} />
         <meshBasicMaterial ref={edge} toneMapped={false} />
       </mesh>

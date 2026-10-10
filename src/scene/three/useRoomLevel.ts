@@ -17,7 +17,8 @@ export function useRoomLevel(pose: Pose, ambience: Ambience, deterministic: bool
   const level = useRef<RoomLevel>({ presence: pose.room, glow: pose.room * ambience.strips })
   useFrame((_, delta) => {
     const presence = deterministic ? pose.room : damp(level.current.presence, pose.room, TRANSITION_LAMBDA, Math.min(delta, 0.1))
-    level.current = { presence, glow: presence * ambience.strips * lights.current }
+    level.current.presence = presence
+    level.current.glow = presence * ambience.strips * lights.current
   }, -1)
   return level
 }

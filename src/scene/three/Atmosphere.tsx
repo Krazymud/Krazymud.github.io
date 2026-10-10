@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
-import { AdditiveBlending, BufferAttribute, BufferGeometry, Color, DoubleSide, Quaternion, Vector3, type MeshBasicMaterial, type PointsMaterial } from 'three'
+import { AdditiveBlending, BufferAttribute, BufferGeometry, DoubleSide, Quaternion, Vector3, type MeshBasicMaterial, type PointsMaterial } from 'three'
 import type { Ambience } from '../ambience'
 import type { Pose } from '../poses'
 import { useRoomLevel } from './useRoomLevel'
@@ -21,8 +21,6 @@ export function Atmosphere({ pose, ambience, deterministic }: { pose: Pose; ambi
   const level = useRoomLevel(pose, ambience, deterministic)
   const beam = useRef<MeshBasicMaterial>(null)
   const dust = useRef<PointsMaterial>(null)
-  const beamColor = useMemo(() => new Color(), [])
-
   const orientation = useMemo(() => {
     const down = KEY_POSITION.clone().negate().normalize()
     return new Quaternion().setFromUnitVectors(new Vector3(0, -1, 0), down)
@@ -45,8 +43,6 @@ export function Atmosphere({ pose, ambience, deterministic }: { pose: Pose; ambi
   useFrame((_, delta) => {
     const { presence, glow } = level.current
     if (beam.current) {
-      beamColor.set(ambience.key)
-      beam.current.color.copy(beamColor)
       beam.current.opacity = BEAM_OPACITY * glow
       beam.current.visible = presence > 0.01
     }
@@ -69,7 +65,7 @@ export function Atmosphere({ pose, ambience, deterministic }: { pose: Pose; ambi
     <group>
       <mesh position={midpoint} quaternion={orientation}>
         <coneGeometry args={[2.2, BEAM_LENGTH, 48, 1, true]} />
-        <meshBasicMaterial ref={beam} transparent depthWrite={false} blending={AdditiveBlending} toneMapped={false} side={DoubleSide} />
+        <meshBasicMaterial ref={beam} color={ambience.key} transparent depthWrite={false} blending={AdditiveBlending} toneMapped={false} side={DoubleSide} />
       </mesh>
       <points geometry={geometry}>
         <pointsMaterial ref={dust} color="#f3e6d0" size={0.025} sizeAttenuation transparent depthWrite={false} blending={AdditiveBlending} />

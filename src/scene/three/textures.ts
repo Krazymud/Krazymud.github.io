@@ -1,5 +1,5 @@
 import { useTexture } from '@react-three/drei'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { RepeatWrapping, SRGBColorSpace, type Texture } from 'three'
 
 const url = (name: string) => `${import.meta.env.BASE_URL}textures/${name}.webp`
@@ -11,7 +11,7 @@ export const TEXTURE_URLS = {
 
 export function useTiledTextures(urls: [string, string, string], repeat: [number, number]) {
   const [base, rough, normal] = useTexture(urls) as Texture[]
-  return useMemo(() => {
+  const textures = useMemo(() => {
     const [map, roughnessMap, normalMap] = [base, rough, normal].map((texture) => {
       const tiled = texture.clone()
       tiled.wrapS = tiled.wrapT = RepeatWrapping
@@ -23,4 +23,13 @@ export function useTiledTextures(urls: [string, string, string], repeat: [number
     map.colorSpace = SRGBColorSpace
     return { map, roughnessMap, normalMap }
   }, [base, rough, normal, repeat[0], repeat[1]])
+  useEffect(
+    () => () => {
+      textures.map.dispose()
+      textures.roughnessMap.dispose()
+      textures.normalMap.dispose()
+    },
+    [textures],
+  )
+  return textures
 }
