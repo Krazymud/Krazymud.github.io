@@ -23,7 +23,7 @@ export function FrameGuard({ initial, onQuality, onGiveUp }: FrameGuardProps) {
   useEffect(() => {
     frames.current = 0
     elapsed.current = 0
-    state.current = { ...state.current, lowFor: 0 }
+    state.current = { ...state.current, lowFor: 0, highFor: 0 }
   }, [visible])
 
   useFrame(({ clock }, delta) => {
