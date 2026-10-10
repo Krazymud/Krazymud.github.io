@@ -5,6 +5,7 @@ import { Box3, Group, Mesh, MeshStandardMaterial, Texture, Vector3, type Object3
 import { damp, WHEEL_SPEED } from '../motion'
 import type { Pose } from '../poses'
 import { initialTurntable, stepTurntable } from '../turntable'
+import { Turntable, TURNTABLE_HEIGHT } from './Turntable'
 import { useCarDrag } from './useCarDrag'
 import { useIgnitionLevel } from './useIgnitionLevel'
 
@@ -96,7 +97,8 @@ export function Car({ pose, deterministic }: CarProps) {
 
   return (
     <group ref={group}>
-      <primitive object={scene} />
+      <Turntable pose={pose} deterministic={deterministic} />
+      <primitive object={scene} position-y={TURNTABLE_HEIGHT} />
     </group>
   )
 }
