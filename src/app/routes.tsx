@@ -13,6 +13,7 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
   ? [
       {
         path: '/__stills',
+        HydrateFallback: () => null,
         lazy: async () => {
           const { StillsPage } = await import('../scene/three/StillsPage')
           return { Component: StillsPage }

@@ -12,5 +12,10 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    experimental: {
+      // The per-file jsdom hints suggest fixes that don't fit: pool 'vmThreads' has no crypto.subtle (vault tests fail),
+      // and isolate: false would let module-level state (prefs cache, sound context, warn-once flags) leak between files.
+      diagnostics: { environment: false, isolate: false },
+    },
   },
 })

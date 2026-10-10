@@ -1,10 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetSound, setAudioContextFactory } from '../audio/sound'
 import { site } from '../config/site'
 import { PREFS_KEY, resetPrefsCache } from '../prefs/prefs'
 import { ProgressProvider } from '../progress/ProgressProvider'
 import { routes } from './routes'
+
+vi.mock('../scene/three/StillsPage', () => ({ StillsPage: () => <p>stills</p> }))
 
 function renderAt(path: string) {
   const router = createMemoryRouter(routes, { initialEntries: [path] })
@@ -20,7 +23,12 @@ describe('app shell', () => {
     localStorage.clear()
     resetPrefsCache()
   })
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    resetSound()
+    setAudioContextFactory(null)
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
 
   it('greets her in the garage with today\'s trial status', () => {
     renderAt('/')
@@ -65,7 +73,16 @@ describe('app shell', () => {
     expect(screen.queryByRole('dialog', { name: '点火开场' })).toBeNull()
   })
 
+  it('opens the dev stills page without a missing fallback warning', async () => {
+    const warn = vi.spyOn(console, 'warn')
+    renderAt('/__stills')
+    expect(await screen.findByText('stills')).toBeInTheDocument()
+    expect(warn).not.toHaveBeenCalledWith(expect.stringContaining('HydrateFallback'))
+  })
+
   it('mutes and unmutes from the top bar', () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(new ArrayBuffer(8))))
+    setAudioContextFactory(() => ({ state: 'running', decodeAudioData: async () => ({}) }) as unknown as AudioContext)
     renderAt('/settings')
     const mute = screen.getByRole('button', { name: '静音' })
     expect(mute).toHaveAttribute('aria-pressed', 'false')
