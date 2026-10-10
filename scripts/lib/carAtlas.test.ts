@@ -96,6 +96,20 @@ describe('convertAtlas', () => {
     expect(rgbAt(out.orm, 3, 7)[0]).toBe(200)
   })
 
+  it('marks only paint pixels in the paint mask', () => {
+    expect(out.paintMask.length).toBe(W * H)
+    expect(out.paintMask[5 * W + 5]).toBe(255)
+    expect(out.paintMask[7 * W + 3]).toBe(0)
+    expect(out.paintMask[2 * W + 10]).toBe(0)
+  })
+
+  it('keeps the plate out of the paint mask', () => {
+    const paintedPlate = image((x, y) => ((x === 1 && y === 1) || (x === 5 && y === 5) ? [60, 128, 26, 178] : [10, 10, 10, 127]))
+    const mask = convertAtlas(diffuse, paintedPlate, occlusion, config).paintMask
+    expect(mask[1 * W + 1]).toBe(0)
+    expect(mask[5 * W + 5]).toBe(255)
+  })
+
   it('rejects textures of different sizes', () => {
     const small = image(() => [0, 0, 0, 255], 8, 8)
     expect(() => convertAtlas(diffuse, specGloss, small, config)).toThrow(CarError)
@@ -172,6 +186,21 @@ describe('buildBodyTextures', () => {
       const meta = await sharp(data).metadata()
       expect([meta.format, meta.width, meta.height]).toEqual(['webp', 8, 4])
     }
+    expect(await sharp(result.baseColor).metadata()).toMatchObject({ channels: 4, hasAlpha: true })
+    expect((await sharp(result.orm).metadata()).hasAlpha).toBe(false)
+  })
+
+  it('keeps the colour under unpainted pixels when shrinking', async () => {
+    const lamps = image((x, y) => (x >= 10 && x < 12 && y >= 2 && y < 4 ? RED : [0, 0, 0, 255]))
+    const result = await buildBodyTextures(
+      { diffuse: await png(lamps), specularGlossiness: await png(specGloss), occlusion: await png(occlusion) },
+      config,
+    )
+    const raw = await sharp(result.baseColor).raw().toBuffer()
+    const lamp = [...raw.subarray((1 * 8 + 5) * 4, (1 * 8 + 5) * 4 + 4)]
+    expect(lamp[3]).toBe(0)
+    expect(lamp[0]).toBeGreaterThan(40)
+    expect(raw[(2 * 8 + 2) * 4 + 3]).toBeGreaterThan(0)
   })
 
   it('fails when the taillight area has no lamp pixels', async () => {

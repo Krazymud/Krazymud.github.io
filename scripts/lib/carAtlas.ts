@@ -67,6 +67,7 @@ export interface AtlasPixels {
   baseColor: Uint8Array
   orm: Uint8Array
   emissive: Uint8Array
+  paintMask: Uint8Array
   emissivePixels: number
   width: number
   height: number
@@ -92,6 +93,7 @@ export function convertAtlas(diffuse: RawImage, specGloss: RawImage, occlusion: 
   const baseColor = new Uint8Array(width * height * 3)
   const orm = new Uint8Array(width * height * 3)
   const emissive = new Uint8Array(width * height * 3)
+  const paintMask = new Uint8Array(width * height)
   let emissivePixels = 0
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -102,6 +104,7 @@ export function convertAtlas(diffuse: RawImage, specGloss: RawImage, occlusion: 
       const glossiness = specGloss.data[i + 3] / 255
       const lit = inRect(x, y, config.taillights) && isTaillight(d)
       const pixel = classify(x, y, d, s, glossiness, lit, config)
+      if (!inRect(x, y, config.plate) && isPaint(s, config.paintSpecular, config.paintTolerance)) paintMask[y * width + x] = 255
       baseColor[o] = Math.round(pixel.base[0] * 255)
       baseColor[o + 1] = Math.round(pixel.base[1] * 255)
       baseColor[o + 2] = Math.round(pixel.base[2] * 255)
@@ -114,7 +117,7 @@ export function convertAtlas(diffuse: RawImage, specGloss: RawImage, occlusion: 
       }
     }
   }
-  return { baseColor, orm, emissive, emissivePixels, width, height }
+  return { baseColor, orm, emissive, paintMask, emissivePixels, width, height }
 }
 
 const XML_ENTITIES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }
@@ -167,15 +170,26 @@ export async function buildBodyTextures(
   if (pixels.emissivePixels === 0) throw new CarError('尾灯区域里没有找到红橙色像素，请检查 car.config.ts 的 taillights')
   const withPlate = await paintPlate(pixels.baseColor, pixels.width, pixels.height, config.plate, config.plateText)
   const [outWidth, outHeight] = config.outputSize
-  const encode = (data: Uint8Array) =>
-    sharp(data, { raw: { width: pixels.width, height: pixels.height, channels: 3 } })
-      .resize(outWidth, outHeight, { fit: 'fill' })
-      .webp({ quality: 82 })
+  const shrink = (data: Uint8Array, channels: 1 | 3) => {
+    const resized = sharp(data, { raw: { width: pixels.width, height: pixels.height, channels } }).resize(outWidth, outHeight, { fit: 'fill' })
+    return (channels === 1 ? resized.extractChannel(0) : resized).raw().toBuffer()
+  }
+  // sharp premultiplies alpha when resizing and libwebp cleans up transparent areas by default; either would wipe
+  // the colour of every unpainted pixel, so the mask is resized on its own and the encoder keeps hidden RGB exact.
+  const encode = async (data: Uint8Array, channels: 3 | 4) =>
+    sharp(channels === 3 ? await shrink(data, 3) : data, { raw: { width: outWidth, height: outHeight, channels } })
+      .webp({ quality: 82, exact: true })
       .toBuffer()
+  const [rgb, mask] = await Promise.all([shrink(withPlate, 3), shrink(pixels.paintMask, 1)])
+  const withMask = new Uint8Array(outWidth * outHeight * 4)
+  for (let i = 0; i < outWidth * outHeight; i++) {
+    withMask.set(rgb.subarray(i * 3, i * 3 + 3), i * 4)
+    withMask[i * 4 + 3] = mask[i]
+  }
   return {
-    baseColor: await encode(withPlate),
-    orm: await encode(pixels.orm),
-    emissive: await encode(pixels.emissive),
+    baseColor: await encode(withMask, 4),
+    orm: await encode(pixels.orm, 3),
+    emissive: await encode(pixels.emissive, 3),
     emissivePixels: pixels.emissivePixels,
   }
 }
