@@ -52,4 +52,20 @@ describe('HomePage', () => {
     expect(await screen.findByText('赛道')).toBeInTheDocument()
     expect(play).not.toHaveBeenCalled()
   })
+
+  it('shows the garage dashboard', () => {
+    renderHome()
+    expect(screen.getByRole('group', { name: '车库仪表' })).toBeInTheDocument()
+  })
+
+  it('folds due reviews into the trial card', () => {
+    const today = studyDay(new Date())
+    localStorage.setItem(
+      STORAGE_KEY,
+      serializeProgress({ ...emptyProgress(), words: { alpha: { interval: 1, due: today, lastResult: 'ok', seenCount: 1 } } }),
+    )
+    renderHome()
+    expect(screen.getByRole('link', { name: /今日试炼 · 到期 1/ })).toBeInTheDocument()
+    expect(screen.queryByText(/到期复习/)).toBeNull()
+  })
 })
