@@ -93,7 +93,7 @@ export async function runAudio({ sourceDir, outDir, clips, encode, log }: RunAud
   }
   const configured = new Set(jobs.map((job) => path.basename(job.out)))
   for (const name of await readdir(outDir)) {
-    if (!name.endsWith('.mp3') || configured.has(name)) continue
+    if (!(name.endsWith('.mp3') || name.endsWith('.tmp')) || configured.has(name)) continue
     await unlink(path.join(outDir, name))
     log(`已删除不再使用的 ${name}`)
   }

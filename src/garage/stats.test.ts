@@ -41,6 +41,10 @@ describe('garageStats', () => {
     expect(garageStats(withDays('2026-10-05', '2026-10-07', '2026-10-08', '2026-10-09'), '2026-10-09').streak).toBe(3)
   })
 
+  it('counts a day with several laps once', () => {
+    expect(garageStats(withDays('2026-10-09', '2026-10-09', '2026-10-10'), '2026-10-10').streak).toBe(2)
+  })
+
   it('runs across a month boundary', () => {
     expect(garageStats(withDays('2026-09-29', '2026-09-30', '2026-10-01'), '2026-10-01').streak).toBe(3)
   })

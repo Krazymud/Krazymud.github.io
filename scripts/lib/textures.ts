@@ -21,9 +21,10 @@ export interface RunTexturesOptions {
   outDir: string
   jobs: readonly TextureJob[]
   log: (line: string) => void
+  maxTotalBytes?: number
 }
 
-export async function runTextures({ sourceDir, outDir, jobs, log }: RunTexturesOptions): Promise<{ name: string; bytes: number }[]> {
+export async function runTextures({ sourceDir, outDir, jobs, log, maxTotalBytes = MAX_TEXTURES_TOTAL }: RunTexturesOptions): Promise<{ name: string; bytes: number }[]> {
   const names = new Set<string>()
   for (const job of jobs) {
     if (names.has(job.name)) throw new TextureError(`贴图名重复：${job.name}`)
@@ -52,7 +53,7 @@ export async function runTextures({ sourceDir, outDir, jobs, log }: RunTexturesO
       log(`已处理 ${item.job.name}（${(item.bytes / 1024).toFixed(1)} KB）`)
     }
     const total = work.reduce((sum, item) => sum + item.bytes, 0)
-    if (total > MAX_TEXTURES_TOTAL) throw new TextureError(`贴图合计 ${(total / 1024).toFixed(0)} KB，超过 ${MAX_TEXTURES_TOTAL / 1024} KB`)
+    if (total > maxTotalBytes) throw new TextureError(`贴图合计 ${(total / 1024).toFixed(0)} KB，超过 ${maxTotalBytes / 1024} KB`)
     for (const item of work) await rename(item.tmp, item.out)
   } catch (error) {
     await Promise.all(work.map((item) => unlink(item.tmp).catch(() => undefined)))
@@ -60,7 +61,7 @@ export async function runTextures({ sourceDir, outDir, jobs, log }: RunTexturesO
   }
   const configured = new Set(work.map((item) => path.basename(item.out)))
   for (const name of await readdir(outDir)) {
-    if (!name.endsWith('.webp') || configured.has(name)) continue
+    if (!(name.endsWith('.webp') || name.endsWith('.tmp')) || configured.has(name)) continue
     await unlink(path.join(outDir, name))
     log(`已删除不再使用的 ${name}`)
   }

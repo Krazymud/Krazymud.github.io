@@ -125,4 +125,11 @@ describe('runAudio', () => {
     expect((await readdir(outDir)).sort()).toEqual(['notes.txt', 'rev.mp3'])
     expect(lines.join('\n')).toContain('horn.mp3')
   })
+
+  it('removes temporary files left by an interrupted run', async () => {
+    const { sourceDir, outDir } = await sandbox(['rev.mp3'])
+    await writeFile(path.join(outDir, 'horn.mp3.tmp'), 'stale')
+    await runAudio({ sourceDir, outDir, clips: [clip()], encode: fakeEncode(1000), log: () => {} })
+    expect(await readdir(outDir)).toEqual(['rev.mp3'])
+  })
 })
