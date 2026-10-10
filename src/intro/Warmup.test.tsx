@@ -1,7 +1,8 @@
 import { act, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetLoading, setLoading } from '../scene/loading'
-import { INTRO_FADE_MS, INTRO_FALLBACK_MS } from './Intro'
+import { INTRO_FADE_MS } from './Intro'
+import { STALL_MS } from './patience'
 import { WARMUP_GRACE_MS, Warmup } from './Warmup'
 
 const advance = (ms: number) =>
@@ -51,12 +52,24 @@ describe('Warmup', () => {
     expect(onDone).toHaveBeenCalledTimes(1)
   })
 
-  it('gives up waiting after the intro fallback time', () => {
+  it('gives up waiting once loading has stalled', () => {
     const onDone = vi.fn()
     render(<Warmup onDone={onDone} />)
     act(() => setLoading({ kind: '3d', fraction: 0.4 }))
-    advance(INTRO_FALLBACK_MS)
+    advance(STALL_MS)
     advance(INTRO_FADE_MS)
     expect(onDone).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the gauge up on a slow network while data is still coming in', () => {
+    const onDone = vi.fn()
+    render(<Warmup onDone={onDone} />)
+    for (const fraction of [0.2, 0.4, 0.6]) {
+      advance(STALL_MS - 1000)
+      act(() => setLoading({ kind: '3d', fraction }))
+    }
+    advance(STALL_MS - 1000)
+    expect(gauge()).toBeInTheDocument()
+    expect(onDone).not.toHaveBeenCalled()
   })
 })

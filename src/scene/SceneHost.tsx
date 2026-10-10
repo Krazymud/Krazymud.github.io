@@ -3,6 +3,7 @@ import { perfMark } from '../perf/perf'
 import { usePrefs } from '../prefs/prefs'
 import { usePrefersReducedMotion } from './hooks'
 import { setLoading, stageProgress } from './loading'
+import { onPrefetchProgress, prefetchStageAssets } from './prefetch'
 import { markSceneFailed, sceneFailed, sceneMode, supportsWebGL2 } from './mode'
 import { POSES } from './poses'
 import { SceneErrorBoundary } from './SceneErrorBoundary'
@@ -14,22 +15,21 @@ export const FADE_MS = 600
 
 const loadDefaultStage = (): Promise<StageModule> => import('./three/Stage')
 
-function whenIdle(callback: () => void): () => void {
-  if (typeof window.requestIdleCallback === 'function') {
-    const id = window.requestIdleCallback(callback, { timeout: 1500 })
-    return () => window.cancelIdleCallback(id)
-  }
-  const id = window.setTimeout(callback, 1)
-  return () => window.clearTimeout(id)
+type Prefetch = (onProgress: (fraction: number) => void) => Promise<void>
+
+const prefetchDefault: Prefetch = (onProgress) => {
+  const off = onPrefetchProgress(onProgress)
+  return prefetchStageAssets().finally(off)
 }
 
 interface SceneHostProps {
   scene: Scene
   loadStage?: () => Promise<StageModule>
+  prefetch?: Prefetch
   webgl2?: () => boolean
 }
 
-export function SceneHost({ scene, loadStage = loadDefaultStage, webgl2 = supportsWebGL2 }: SceneHostProps) {
+export function SceneHost({ scene, loadStage = loadDefaultStage, prefetch = prefetchDefault, webgl2 = supportsWebGL2 }: SceneHostProps) {
   const pose = POSES[scene]
   const ambience = useAmbience()
   const reducedMotion = usePrefersReducedMotion()
@@ -38,6 +38,7 @@ export function SceneHost({ scene, loadStage = loadDefaultStage, webgl2 = suppor
   const [failed, setFailed] = useState(sceneFailed)
   const mode = sceneMode({ reducedMotion, webgl2: hasWebGL2, enabled: scene3d, failed })
   const [Stage, setStage] = useState<ComponentType<StageProps> | null>(null)
+  const [codeLoaded, setCodeLoaded] = useState(false)
   const [ready, setReady] = useState(false)
   const [stillGone, setStillGone] = useState(false)
   const [assets, setAssets] = useState(0)
@@ -47,8 +48,8 @@ export function SceneHost({ scene, loadStage = loadDefaultStage, webgl2 = suppor
   }, [])
 
   useEffect(() => {
-    setLoading(mode === '3d' ? { kind: '3d', fraction: ready ? 1 : stageProgress(Stage !== null, assets) } : { kind: 'still', fraction: 1 })
-  }, [mode, Stage, assets, ready])
+    setLoading(mode === '3d' ? { kind: '3d', fraction: ready ? 1 : stageProgress(codeLoaded, assets) } : { kind: 'still', fraction: 1 })
+  }, [mode, codeLoaded, assets, ready])
 
   const fail = useCallback(() => {
     markSceneFailed()
@@ -62,23 +63,27 @@ export function SceneHost({ scene, loadStage = loadDefaultStage, webgl2 = suppor
   useEffect(() => {
     if (mode !== '3d' || Stage !== null) return
     let alive = true
-    const cancel = whenIdle(() => {
-      perfMark('开始加载 3D')
-      loadStage().then(
-        (module) => {
-          perfMark('3D 代码到达')
-          if (alive) setStage(() => module.Stage)
-        },
-        () => {
-          if (alive) fail()
-        },
-      )
+    perfMark('开始加载 3D')
+    const fetched = prefetch((fraction) => {
+      if (alive) setAssets((current) => Math.max(current, fraction))
     })
+    const code = loadStage().then((module) => {
+      perfMark('3D 代码到达')
+      if (alive) setCodeLoaded(true)
+      return module
+    })
+    Promise.all([code, fetched]).then(
+      ([module]) => {
+        if (alive) setStage(() => module.Stage)
+      },
+      () => {
+        if (alive) fail()
+      },
+    )
     return () => {
       alive = false
-      cancel()
     }
-  }, [mode, Stage, loadStage, fail])
+  }, [mode, Stage, loadStage, prefetch, fail])
 
   useEffect(() => {
     if (mode === '3d') return

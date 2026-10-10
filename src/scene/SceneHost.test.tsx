@@ -39,6 +39,7 @@ vi.mock('./three/FrameGuard', () => ({ FrameGuard: () => null }))
 vi.mock('./three/PostFx', () => ({ PostFx: () => null }))
 vi.mock('./three/Room', () => ({ Room: () => null }))
 vi.mock('./three/Studio', () => ({ Studio: () => null }))
+vi.mock('./prefetch', () => ({ prefetchStageAssets: async () => {}, onPrefetchProgress: () => () => {} }))
 
 function fakeStage(behaviour: 'ready' | 'fail' | 'wait'): StageModule {
   function Stage({ scene, onReady, onFail }: StageProps) {
@@ -170,6 +171,28 @@ describe('SceneHost', () => {
     expect(getLoading().fraction).toBeLessThan(1)
     act(() => ready?.())
     expect(getLoading()).toEqual({ kind: '3d', fraction: 1 })
+  })
+
+  it('downloads the assets alongside the 3D code and mounts the stage once both are in', async () => {
+    let report: ((fraction: number) => void) | undefined
+    let finish: (() => void) | undefined
+    const prefetch = (onProgress: (fraction: number) => void) =>
+      new Promise<void>((resolve) => {
+        report = onProgress
+        finish = resolve
+      })
+    let arrive: ((module: StageModule) => void) | undefined
+    const loadStage = () => new Promise<StageModule>((resolve) => (arrive = resolve))
+    render(<SceneHost scene="garage" loadStage={loadStage} prefetch={prefetch} webgl2={yes} />)
+    await waitFor(() => expect(report).toBeDefined())
+    act(() => report?.(0.5))
+    expect(getLoading().fraction).toBeCloseTo(0.325)
+    await act(async () => arrive?.(fakeStage('wait')))
+    expect(getLoading().fraction).toBeCloseTo(0.625)
+    expect(screen.queryByTestId('fake-stage')).toBeNull()
+    act(() => report?.(1))
+    await act(async () => finish?.())
+    expect(await screen.findByTestId('fake-stage')).toBeInTheDocument()
   })
 
   it('starts the asset progress over when 3D is switched back on', async () => {

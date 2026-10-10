@@ -6,7 +6,8 @@ describe('loading progress', () => {
   beforeEach(() => resetLoading())
 
   it('counts the 3D code as the first 30 percent and the assets up to 95, leaving the rest for the first frame', () => {
-    expect(stageProgress(false, 0.9)).toBe(0)
+    expect(stageProgress(false, 0)).toBe(0)
+    expect(stageProgress(false, 1)).toBeCloseTo(ASSETS_DONE - CHUNK_SHARE)
     expect(stageProgress(true, 0)).toBe(CHUNK_SHARE)
     expect(stageProgress(true, 0.5)).toBeCloseTo(0.625)
     expect(stageProgress(true, 2)).toBe(ASSETS_DONE)

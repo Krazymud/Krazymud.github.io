@@ -16,8 +16,7 @@ let state: Loading = INITIAL
 const listeners = new Set<() => void>()
 
 export function stageProgress(chunkLoaded: boolean, assets: number): number {
-  if (!chunkLoaded) return 0
-  return CHUNK_SHARE + (ASSETS_DONE - CHUNK_SHARE) * Math.min(Math.max(assets, 0), 1)
+  return (chunkLoaded ? CHUNK_SHARE : 0) + (ASSETS_DONE - CHUNK_SHARE) * Math.min(Math.max(assets, 0), 1)
 }
 
 export function getLoading(): Loading {

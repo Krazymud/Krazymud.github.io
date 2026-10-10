@@ -4,7 +4,8 @@ import { play, unlockAudio } from '../audio/sound'
 import { getPrefs } from '../prefs/prefs'
 import { onIgnition } from '../scene/events'
 import { resetLoading, setLoading } from '../scene/loading'
-import { INTRO_FADE_MS, INTRO_FALLBACK_MS, INTRO_MIN_MS, Intro, STILL_FILL_MS } from './Intro'
+import { INTRO_FADE_MS, INTRO_MIN_MS, Intro, STILL_FILL_MS } from './Intro'
+import { STALL_MS } from './patience'
 
 vi.mock('../audio/sound', () => ({ play: vi.fn(async () => undefined), unlockAudio: vi.fn() }))
 
@@ -48,11 +49,23 @@ describe('Intro', () => {
     expect(ignite()).toBeInTheDocument()
   })
 
-  it('offers ignition anyway after 8 seconds', () => {
+  it('offers ignition anyway once loading has stalled', () => {
     render(<Intro onDone={() => {}} />)
     act(() => setLoading({ kind: '3d', fraction: 0.4 }))
-    advance(INTRO_FALLBACK_MS)
+    advance(STALL_MS)
     expect(ignite()).toHaveFocus()
+  })
+
+  it('keeps waiting on a slow network while data is still coming in', () => {
+    render(<Intro onDone={() => {}} />)
+    for (const fraction of [0.2, 0.4, 0.6]) {
+      advance(STALL_MS - 1000)
+      act(() => setLoading({ kind: '3d', fraction }))
+    }
+    advance(STALL_MS - 1000)
+    expect(ignite()).toBeNull()
+    act(() => setLoading({ kind: '3d', fraction: 1 }))
+    expect(ignite()).toBeInTheDocument()
   })
 
   it('starts the engine, lights up and remembers the intro', () => {

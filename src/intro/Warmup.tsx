@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { perfMark } from '../perf/perf'
 import { useLoading } from '../scene/loading'
-import { INTRO_FADE_MS, INTRO_FALLBACK_MS } from './Intro'
+import { INTRO_FADE_MS } from './Intro'
+import { usePatience } from './patience'
 import { Tachometer } from './Tachometer'
 
 export const WARMUP_GRACE_MS = 400
@@ -17,7 +18,8 @@ export function Warmup({ onDone }: WarmupProps) {
   const [now, setNow] = useState(startedAt)
   const elapsed = now - startedAt
   const loaded = loading.kind === 'still' || loading.fraction >= 1
-  const ready = loaded || elapsed >= INTRO_FALLBACK_MS
+  const gaveUp = usePatience(loading.fraction, startedAt, now)
+  const ready = loaded || gaveUp
   if (!loaded && ready) perfMark('预热超时，露出静态图')
   const [shown, setShown] = useState(false)
   if (!shown && !ready && elapsed >= WARMUP_GRACE_MS) setShown(true)

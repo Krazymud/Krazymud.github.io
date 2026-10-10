@@ -4,10 +4,10 @@ import { setPrefs } from '../prefs/prefs'
 import { emitIgnition } from '../scene/events'
 import { usePrefersReducedMotion } from '../scene/hooks'
 import { useLoading } from '../scene/loading'
+import { usePatience } from './patience'
 import { Tachometer } from './Tachometer'
 
 export const INTRO_MIN_MS = 1500
-export const INTRO_FALLBACK_MS = 8000
 export const STILL_FILL_MS = 1200
 export const INTRO_FADE_MS = 600
 const TICK_MS = 50
@@ -29,7 +29,8 @@ export function Intro({ onDone }: IntroProps) {
 
   const elapsed = now - startedAt
   const value = loading.kind === 'still' ? (reduced ? 1 : Math.min(1, elapsed / STILL_FILL_MS)) : loading.fraction
-  const canIgnite = (value >= 1 && elapsed >= INTRO_MIN_MS) || elapsed >= INTRO_FALLBACK_MS
+  const gaveUp = usePatience(loading.fraction, startedAt, now)
+  const canIgnite = (value >= 1 && elapsed >= INTRO_MIN_MS) || gaveUp
   const ticking = !canIgnite && !leaving
 
   useEffect(() => {

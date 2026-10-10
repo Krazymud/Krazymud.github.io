@@ -6,13 +6,12 @@ import { modsFor } from '../../garage/mods'
 import { usePrefs } from '../../prefs/prefs'
 import { damp, WHEEL_SPEED } from '../motion'
 import type { Pose } from '../poses'
+import { assetUrl, CAR_URL } from '../prefetch'
 import { initialTurntable, stepTurntable } from '../turntable'
 import { applyMods, finishCar } from './carPaint'
 import { Turntable, TURNTABLE_HEIGHT } from './Turntable'
 import { useCarDrag } from './useCarDrag'
 import { useIgnitionLevel } from './useIgnitionLevel'
-
-export const CAR_URL = `${import.meta.env.BASE_URL}models/car.glb`
 
 interface CarRig {
   wheels: Group[]
@@ -78,7 +77,7 @@ interface CarProps {
 }
 
 export function Car({ pose, deterministic }: CarProps) {
-  const { scene } = useGLTF(CAR_URL, false, true)
+  const { scene } = useGLTF(assetUrl(CAR_URL), false, true)
   const rig = useMemo(() => rigCar(scene), [scene])
   const glow = useMemo(() => glowingMaterials(scene), [scene])
   const finish = useMemo(() => finishCar(scene), [scene])
