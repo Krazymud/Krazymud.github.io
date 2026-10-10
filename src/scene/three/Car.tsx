@@ -1,6 +1,6 @@
 import { useGLTF } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { Box3, Group, Mesh, MeshStandardMaterial, Texture, Vector3, type Object3D } from 'three'
 import { modsFor } from '../../garage/mods'
 import { usePrefs } from '../../prefs/prefs'
@@ -83,7 +83,7 @@ export function Car({ pose, deterministic }: CarProps) {
   const glow = useMemo(() => glowingMaterials(scene), [scene])
   const finish = useMemo(() => finishCar(scene), [scene])
   const { paint, rim, caliper } = usePrefs()
-  useEffect(() => applyMods(finish, modsFor({ paint, rim, caliper })), [finish, paint, rim, caliper])
+  useLayoutEffect(() => applyMods(finish, modsFor({ paint, rim, caliper })), [finish, paint, rim, caliper])
   const lights = useIgnitionLevel()
   const group = useRef<Group>(null)
   const turntable = useRef(initialTurntable(pose.carYaw ?? 0))

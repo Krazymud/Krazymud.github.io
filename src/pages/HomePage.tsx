@@ -23,6 +23,7 @@ export function HomePage() {
   const loading = useLoading()
   const sceneLive = loading.kind === '3d' && loading.fraction === 1
   const [modding, setModding] = useState(false)
+  if (modding && !sceneLive) setModding(false)
   const modsButton = useRef<HTMLButtonElement>(null)
   const closeMods = useCallback(() => {
     setModding(false)
@@ -75,7 +76,7 @@ export function HomePage() {
           )}
         </div>
       </div>
-      {modding && sceneLive && <ModsPanel onClose={closeMods} />}
+      {modding && <ModsPanel onClose={closeMods} />}
     </section>
   )
 }

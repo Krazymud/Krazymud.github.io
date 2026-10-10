@@ -31,7 +31,7 @@ export function finishCar(scene: Object3D): CarFinish {
       shader.uniforms.uPaint = paint
       shader.fragmentShader = shader.fragmentShader
         .replace('void main() {', 'uniform vec3 uPaint;\nvoid main() {')
-        .replace('#include <map_fragment>', '#include <map_fragment>\n\tdiffuseColor.rgb = mix( diffuseColor.rgb, uPaint, sampledDiffuseColor.a );')
+        .replace('#include <map_fragment>', '#include <map_fragment>\n#ifdef USE_MAP\n\tdiffuseColor.rgb = mix( diffuseColor.rgb, uPaint, sampledDiffuseColor.a );\n#endif')
     }
     body.customProgramCacheKey = () => 'car-paint'
     body.needsUpdate = true
