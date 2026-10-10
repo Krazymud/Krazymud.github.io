@@ -30,7 +30,7 @@ vi.mock('@react-three/fiber', () => ({
     useEffect(() => callback(), [])
   },
 }))
-vi.mock('@react-three/drei', () => ({ useProgress: (select: (state: { progress: number }) => number) => select({ progress: 0 }) }))
+vi.mock('@react-three/drei', () => ({ useProgress: { getState: () => ({ progress: 0 }), subscribe: () => () => {} } }))
 vi.mock('./three/Atmosphere', () => ({ Atmosphere: () => null }))
 vi.mock('./three/CameraRig', () => ({ CameraRig: () => null }))
 vi.mock('./three/Car', () => ({ Car: () => null }))
@@ -202,6 +202,22 @@ describe('SceneHost', () => {
     const tint = screen.getByTestId('scene-tint')
     expect(tint).toHaveStyle({ backgroundColor: '#fff2e0', opacity: '0.16' })
     rerender(<SceneHost scene="vault" webgl2={() => false} />)
+    expect(screen.getByTestId('scene-tint')).toHaveStyle({ opacity: '0' })
+  })
+
+  it('drops the tint as soon as the 3D stage is ready', async () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+    vi.setSystemTime(new Date(2026, 9, 10, 13, 0))
+    let ready: (() => void) | undefined
+    function Stage({ onReady }: StageProps) {
+      ready = onReady
+      return <div data-testid="fake-stage" />
+    }
+    render(<SceneHost scene="garage" loadStage={async () => ({ Stage })} webgl2={yes} />)
+    await screen.findByTestId('fake-stage')
+    expect(screen.getByTestId('scene-tint')).toHaveStyle({ opacity: '0.16' })
+    act(() => ready?.())
+    expect(still()).toBeInTheDocument()
     expect(screen.getByTestId('scene-tint')).toHaveStyle({ opacity: '0' })
   })
 })

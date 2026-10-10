@@ -8,8 +8,8 @@ import { useRoomLevel } from './useRoomLevel'
 const KEY_POSITION = new Vector3(3, 7, 4)
 const BEAM_LENGTH = KEY_POSITION.length()
 const BEAM_RADIUS = 2.2
-const BEAM_LAYERS = [1, 0.7, 0.4]
-const BEAM_OPACITY = 0.035
+const BEAM_LAYERS = [1, 0.8, 0.6, 0.4, 0.2]
+const BEAM_OPACITY = 0.021
 const DUST_COUNT = 150
 const DUST_BOX: [number, number, number] = [8, 4, 8]
 const DUST_SPEED = 0.05

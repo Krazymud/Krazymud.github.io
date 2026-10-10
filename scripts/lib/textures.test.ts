@@ -60,4 +60,22 @@ describe('runTextures', () => {
     await runTextures({ sourceDir, outDir, jobs: [job('a', 'a.jpg')], log: () => {} })
     expect(await readdir(outDir)).toEqual(['a.webp'])
   })
+
+  it('rejects textures over the total limit and writes nothing', async () => {
+    const { sourceDir, outDir } = await sandbox()
+    await noise(path.join(sourceDir, 'a.jpg'), 64)
+    const jobs = [job('a', 'a.jpg'), job('b', 'a.jpg')]
+    const run = () => runTextures({ sourceDir, outDir, jobs, log: () => {}, maxTotalBytes: 1024 })
+    await expect(run()).rejects.toThrow(TextureError)
+    await expect(run()).rejects.toThrow(/合计.*超过 1 KB/)
+    expect(await readdir(outDir)).toEqual([])
+  })
+
+  it('removes temporary files left by an interrupted run', async () => {
+    const { sourceDir, outDir } = await sandbox()
+    await noise(path.join(sourceDir, 'a.jpg'), 64)
+    await writeFile(path.join(outDir, 'old.webp.tmp'), 'stale')
+    await runTextures({ sourceDir, outDir, jobs: [job('a', 'a.jpg')], log: () => {} })
+    expect(await readdir(outDir)).toEqual(['a.webp'])
+  })
 })

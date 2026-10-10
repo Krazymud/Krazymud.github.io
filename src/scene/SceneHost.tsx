@@ -102,7 +102,7 @@ export function SceneHost({ scene, loadStage = loadDefaultStage, webgl2 = suppor
       <div
         data-testid="scene-tint"
         className="absolute inset-0 mix-blend-soft-light transition-opacity duration-[1200ms] ease-out"
-        style={{ backgroundColor: ambience.tint, opacity: showStage && stillGone ? 0 : ambience.tintAlpha * pose.room }}
+        style={{ backgroundColor: ambience.tint, opacity: showStage && ready ? 0 : ambience.tintAlpha * pose.room }}
       />
       <div
         data-testid="scene-dim"

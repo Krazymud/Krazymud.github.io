@@ -3,9 +3,21 @@ import type { GarageStats } from './stats'
 const RADIUS = 26
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 
-function Ring({ id, fill, value, caption, label }: { id: string; fill: number; value: number; caption: string; label: string }) {
+function ceilTo(value: number, step: number) {
+  return Math.max(step, Math.ceil(value / step) * step)
+}
+
+function Ring({ id, fill, value, max, caption, label }: { id: string; fill: number; value: number; max: number; caption: string; label: string }) {
   return (
-    <div role="meter" aria-label={label} aria-valuenow={value} aria-valuemin={0} className="flex flex-col items-center gap-1">
+    <div
+      role="meter"
+      aria-label={label}
+      aria-valuenow={value}
+      aria-valuemin={0}
+      aria-valuemax={max}
+      aria-valuetext={label}
+      className="flex flex-col items-center gap-1"
+    >
       <div className="relative h-16 w-16">
         <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90" aria-hidden>
           <circle cx="32" cy="32" r={RADIUS} fill="none" stroke="var(--color-line)" strokeWidth="3" />
@@ -32,11 +44,11 @@ function Ring({ id, fill, value, caption, label }: { id: string; fill: number; v
 
 export function Dashboard({ stats }: { stats: GarageStats }) {
   const streakFill = stats.streak === 0 ? 0 : stats.streak % 7 === 0 ? 1 : (stats.streak % 7) / 7
-  const masteredFill = (stats.mastered % 100) / 100
+  const masteredFill = stats.mastered === 0 ? 0 : stats.mastered % 100 === 0 ? 1 : (stats.mastered % 100) / 100
   const lit = stats.week.filter(Boolean).length
   return (
     <div role="group" aria-label="车库仪表" className="flex items-center justify-between border border-line bg-panel/60 px-4 py-3">
-      <Ring id="streak" fill={streakFill} value={stats.streak} caption="连续" label={`连续打卡 ${stats.streak} 天`} />
+      <Ring id="streak" fill={streakFill} value={stats.streak} max={ceilTo(stats.streak, 7)} caption="连续" label={`连续打卡 ${stats.streak} 天`} />
       <div className="flex flex-col items-center gap-2">
         <div role="img" aria-label={`最近 7 天打卡 ${lit} 天`} className="flex gap-2">
           {stats.week.map((done, i) => (
@@ -55,7 +67,7 @@ export function Dashboard({ stats }: { stats: GarageStats }) {
         </div>
         <span className="text-[10px] tracking-[0.3em] text-muted">本周</span>
       </div>
-      <Ring id="mastered" fill={masteredFill} value={stats.mastered} caption="掌握" label={`已掌握 ${stats.mastered} 个词`} />
+      <Ring id="mastered" fill={masteredFill} value={stats.mastered} max={ceilTo(stats.mastered, 100)} caption="掌握" label={`已掌握 ${stats.mastered} 个词`} />
     </div>
   )
 }
