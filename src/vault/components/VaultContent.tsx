@@ -21,10 +21,11 @@ const TABS: { id: Tab; label: string }[] = [
 interface VaultContentProps {
   session: VaultSession
   fetchBytes: FetchBytes
+  sweep: boolean
   onLock: () => void
 }
 
-export function VaultContent({ session, fetchBytes, onLock }: VaultContentProps) {
+export function VaultContent({ session, fetchBytes, sweep, onLock }: VaultContentProps) {
   const [params, setParams] = useSearchParams()
   const raw = params.get('tab')
   const tab: Tab = raw === 'notes' || raw === 'lists' ? raw : 'photos'
@@ -34,7 +35,7 @@ export function VaultContent({ session, fetchBytes, onLock }: VaultContentProps)
 
   return (
     <section>
-      <GoldSweep />
+      {sweep && <GoldSweep />}
       <div className="flex items-center justify-between">
         <p className="font-display text-xs tracking-[0.35em] text-accent-hi">PRIVATE VAULT</p>
         <button type="button" onClick={onLock} className="border border-line px-3 py-1 text-xs text-muted hover:text-fg">

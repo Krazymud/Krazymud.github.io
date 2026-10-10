@@ -1,22 +1,36 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { play } from '../audio/sound'
+import { prefersReducedMotion } from '../scene/hooks'
+import { studyDay } from '../trial/day'
 import { DecryptError } from './crypto'
+import { doorPlayedOn, markDoorPlayed } from './doorDay'
 import { defaultKeyStore, type KeyStore } from './keyStore'
 import { fetchVaultBytes, loadVaultFile, unlockWithKey, unlockWithPassphrase, type FetchBytes, type VaultSession } from './repo'
 import type { VaultFile } from './types'
 import { UnlockPanel } from './components/UnlockPanel'
 import { VaultContent } from './components/VaultContent'
+import { VaultDoor } from './components/VaultDoor'
 
 type VaultState =
   | { status: 'loading' }
   | { status: 'empty' }
   | { status: 'error' }
   | { status: 'locked'; file: VaultFile }
-  | { status: 'open'; file: VaultFile; session: VaultSession }
+  | { status: 'open'; file: VaultFile; session: VaultSession; door: boolean }
+
+type Loaded = Exclude<VaultState, { status: 'open' }> | { status: 'remembered'; file: VaultFile; session: VaultSession }
 
 interface VaultScreenProps {
   fetchBytes?: FetchBytes
   keyStore?: KeyStore | null
+}
+
+function opened(file: VaultFile, session: VaultSession, manual: boolean): VaultState {
+  const today = studyDay(new Date())
+  const door = !prefersReducedMotion() && !doorPlayedOn(today)
+  if (door) markDoorPlayed(today)
+  if (door || manual) void play('unlock')
+  return { status: 'open', file, session, door }
 }
 
 function Notice({ children }: { children: ReactNode }) {
@@ -35,13 +49,13 @@ export function VaultScreen({ fetchBytes = fetchVaultBytes, keyStore }: VaultScr
 
   useEffect(() => {
     let alive = true
-    async function open(): Promise<VaultState> {
+    async function open(): Promise<Loaded> {
       const file = await loadVaultFile(fetchBytes)
       if (!file) return { status: 'empty' }
       const saved = store ? await store.load().catch(() => null) : null
       if (saved) {
         try {
-          return { status: 'open', file, session: await unlockWithKey(file, saved) }
+          return { status: 'remembered', file, session: await unlockWithKey(file, saved) }
         } catch {
           await store?.clear().catch(() => undefined)
         }
@@ -49,7 +63,9 @@ export function VaultScreen({ fetchBytes = fetchVaultBytes, keyStore }: VaultScr
       return { status: 'locked', file }
     }
     open().then(
-      (next) => alive && setState(next),
+      (next) => {
+        if (alive) setState(next.status === 'remembered' ? opened(next.file, next.session, false) : next)
+      },
       () => alive && setState({ status: 'error' }),
     )
     return () => {
@@ -67,8 +83,7 @@ export function VaultScreen({ fetchBytes = fetchVaultBytes, keyStore }: VaultScr
         throw error
       }
       if (remember && store) await store.save(session.dek).catch(() => undefined)
-      void play('unlock')
-      setState({ status: 'open', file, session })
+      setState(opened(file, session, true))
       return true
     },
     [store],
@@ -81,6 +96,8 @@ export function VaultScreen({ fetchBytes = fetchVaultBytes, keyStore }: VaultScr
     },
     [store],
   )
+
+  const doorDone = useCallback(() => setState((s) => (s.status === 'open' ? { ...s, door: false } : s)), [])
 
   switch (state.status) {
     case 'loading':
@@ -106,6 +123,13 @@ export function VaultScreen({ fetchBytes = fetchVaultBytes, keyStore }: VaultScr
     case 'locked':
       return <UnlockPanel canRemember={store !== null} onUnlock={(passphrase, remember) => unlock(state.file, passphrase, remember)} />
     case 'open':
-      return <VaultContent session={state.session} fetchBytes={fetchBytes} onLock={() => void lock(state.file)} />
+      return (
+        <>
+          <div inert={state.door}>
+            <VaultContent session={state.session} fetchBytes={fetchBytes} sweep={!state.door} onLock={() => void lock(state.file)} />
+          </div>
+          {state.door && <VaultDoor onDone={doorDone} />}
+        </>
+      )
   }
 }

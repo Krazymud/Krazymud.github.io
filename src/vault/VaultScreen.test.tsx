@@ -3,8 +3,10 @@ import { IDBFactory } from 'fake-indexeddb'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { play } from '../audio/sound'
+import { studyDay } from '../trial/day'
 import { HOLD_MS } from './components/UnlockPanel'
 import { toBase64 } from './crypto'
+import { DOOR_DAY_KEY } from './doorDay'
 import { createKeyStore, type KeyStore } from './keyStore'
 import type { FetchBytes } from './repo'
 import { makeTestVault, TEST_PASSPHRASE } from './testVault'
@@ -19,6 +21,19 @@ function renderVault(fetchBytes: FetchBytes, keyStore: KeyStore | null, path = '
   return render(<RouterProvider router={router} />)
 }
 
+function reduceMotion() {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: query.includes('reduce'),
+    media: query,
+    addEventListener() {},
+    removeEventListener() {},
+    addListener() {},
+    removeListener() {},
+  }))
+}
+
+const sounds = () => vi.mocked(play).mock.calls.map(([name]) => name)
+
 async function type(passphrase: string) {
   fireEvent.change(await screen.findByLabelText('口令'), { target: { value: passphrase } })
 }
@@ -29,7 +44,11 @@ async function enter(passphrase: string) {
 }
 
 describe('VaultScreen', () => {
-  afterEach(() => vi.useRealTimers())
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+    localStorage.clear()
+  })
 
   it('shows an empty vault when vault.json is missing', async () => {
     renderVault(async () => null, null)
@@ -182,5 +201,77 @@ describe('VaultScreen', () => {
     const memory = await screen.findByRole('region', { name: '今日回忆' })
     const tablist = screen.getByRole('tablist')
     expect(memory.compareDocumentPosition(tablist) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('swings the door open on the first visit of the day only', async () => {
+    const vault = await makeTestVault()
+    const first = renderVault(vault.fetchBytes, null)
+    await enter(TEST_PASSPHRASE)
+    await screen.findByRole('tab', { name: '照片' })
+    expect(screen.getByTestId('vault-door')).toBeInTheDocument()
+    expect(localStorage.getItem(DOOR_DAY_KEY)).toBe(studyDay(new Date()))
+    first.unmount()
+
+    renderVault(vault.fetchBytes, null)
+    await enter(TEST_PASSPHRASE)
+    await screen.findByRole('tab', { name: '照片' })
+    expect(screen.queryByTestId('vault-door')).not.toBeInTheDocument()
+  })
+
+  it('keeps the vault inert until the door is skipped', async () => {
+    const vault = await makeTestVault()
+    renderVault(vault.fetchBytes, null)
+    await enter(TEST_PASSPHRASE)
+    const tab = await screen.findByRole('tab', { name: '照片' })
+    expect(tab.closest('[inert]')).not.toBeNull()
+    fireEvent.click(screen.getByTestId('vault-door'))
+    expect(screen.queryByTestId('vault-door')).not.toBeInTheDocument()
+    expect(tab.closest('[inert]')).toBeNull()
+  })
+
+  it('opens without the door when motion is reduced', async () => {
+    reduceMotion()
+    vi.mocked(play).mockClear()
+    const vault = await makeTestVault()
+    renderVault(vault.fetchBytes, null)
+    await enter(TEST_PASSPHRASE)
+    await screen.findByRole('tab', { name: '照片' })
+    expect(screen.queryByTestId('vault-door')).not.toBeInTheDocument()
+    expect(localStorage.getItem(DOOR_DAY_KEY)).toBeNull()
+    expect(sounds()).toEqual(['ignition', 'unlock'])
+  })
+
+  it('opens a remembered vault with the door and its sound', async () => {
+    vi.mocked(play).mockClear()
+    const vault = await makeTestVault()
+    const store = createKeyStore(new IDBFactory())!
+    await store.save(vault.dek)
+    renderVault(vault.fetchBytes, store)
+    await screen.findByRole('tab', { name: '照片' })
+    expect(screen.getByTestId('vault-door')).toBeInTheDocument()
+    expect(sounds()).toEqual(['unlock'])
+  })
+
+  it('still plays the unlock sound once for a manual unlock after the door', async () => {
+    localStorage.setItem(DOOR_DAY_KEY, studyDay(new Date()))
+    vi.mocked(play).mockClear()
+    const vault = await makeTestVault()
+    renderVault(vault.fetchBytes, null)
+    await enter(TEST_PASSPHRASE)
+    await screen.findByRole('tab', { name: '照片' })
+    expect(screen.queryByTestId('vault-door')).not.toBeInTheDocument()
+    expect(sounds()).toEqual(['ignition', 'unlock'])
+  })
+
+  it('stays quiet when a remembered vault opens after the door', async () => {
+    localStorage.setItem(DOOR_DAY_KEY, studyDay(new Date()))
+    vi.mocked(play).mockClear()
+    const vault = await makeTestVault()
+    const store = createKeyStore(new IDBFactory())!
+    await store.save(vault.dek)
+    renderVault(vault.fetchBytes, store)
+    await screen.findByRole('tab', { name: '照片' })
+    expect(screen.queryByTestId('vault-door')).not.toBeInTheDocument()
+    expect(sounds()).toEqual([])
   })
 })

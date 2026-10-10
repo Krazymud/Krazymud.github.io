@@ -13,7 +13,7 @@ function subscribeReducedMotion(callback: () => void): () => void {
   return () => query.removeEventListener('change', callback)
 }
 
-function prefersReducedMotion(): boolean {
+export function prefersReducedMotion(): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia(REDUCED_QUERY).matches
 }
 
