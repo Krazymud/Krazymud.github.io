@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
-import { AdditiveBlending, Box3, CanvasTexture, Matrix4, Mesh, SpriteMaterial, Vector3, type Group, type Object3D } from 'three'
+import { AdditiveBlending, CanvasTexture, SpriteMaterial, Vector3, type Group, type Object3D } from 'three'
+import { carSpaceBox } from './carBox'
 import { facingFade, FRONT, lampsFor } from './lamps'
 import { useIgnitionLevel } from './useIgnitionLevel'
 
@@ -28,22 +29,6 @@ function radialTexture(): CanvasTexture {
 
 const glowMaterial = (map: CanvasTexture, color: string) =>
   new SpriteMaterial({ map, color, blending: AdditiveBlending, transparent: true, depthWrite: false, toneMapped: false })
-
-// 在车模自身坐标里量包围盒；世界坐标的盒子会随转台角度变大，灯位就偏了。
-// 车模自带的阴影平面比车身大好几倍，不算在内。
-function carSpaceBox(car: Object3D): Box3 {
-  car.updateWorldMatrix(true, true)
-  const toCar = car.matrixWorld.clone().invert()
-  const box = new Box3()
-  const part = new Box3()
-  const transform = new Matrix4()
-  car.traverse((object) => {
-    if (!(object instanceof Mesh) || object.name.includes('shadow')) return
-    if (!object.geometry.boundingBox) object.geometry.computeBoundingBox()
-    box.union(part.copy(object.geometry.boundingBox!).applyMatrix4(transform.multiplyMatrices(toCar, object.matrixWorld)))
-  })
-  return box
-}
 
 export function LampGlow({ car }: { car: Object3D }) {
   const lights = useIgnitionLevel()
