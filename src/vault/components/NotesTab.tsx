@@ -11,7 +11,7 @@ function preview(markdown: string): string {
   return markdown.replace(/[#*_`>]/g, '').replace(/\s+/g, ' ').trim()
 }
 
-function NoteCard({ note, read }: { note: NoteEntry; read: ReadBlob }) {
+export function NoteCard({ note, read }: { note: NoteEntry; read: ReadBlob }) {
   const [open, setOpen] = useState(false)
   const body = useBlobText(note.blob, read)
 

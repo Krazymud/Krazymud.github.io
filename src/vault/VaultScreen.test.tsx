@@ -174,4 +174,13 @@ describe('VaultScreen', () => {
     await enter(TEST_PASSPHRASE)
     expect(await screen.findByText('已完成 1 / 2')).toBeInTheDocument()
   })
+
+  it("shows today's memory above the tabs", async () => {
+    const vault = await makeTestVault()
+    renderVault(vault.fetchBytes, null)
+    await enter(TEST_PASSPHRASE)
+    const memory = await screen.findByRole('region', { name: '今日回忆' })
+    const tablist = screen.getByRole('tablist')
+    expect(memory.compareDocumentPosition(tablist) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
 })

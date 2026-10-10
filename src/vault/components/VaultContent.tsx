@@ -1,9 +1,12 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router'
+import { studyDay } from '../../trial/day'
+import { todaysMemory } from '../memory'
 import { readBlob, type FetchBytes, type VaultSession } from '../repo'
 import type { ReadBlob } from '../useBlob'
 import { GoldSweep } from './GoldSweep'
 import { ListsTab } from './ListsTab'
+import { MemoryCard } from './MemoryCard'
 import { NotesTab } from './NotesTab'
 import { PhotoGrid } from './PhotoGrid'
 
@@ -27,6 +30,7 @@ export function VaultContent({ session, fetchBytes, onLock }: VaultContentProps)
   const tab: Tab = raw === 'notes' || raw === 'lists' ? raw : 'photos'
   const read = useCallback<ReadBlob>((name) => readBlob(fetchBytes, session.dek, name), [fetchBytes, session])
   const { manifest } = session
+  const memory = useMemo(() => todaysMemory(manifest, studyDay(new Date())), [manifest])
 
   return (
     <section>
@@ -37,6 +41,7 @@ export function VaultContent({ session, fetchBytes, onLock }: VaultContentProps)
           锁上
         </button>
       </div>
+      {memory && <MemoryCard memory={memory} photos={manifest.photos} read={read} />}
       <div role="tablist" className="mt-4 grid grid-cols-3 border-b border-line">
         {TABS.map((item) => (
           <button
