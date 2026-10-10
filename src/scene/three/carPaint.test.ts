@@ -54,6 +54,16 @@ describe('carPaint', () => {
     expect(caliper.color.getHex()).toBe(new Color('#9e1c22').getHex())
   })
 
+  it('gives custom rims their own finish and restores the factory one', () => {
+    const { scene, wheel } = car()
+    Object.assign(wheel, { metalness: 1, roughness: 0.8 })
+    const finish = finishCar(scene)
+    applyMods(finish, modsFor({ paint: 'midnight', rim: 'gold', caliper: 'red' }))
+    expect([wheel.metalness, wheel.roughness]).toEqual([0.5, 0.45])
+    applyMods(finish, modsFor({ paint: 'midnight', rim: 'gunmetal', caliper: 'red' }))
+    expect([wheel.metalness, wheel.roughness]).toEqual([1, 0.8])
+  })
+
   it('tolerates a car without the named materials', () => {
     const finish = finishCar(new Group())
     expect(() => applyMods(finish, modsFor({ paint: 'red', rim: 'black', caliper: 'blue' }))).not.toThrow()

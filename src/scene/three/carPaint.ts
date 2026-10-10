@@ -4,6 +4,7 @@ import type { Mods } from '../../garage/mods'
 export interface CarFinish {
   paint: { value: Color }
   wheel: MeshStandardMaterial | null
+  wheelSurface: { metalness: number; roughness: number }
   caliper: MeshStandardMaterial | null
 }
 
@@ -35,13 +36,22 @@ export function finishCar(scene: Object3D): CarFinish {
     body.customProgramCacheKey = () => 'car-paint'
     body.needsUpdate = true
   }
-  const finish: CarFinish = { paint, wheel: materials.get('wheel') ?? null, caliper: materials.get('caliper') ?? null }
+  const wheel = materials.get('wheel') ?? null
+  const finish: CarFinish = {
+    paint,
+    wheel,
+    wheelSurface: { metalness: wheel?.metalness ?? 1, roughness: wheel?.roughness ?? 1 },
+    caliper: materials.get('caliper') ?? null,
+  }
   scene.userData.finish = finish
   return finish
 }
 
 export function applyMods(finish: CarFinish, mods: Mods): void {
   finish.paint.value.set(mods.paint.hex)
-  finish.wheel?.color.set(mods.rim.hex)
+  if (finish.wheel) {
+    finish.wheel.color.set(mods.rim.hex)
+    Object.assign(finish.wheel, mods.rim.surface ?? finish.wheelSurface)
+  }
   finish.caliper?.color.set(mods.caliper.hex)
 }

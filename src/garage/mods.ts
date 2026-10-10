@@ -3,6 +3,7 @@ export interface Swatch {
   name: string
   hex: string
   chip?: string
+  surface?: { metalness: number; roughness: number }
 }
 
 export type ModPart = 'paint' | 'rim' | 'caliper'
@@ -24,14 +25,17 @@ export const PAINTS: readonly Swatch[] = [
   { id: 'sunset', name: '落日橙', hex: '#b4410f' },
 ]
 
+// 原厂轮毂是全金属粗糙面，在暗车库里几乎不显色；其余配色换成半金属的亮面才看得出颜色。
+const BRIGHT_RIM = { metalness: 0.5, roughness: 0.45 }
+
 // 轮毂颜色乘在贴图上，hex 是系数，chip 才是看上去的颜色。
 export const RIMS: readonly Swatch[] = [
   { id: 'gunmetal', name: '枪灰', hex: '#b3b3b8', chip: '#5a5a60' },
-  { id: 'silver', name: '亮银', hex: '#ffffff', chip: '#c4c6ca' },
-  { id: 'black', name: '哑黑', hex: '#2a2a2e', chip: '#1d1d20' },
-  { id: 'bronze', name: '古铜', hex: '#b07a48', chip: '#7a5530' },
-  { id: 'gold', name: '香槟金', hex: '#d8b878', chip: '#a88a52' },
-  { id: 'blue', name: '电光蓝', hex: '#6f8fd8', chip: '#34508c' },
+  { id: 'silver', name: '亮银', hex: '#ffffff', chip: '#c4c6ca', surface: BRIGHT_RIM },
+  { id: 'black', name: '哑黑', hex: '#2a2a2e', chip: '#1d1d20', surface: BRIGHT_RIM },
+  { id: 'bronze', name: '古铜', hex: '#b07a48', chip: '#7a5530', surface: BRIGHT_RIM },
+  { id: 'gold', name: '香槟金', hex: '#d8b878', chip: '#a88a52', surface: BRIGHT_RIM },
+  { id: 'blue', name: '电光蓝', hex: '#6f8fd8', chip: '#34508c', surface: BRIGHT_RIM },
 ]
 
 export const CALIPERS: readonly Swatch[] = [
