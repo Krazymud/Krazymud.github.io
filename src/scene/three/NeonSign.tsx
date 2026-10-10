@@ -1,5 +1,5 @@
 import { useFrame } from '@react-three/fiber'
-import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'
+import { use, useEffect, useMemo, useRef, type MutableRefObject } from 'react'
 import { CanvasTexture, Color, SRGBColorSpace, type Mesh, type MeshBasicMaterial } from 'three'
 import type { RoomLevel } from './useRoomLevel'
 
@@ -27,33 +27,30 @@ function drawSign(): CanvasTexture {
   return texture
 }
 
+let fontLoad: Promise<void> | null = null
+
+function loadFont(): Promise<void> {
+  fontLoad ??= document.fonts ? document.fonts.load(FONT).then(() => undefined, () => undefined) : Promise.resolve()
+  return fontLoad
+}
+
 export function NeonSign({ level }: { level: MutableRefObject<RoomLevel> }) {
-  const [fontsReady, setFontsReady] = useState(false)
-  useEffect(() => {
-    let alive = true
-    const ready = () => alive && setFontsReady(true)
-    if (document.fonts) document.fonts.load(FONT).then(ready, ready)
-    else ready()
-    return () => {
-      alive = false
-    }
-  }, [])
-  const texture = useMemo(() => (fontsReady ? drawSign() : null), [fontsReady])
-  useEffect(() => () => texture?.dispose(), [texture])
+  use(loadFont())
+  const texture = useMemo(drawSign, [])
+  useEffect(() => () => texture.dispose(), [texture])
   const mesh = useRef<Mesh>(null)
   const material = useRef<MeshBasicMaterial>(null)
 
   useFrame(() => {
     const { presence, glow } = level.current
-    if (mesh.current) mesh.current.visible = presence > 0.01 && texture !== null
+    if (mesh.current) mesh.current.visible = presence > 0.01
     material.current?.color.copy(NEON).multiplyScalar(GLOW * glow)
     if (material.current) material.current.opacity = presence
   })
 
-  if (!texture) return null
   return (
-    <mesh ref={mesh} position={[0, 4.6, 0.06]}>
-      <planeGeometry args={[6.4, 1]} />
+    <mesh ref={mesh} position={[0, 1.3, 0.1]} renderOrder={1}>
+      <planeGeometry args={[3.2, 0.5]} />
       <meshBasicMaterial ref={material} map={texture} transparent depthWrite={false} toneMapped={false} />
     </mesh>
   )
