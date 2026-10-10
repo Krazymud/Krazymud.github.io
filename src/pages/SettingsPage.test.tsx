@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { PREFS_KEY } from '../prefs/prefs'
+import { PREFS_KEY, resetPrefsCache } from '../prefs/prefs'
 import { ProgressProvider } from '../progress/ProgressProvider'
 import { emptyProgress, STORAGE_KEY } from '../progress/store'
 import { SettingsPage } from './SettingsPage'
@@ -19,7 +19,10 @@ function upload(input: HTMLElement, text: string) {
 }
 
 describe('SettingsPage', () => {
-  beforeEach(() => localStorage.clear())
+  beforeEach(() => {
+    localStorage.clear()
+    resetPrefsCache()
+  })
 
   it('explains why an invalid file is rejected', async () => {
     upload(renderSettings(), 'not json')

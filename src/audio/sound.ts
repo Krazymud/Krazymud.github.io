@@ -29,11 +29,10 @@ async function load(ctx: AudioContext, name: SoundName): Promise<AudioBuffer> {
 
 export function unlockAudio(): void {
   try {
-    if (context === null) {
-      const ctx = createContext()
-      context = ctx
+    context ??= createContext()
+    if (buffers.size === 0 && !getPrefs().muted) {
       for (const name of SOUND_NAMES) {
-        const buffer = load(ctx, name)
+        const buffer = load(context, name)
         buffer.catch(warn)
         buffers.set(name, buffer)
       }
@@ -102,6 +101,7 @@ export function setAudioContextFactory(factory: ContextFactory | null): void {
 
 export function resetSound(): void {
   stopAll()
+  if (typeof context?.close === 'function') context.close().catch(warn)
   context = null
   buffers.clear()
 }

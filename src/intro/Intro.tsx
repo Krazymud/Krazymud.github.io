@@ -24,17 +24,18 @@ export function Intro({ onDone }: IntroProps) {
   const [leaving, setLeaving] = useState(false)
   const fade = useRef<number | undefined>(undefined)
 
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), TICK_MS)
-    return () => {
-      window.clearInterval(id)
-      window.clearTimeout(fade.current)
-    }
-  }, [])
+  useEffect(() => () => window.clearTimeout(fade.current), [])
 
   const elapsed = now - startedAt
   const value = loading.kind === 'still' ? (reduced ? 1 : Math.min(1, elapsed / STILL_FILL_MS)) : loading.fraction
   const canIgnite = (value >= 1 && elapsed >= INTRO_MIN_MS) || elapsed >= INTRO_FALLBACK_MS
+  const ticking = !canIgnite && !leaving
+
+  useEffect(() => {
+    if (!ticking) return
+    const id = window.setInterval(() => setNow(Date.now()), TICK_MS)
+    return () => window.clearInterval(id)
+  }, [ticking])
 
   function ignite() {
     if (leaving) return

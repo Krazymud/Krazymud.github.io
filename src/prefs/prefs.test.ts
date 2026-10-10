@@ -10,7 +10,7 @@ describe('prefs', () => {
   })
   afterEach(() => vi.restoreAllMocks())
 
-  it('turns the 3D garage and sound on, and has not shown the intro yet', () => {
+  it('defaults to scene3d: true, muted: false and introSeen: false', () => {
     expect(getPrefs()).toEqual({ scene3d: true, muted: false, introSeen: false })
   })
 
