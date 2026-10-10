@@ -75,7 +75,7 @@ export function HomePage() {
           )}
         </div>
       </div>
-      {modding && <ModsPanel onClose={closeMods} />}
+      {modding && sceneLive && <ModsPanel onClose={closeMods} />}
     </section>
   )
 }

@@ -83,6 +83,14 @@ describe('HomePage', () => {
     expect(button).toHaveFocus()
   })
 
+  it('drops the mods panel if the garage falls back to the still', () => {
+    renderHome()
+    act(() => setLoading({ kind: '3d', fraction: 1 }))
+    fireEvent.click(screen.getByRole('button', { name: '改装' }))
+    act(() => setLoading({ kind: 'still', fraction: 1 }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
   it('hides mods when only the still is shown', () => {
     setLoading({ kind: 'still', fraction: 1 })
     renderHome()
