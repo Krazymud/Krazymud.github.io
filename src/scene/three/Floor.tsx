@@ -65,8 +65,6 @@ export function Floor({ pose, deterministic, reflection }: FloorProps) {
           />
         ) : (
           <MeshReflectorMaterial
-            // drei 只在创建反射器时读取 resolution，换 key 才能按新分辨率重建
-            key={reflection}
             resolution={reflection}
             blur={[300, 80]}
             mixBlur={1}
