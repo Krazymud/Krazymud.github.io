@@ -74,6 +74,11 @@ describe('turntable', () => {
     expect(t.velocity).toBeLessThanOrEqual((10 * RAD_PER_PX) / MIN_DRAG_DT)
   })
 
+  it('keeps the full flick speed on a 240 Hz display', () => {
+    const t = dragBy(grab(initialTurntable()), 10, 0.0042)
+    expect(t.velocity).toBeCloseTo((10 * RAD_PER_PX) / 0.0042)
+  })
+
   it('keeps the flick when released right at the end of the flick window', () => {
     const dragged = dragBy(grab(initialTurntable()), 100, 0.1)
     expect(release(dragged, FLICK_WINDOW).velocity).toBe(dragged.velocity)

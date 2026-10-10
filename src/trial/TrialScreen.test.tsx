@@ -152,6 +152,7 @@ describe('TrialScreen', () => {
       await screen.findByRole('button', { name: '会了' })
       expect(nitro).toHaveBeenCalledTimes(1)
       expect(vi.mocked(play)).toHaveBeenCalledWith('rev')
+      expect(document.querySelector('[style*="radial-gradient"]')).toBeInTheDocument()
     } finally {
       off()
     }

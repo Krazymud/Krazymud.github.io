@@ -68,10 +68,11 @@ describe('runCar', () => {
 
   it('refuses to guess between several model files', async () => {
     const sourceDir = await writeFixture()
-    await writeFile(join(sourceDir, 'other.glb'), '')
+    await writeFile(join(sourceDir, 'a.glb'), '')
+    await writeFile(join(sourceDir, 'B.glb'), '')
     const run = () => runCar({ sourceDir, outFile: join(dir, 'car.glb'), config: fixtureConfig() })
     await expect(run()).rejects.toThrow(CarError)
-    await expect(run()).rejects.toThrow(/other\.glb.*scene\.gltf/)
+    await expect(run()).rejects.toThrow('B.glb、a.glb、scene.gltf')
   })
 
   it('refuses to overwrite the old model with an oversized one', async () => {

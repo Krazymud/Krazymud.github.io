@@ -117,6 +117,20 @@ describe('processCar', () => {
   it('rejects wheel parts that carry their own offset', async () => {
     const doc = await buildCarFixture()
     doc.getRoot().listNodes().find((node) => node.getName() === 'car_wheel_FL_car_tire_0')!.setTranslation([0.1, 0, 0])
-    await expect(processCar(doc, fixtureConfig())).rejects.toThrow(/car_wheel_FL_car_tire_0/)
+    const result = processCar(doc, fixtureConfig())
+    await expect(result).rejects.toThrow(CarError)
+    await expect(result).rejects.toThrow(/car_wheel_FL_car_tire_0/)
+  })
+
+  it('pulls wheel UVs that barely overshoot [0,1] back in', async () => {
+    const doc = await buildCarFixture()
+    const rim = doc.getRoot().listMeshes().find((mesh) => mesh.getName() === 'car_wheel_FL_car_body_0')!.listPrimitives()[0]
+    const values = Array.from({ length: 8 }, (_, i) => [i % 2 ? 1.004 : -0.008, i / 7]).flat()
+    rim.setAttribute('TEXCOORD_0', doc.createAccessor().setType('VEC2').setArray(new Float32Array(values)).setBuffer(doc.getRoot().listBuffers()[0]))
+    await processCar(doc, fixtureConfig())
+    const wheel = meshNodes(doc).find((node) => node.getExtras().wheel === 'FL')!
+    const uv = wheel.getMesh()!.listPrimitives().find((p) => p.getMaterial()?.getName() === 'wheel')!.getAttribute('TEXCOORD_0')!
+    expect(Math.min(...uv.getArray()!)).toBe(0)
+    expect(Math.max(...uv.getArray()!)).toBe(1)
   })
 })

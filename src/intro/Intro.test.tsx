@@ -112,8 +112,10 @@ describe('Intro', () => {
     render(<Intro onDone={onDone} />)
     advance(INTRO_MIN_MS)
     const button = ignite()!
-    fireEvent.click(button)
-    fireEvent.click(button)
+    act(() => {
+      fireEvent.click(button)
+      fireEvent.click(button)
+    })
     expect(play).toHaveBeenCalledTimes(1)
     expect(lit).toHaveBeenCalledTimes(1)
     advance(INTRO_FADE_MS)

@@ -15,7 +15,7 @@ export async function findSource(dir: string): Promise<string> {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
     throw new CarError(`找不到 ${dir}。请登录 Sketchfab，以 glTF 格式下载「Fictional supercar - V12 Goblin」，解压到这个文件夹。`)
   }
-  const models = names.filter((name) => /\.(gltf|glb)$/i.test(name))
+  const models = names.filter((name) => /\.(gltf|glb)$/i.test(name)).sort()
   if (models.length === 0) throw new CarError(`${dir} 里没有 .gltf 或 .glb 文件。请把 Sketchfab 下载的压缩包完整解压到这里。`)
   if (models.length > 1) throw new CarError(`${dir} 里有多个模型文件：${models.join('、')}。请只留下 Sketchfab 下载的那一个。`)
   return join(dir, models[0])

@@ -9,6 +9,7 @@ import type { StageModule, StageProps } from './types'
 
 const renderer = vi.hoisted(() => ({ disposed: 0 }))
 
+// These module-wide fiber/drei/three mocks let the real Stage run on a fake canvas for the 3D re-enable test.
 // Like R3F, the fake canvas forces a context loss while disposing, after the stage has unmounted.
 vi.mock('@react-three/fiber', () => ({
   Canvas: ({ onCreated, children }: { onCreated: (state: { gl: { domElement: HTMLCanvasElement } }) => void; children?: ReactNode }) => {

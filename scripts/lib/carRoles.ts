@@ -1,7 +1,8 @@
 import { CarError, type Role, type RoleRule } from './carTypes.ts'
 
 // With the g or y flag, RegExp.test() resumes from lastIndex, so the same pattern can match one mesh name and miss the next.
-export function stateless(pattern: RegExp): RegExp {
+// Stripping y also drops its sticky anchoring: the pattern can then match anywhere in the name, not only at lastIndex.
+function stateless(pattern: RegExp): RegExp {
   return pattern.global || pattern.sticky ? new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, '')) : pattern
 }
 

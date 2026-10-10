@@ -23,6 +23,7 @@ export function Intro({ onDone }: IntroProps) {
   const [now, setNow] = useState(startedAt)
   const [leaving, setLeaving] = useState(false)
   const fade = useRef<number | undefined>(undefined)
+  const ignited = useRef(false)
 
   useEffect(() => () => window.clearTimeout(fade.current), [])
 
@@ -38,7 +39,8 @@ export function Intro({ onDone }: IntroProps) {
   }, [ticking])
 
   function ignite() {
-    if (leaving) return
+    if (ignited.current) return
+    ignited.current = true
     setLeaving(true)
     unlockAudio()
     void play('ignition')

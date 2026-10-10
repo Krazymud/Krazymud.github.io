@@ -11,7 +11,7 @@ export const FRICTION = 3
 export const RAD_PER_PX = 0.008
 export const ALIGN_LAMBDA = 4
 export const FLICK_WINDOW = 0.12
-export const MIN_DRAG_DT = 0.008
+export const MIN_DRAG_DT = 0.002
 export const MIN_COAST_SPEED = 0.01
 
 export function initialTurntable(angle = 0): Turntable {

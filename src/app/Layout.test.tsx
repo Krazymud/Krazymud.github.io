@@ -26,7 +26,7 @@ describe('Layout', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.mocked(stopAll).mockClear()
-    vi.mocked(unlockAudio).mockClear()
+    vi.mocked(unlockAudio).mockReset()
   })
   afterEach(() => {
     Reflect.deleteProperty(document, 'visibilityState')
@@ -47,10 +47,15 @@ describe('Layout', () => {
     expect(getPrefs().muted).toBe(true)
     expect(stopAll).toHaveBeenCalledTimes(1)
     vi.mocked(unlockAudio).mockClear()
+    const mutedAtUnlock: boolean[] = []
+    vi.mocked(unlockAudio).mockImplementation(() => {
+      mutedAtUnlock.push(getPrefs().muted)
+    })
     fireEvent.click(mute)
     expect(getPrefs().muted).toBe(false)
     expect(stopAll).toHaveBeenCalledTimes(1)
     expect(unlockAudio).toHaveBeenCalledTimes(2)
+    expect(mutedAtUnlock).toEqual([true, false])
   })
 
   it('unlocks audio on any pointer, click or key press', () => {

@@ -8,7 +8,7 @@ import {
 import { flatten, getBounds, join, prune } from '@gltf-transform/functions'
 import { groundOffset, groundScale, headingYaw, unionBounds, yawQuaternion, type Bounds, type Vec3 } from './carAlign.ts'
 import { buildBodyTextures, fitWebp } from './carAtlas.ts'
-import { assignRoles, stateless } from './carRoles.ts'
+import { assignRoles } from './carRoles.ts'
 import { CarError, type CarConfig, type Role } from './carTypes.ts'
 
 export function linearColor(hex: string): [number, number, number, number] {
@@ -97,10 +97,9 @@ async function createMaterials(doc: Document, config: CarConfig): Promise<Record
   return { body, wheel, caliper, glass, tire, shadow }
 }
 
-function removeMeshes(doc: Document, patterns: RegExp[]) {
-  const removals = patterns.map(stateless)
+function removeUnassigned(doc: Document, roles: Map<string, Role>) {
   for (const mesh of doc.getRoot().listMeshes()) {
-    if (!removals.some((pattern) => pattern.test(mesh.getName()))) continue
+    if (roles.has(mesh.getName())) continue
     for (const parent of mesh.listParents()) if (parent instanceof Node) parent.setMesh(null)
     mesh.dispose()
   }
@@ -189,7 +188,7 @@ export async function processCar(doc: Document, config: CarConfig): Promise<void
   const roles = assignRoles(root.listMeshes().map((mesh) => mesh.getName()), config.roles, config.remove)
   const materials = await createMaterials(doc, config)
 
-  removeMeshes(doc, config.remove)
+  removeUnassigned(doc, roles)
   for (const mesh of root.listMeshes()) {
     const role = roles.get(mesh.getName())
     if (!role) continue
