@@ -35,9 +35,9 @@ export function PostFx({ deterministic, fx }: { deterministic: boolean; fx: Fx }
     // SSAO 依赖 NormalPass，只在开启环境光遮蔽时才付这份渲染开销。
     <EffectComposer multisampling={4} enableNormalPass={fx.ambientOcclusion}>
       {fx.ambientOcclusion && (
-        <SSAO samples={16} radius={0.12} intensity={12} luminanceInfluence={0.6} resolutionScale={0.5} />
+        <SSAO samples={16} radius={0.3} intensity={3} bias={0.025} luminanceInfluence={0.6} resolutionScale={0.5} />
       )}
-      {fx.depthOfField && <DepthOfField target={FOCUS} focalLength={0.02} bokehScale={2} />}
+      {fx.depthOfField && <DepthOfField target={FOCUS} worldFocusRange={5} bokehScale={1.5} />}
       <Bloom mipmapBlur luminanceThreshold={0.7} intensity={0.7} />
       {fx.grade && <primitive object={grade} />}
       <ChromaticAberration ref={aberration} offset={zero} radialModulation={false} modulationOffset={0} />
