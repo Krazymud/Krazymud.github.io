@@ -10,14 +10,14 @@ describe('prefs', () => {
   })
   afterEach(() => vi.restoreAllMocks())
 
-  it('defaults to scene3d: true, muted: false and introSeen: false', () => {
-    expect(getPrefs()).toEqual({ scene3d: true, muted: false, introSeen: false })
+  it('defaults to the 3D garage on, sound on, intro unseen and the factory colours', () => {
+    expect(getPrefs()).toEqual({ scene3d: true, muted: false, introSeen: false, paint: 'midnight', rim: 'gunmetal', caliper: 'red' })
   })
 
   it('saves the switch apart from the progress data', () => {
     localStorage.setItem(STORAGE_KEY, '{"version":1}')
     setPrefs({ scene3d: false })
-    expect(JSON.parse(localStorage.getItem(PREFS_KEY)!)).toEqual({ scene3d: false, muted: false, introSeen: false })
+    expect(JSON.parse(localStorage.getItem(PREFS_KEY)!)).toEqual({ scene3d: false, muted: false, introSeen: false, paint: 'midnight', rim: 'gunmetal', caliper: 'red' })
     expect(localStorage.getItem(STORAGE_KEY)).toBe('{"version":1}')
     resetPrefsCache()
     expect(getPrefs().scene3d).toBe(false)
@@ -40,8 +40,8 @@ describe('prefs', () => {
   it('does not store undefined fields', () => {
     setPrefs({ scene3d: false })
     setPrefs({ scene3d: undefined, muted: true })
-    expect(getPrefs()).toEqual({ scene3d: false, muted: true, introSeen: false })
-    expect(JSON.parse(localStorage.getItem(PREFS_KEY)!)).toEqual({ scene3d: false, muted: true, introSeen: false })
+    expect(getPrefs()).toEqual({ scene3d: false, muted: true, introSeen: false, paint: 'midnight', rim: 'gunmetal', caliper: 'red' })
+    expect(JSON.parse(localStorage.getItem(PREFS_KEY)!)).toEqual({ scene3d: false, muted: true, introSeen: false, paint: 'midnight', rim: 'gunmetal', caliper: 'red' })
   })
 
   it('does not notify hook users when nothing changes', () => {
@@ -58,9 +58,9 @@ describe('prefs', () => {
 
   it('checks each field on its own', () => {
     localStorage.setItem(PREFS_KEY, '{"scene3d":false,"muted":"yes","introSeen":1}')
-    expect(readPrefs()).toEqual({ scene3d: false, muted: false, introSeen: false })
+    expect(readPrefs()).toEqual({ scene3d: false, muted: false, introSeen: false, paint: 'midnight', rim: 'gunmetal', caliper: 'red' })
     localStorage.setItem(PREFS_KEY, '{"muted":true,"introSeen":true}')
-    expect(readPrefs()).toEqual({ scene3d: true, muted: true, introSeen: true })
+    expect(readPrefs()).toEqual({ scene3d: true, muted: true, introSeen: true, paint: 'midnight', rim: 'gunmetal', caliper: 'red' })
   })
 
   it('still works for this visit when storage is unavailable', () => {
@@ -80,5 +80,18 @@ describe('prefs', () => {
     expect(result.current.scene3d).toBe(true)
     act(() => setPrefs({ scene3d: false }))
     expect(result.current.scene3d).toBe(false)
+  })
+
+  it('keeps known car colours and drops unknown ones', () => {
+    localStorage.setItem(PREFS_KEY, '{"paint":"pearl","rim":"bronze","caliper":"yellow"}')
+    expect(readPrefs()).toMatchObject({ paint: 'pearl', rim: 'bronze', caliper: 'yellow' })
+    localStorage.setItem(PREFS_KEY, '{"paint":"pink","rim":7,"caliper":"pearl"}')
+    expect(readPrefs()).toMatchObject({ paint: 'midnight', rim: 'gunmetal', caliper: 'red' })
+  })
+
+  it('saves a colour choice', () => {
+    setPrefs({ paint: 'red' })
+    resetPrefsCache()
+    expect(getPrefs().paint).toBe('red')
   })
 })

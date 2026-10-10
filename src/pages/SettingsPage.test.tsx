@@ -58,7 +58,7 @@ describe('SettingsPage', () => {
     expect(toggle).toBeChecked()
     fireEvent.click(toggle)
     expect(toggle).not.toBeChecked()
-    expect(JSON.parse(localStorage.getItem(PREFS_KEY)!)).toEqual({ scene3d: false, muted: false, introSeen: false })
+    expect(JSON.parse(localStorage.getItem(PREFS_KEY)!)).toEqual({ scene3d: false, muted: false, introSeen: false, paint: 'midnight', rim: 'gunmetal', caliper: 'red' })
     fireEvent.click(toggle)
     expect(toggle).toBeChecked()
   })
