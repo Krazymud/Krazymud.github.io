@@ -3,6 +3,8 @@ import { NavLink, Outlet, useLocation } from 'react-router'
 import { stopAll, unlockAudio } from '../audio/sound'
 import { Intro } from '../intro/Intro'
 import { Warmup } from '../intro/Warmup'
+import { perfEnabled } from '../perf/perf'
+import { PerfOverlay } from '../perf/PerfOverlay'
 import { getPrefs, setPrefs, usePrefs } from '../prefs/prefs'
 import { useProgress } from '../progress/ProgressProvider'
 import { setIgnitionPending } from '../scene/events'
@@ -99,6 +101,7 @@ export function Layout() {
       </main>
       {opening === 'ignition' && <Intro onDone={closeOpening} />}
       {opening === 'warmup' && <Warmup onDone={closeOpening} />}
+      {perfEnabled && <PerfOverlay />}
     </div>
   )
 }

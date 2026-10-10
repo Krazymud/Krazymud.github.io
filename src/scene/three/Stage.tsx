@@ -1,6 +1,7 @@
 import { useProgress } from '@react-three/drei'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { perfMark } from '../../perf/perf'
 import { NIGHT } from '../ambience'
 import { dprFor, type Quality } from '../frameGuard'
 import { usePageVisible } from '../hooks'
@@ -21,6 +22,7 @@ function FirstFrame({ onReady }: { onReady: () => void }) {
   useFrame(() => {
     if (done.current) return
     done.current = true
+    perfMark('首帧开始渲染')
     requestAnimationFrame(() => onReady())
   })
   return null

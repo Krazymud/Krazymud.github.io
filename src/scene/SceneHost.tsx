@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ComponentType } from 'react'
+import { perfMark } from '../perf/perf'
 import { usePrefs } from '../prefs/prefs'
 import { usePrefersReducedMotion } from './hooks'
 import { setLoading, stageProgress } from './loading'
@@ -40,7 +41,10 @@ export function SceneHost({ scene, loadStage = loadDefaultStage, webgl2 = suppor
   const [ready, setReady] = useState(false)
   const [stillGone, setStillGone] = useState(false)
   const [assets, setAssets] = useState(0)
-  const reportProgress = useCallback((fraction: number) => setAssets((current) => Math.max(current, fraction)), [])
+  const reportProgress = useCallback((fraction: number) => {
+    if (fraction >= 1) perfMark('素材下载完')
+    setAssets((current) => Math.max(current, fraction))
+  }, [])
 
   useEffect(() => {
     setLoading(mode === '3d' ? { kind: '3d', fraction: ready ? 1 : stageProgress(Stage !== null, assets) } : { kind: 'still', fraction: 1 })
@@ -50,14 +54,19 @@ export function SceneHost({ scene, loadStage = loadDefaultStage, webgl2 = suppor
     markSceneFailed()
     setFailed(true)
   }, [])
-  const markReady = useCallback(() => setReady(true), [])
+  const markReady = useCallback(() => {
+    perfMark('首帧画出')
+    setReady(true)
+  }, [])
 
   useEffect(() => {
     if (mode !== '3d' || Stage !== null) return
     let alive = true
     const cancel = whenIdle(() => {
+      perfMark('开始加载 3D')
       loadStage().then(
         (module) => {
+          perfMark('3D 代码到达')
           if (alive) setStage(() => module.Stage)
         },
         () => {
