@@ -28,7 +28,7 @@ export function VaultDoor({ onDone }: { onDone: () => void }) {
       <motion.svg
         viewBox="-100 -100 200 200"
         className="relative w-[min(80vw,80vh)] text-accent-hi"
-        style={{ transformOrigin: 'left center' }}
+        style={{ transformOrigin: 'left center', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
         initial={{ rotateY: 0 }}
         animate={{ rotateY: -100 }}
         transition={{ delay: 0.8, duration: 0.8, ease: 'easeIn' }}
