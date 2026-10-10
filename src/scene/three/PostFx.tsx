@@ -33,7 +33,8 @@ export function PostFx({ deterministic, fx }: { deterministic: boolean; fx: Fx }
 
   return (
     // SSAO 依赖 NormalPass，只在开启环境光遮蔽时才付这份渲染开销。
-    <EffectComposer multisampling={4} enableNormalPass={fx.ambientOcclusion}>
+    // 升档时 SSAO 会先于新的 NormalPass 渲染并报错，所以开关环境光遮蔽时整体重建合成器。
+    <EffectComposer key={String(fx.ambientOcclusion)} multisampling={4} enableNormalPass={fx.ambientOcclusion}>
       {fx.ambientOcclusion && (
         <SSAO samples={16} radius={0.3} intensity={3} bias={0.025} luminanceInfluence={0.6} resolutionScale={0.5} />
       )}
