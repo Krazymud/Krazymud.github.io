@@ -255,6 +255,21 @@ describe('VaultContent published edits', () => {
     expect(await screen.findByText('还没有笔记')).toBeInTheDocument()
   })
 
+  it('toggles a published list item when GitHub cannot hydrate but the site has the blob', async () => {
+    readBlobFile.mockRejectedValue(new GitHubWriteError(SYNC_PENDING))
+    renderVault('/vault?tab=lists')
+    const header = await screen.findByRole('button', { name: /一起去的地方/ })
+    await waitFor(() => expect(header).toBeEnabled())
+    fireEvent.click(header)
+    const row = await screen.findByRole('button', { name: /去冰岛看极光/ })
+    await waitFor(() => expect(row).toBeEnabled())
+    fireEvent.click(row)
+
+    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    expect(await screen.findByText('已完成 2 / 2')).toBeInTheDocument()
+    expect(screen.queryByText('没能保存，请再试一次')).not.toBeInTheDocument()
+  })
+
   it('toggles a published list item through the vault commit, not web.json', async () => {
     renderVault('/vault?tab=lists')
     const header = await screen.findByRole('button', { name: /一起去的地方/ })

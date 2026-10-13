@@ -374,9 +374,8 @@ describe('useVaultMutate', () => {
     expect(second.notes).toEqual([])
   })
 
-  it('reads a published list blob from GitHub before toggling and uploads only the new blob', async () => {
-    const original = await vault.fetchBytes('blobs/list-a.bin')
-    readBlobFile.mockResolvedValue(original!)
+  it('hydrates a published list from the site before toggling and uploads only the new blob', async () => {
+    readBlobFile.mockRejectedValue(new GitHubWriteError(SYNC_PENDING))
     mount()
     await ready()
     await waitFor(() => expect(saveButton()).toBeEnabled())
@@ -385,7 +384,7 @@ describe('useVaultMutate', () => {
     await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(screen.queryByText(SYNCING)).toBeNull())
 
-    expect(readBlobFile).toHaveBeenCalledWith(apiFetch, 'tok', 'list-a')
+    expect(readBlobFile).not.toHaveBeenCalled()
     const call = commitVaultUpdate.mock.calls[0][0]
     const sent = await committedManifest(call)
     const list = sent.lists.find((l) => l.source === 'lists/a.md')!
@@ -398,9 +397,23 @@ describe('useVaultMutate', () => {
     ])
   })
 
-  it('does not commit when the list blob cannot be read', async () => {
+  it('falls back to GitHub when the site is missing the list blob', async () => {
+    const original = await vault.fetchBytes('blobs/list-a.bin')
+    const siteMiss: FetchBytes = async (path) => (path === 'blobs/list-a.bin' ? null : vault.fetchBytes(path))
+    readBlobFile.mockResolvedValue(original!)
+    mount({ fetchBytes: siteMiss })
+    await ready()
+    await waitFor(() => expect(saveButton()).toBeEnabled())
+
+    fireEvent.click(screen.getByRole('button', { name: '打勾' }))
+    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    expect(readBlobFile).toHaveBeenCalledWith(apiFetch, 'tok', 'list-a')
+  })
+
+  it('does not commit when the list blob cannot be read from the site or GitHub', async () => {
+    const siteMiss: FetchBytes = async (path) => (path === 'blobs/list-a.bin' ? null : vault.fetchBytes(path))
     readBlobFile.mockRejectedValue(new GitHubWriteError(TOKEN_DENIED))
-    mount()
+    mount({ fetchBytes: siteMiss })
     await ready()
     await waitFor(() => expect(saveButton()).toBeEnabled())
 
@@ -500,9 +513,10 @@ describe('useVaultMutate', () => {
     expect(commitVaultUpdate).not.toHaveBeenCalled()
   })
 
-  it('does not commit when list hydration hits a network TypeError', async () => {
+  it('does not commit when list hydration hits a network TypeError on GitHub and the site misses the blob', async () => {
+    const siteMiss: FetchBytes = async (path) => (path === 'blobs/list-a.bin' ? null : vault.fetchBytes(path))
     readBlobFile.mockRejectedValue(new TypeError('Failed to fetch'))
-    mount()
+    mount({ fetchBytes: siteMiss })
     await ready()
     await waitFor(() => expect(saveButton()).toBeEnabled())
 
