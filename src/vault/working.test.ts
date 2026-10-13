@@ -15,7 +15,7 @@ import {
   webNoteSource,
   webPhotoSource,
 } from './working'
-import type { VaultManifest } from './types'
+import type { PhotoEntry, VaultManifest } from './types'
 import type { WebDoc } from './web'
 
 const baseManifest = (): VaultManifest => ({
@@ -144,6 +144,51 @@ describe('sealVaultFile', () => {
     const roundTrip = await unlockWithKey(sealed, vault.dek)
     expect(roundTrip.manifest.notes).toHaveLength(2)
     expect(roundTrip.manifest.notes.some((n) => n.title === '新')).toBe(true)
+  })
+
+  it('seals photos newest first even when the working order is not', async () => {
+    const vault = await makeTestVault()
+    const working = emptyWorking({
+      photos: [photo('photos/old.jpg', '2023-01-02'), photo('photos/new.jpg', '2025-07-01'), photo('photos/mid.jpg', '2024-03-04')],
+      notes: [],
+      lists: [],
+    })
+    const sealed = await sealVaultFile(vault.dek, working, vault.file)
+    const roundTrip = await unlockWithKey(sealed, vault.dek)
+    expect(roundTrip.manifest.photos.map((p) => p.source)).toEqual(['photos/new.jpg', 'photos/mid.jpg', 'photos/old.jpg'])
+  })
+})
+
+function photo(source: string, date: string): PhotoEntry {
+  return { caption: '', date, width: 1, height: 1, thumb: `${source}-t`, full: `${source}-f`, source, hash: 'h' }
+}
+
+describe('photo order', () => {
+  const published = (): VaultManifest => ({
+    photos: [photo('photos/b.jpg', '2025-05-01'), photo('photos/a.jpg', '2024-05-20')],
+    notes: [],
+    lists: [],
+  })
+
+  it('places an added photo by date, newest first', async () => {
+    const dek = await generateDek()
+    const bytes = { full: new Uint8Array([1]), thumb: new Uint8Array([2]), width: 1, height: 1, caption: '' }
+    let next = await addPhoto(emptyWorking(published()), { ...bytes, date: '2026-10-13' }, { now: () => 1, uuid: () => 'new' }, dek)
+    next = await addPhoto(next, { ...bytes, date: '2024-12-01' }, { now: () => 2, uuid: () => 'mid' }, dek)
+    expect(next.manifest.photos.map((p) => p.date)).toEqual(['2026-10-13', '2025-05-01', '2024-12-01', '2024-05-20'])
+  })
+
+  it('keeps photos newest first after a merge appends incoming records', async () => {
+    const dek = await generateDek()
+    const bytes = { full: new Uint8Array([1]), thumb: new Uint8Array([2]), width: 1, height: 1, caption: '' }
+    const incoming = await addPhoto(
+      emptyWorking({ photos: [], notes: [], lists: [] }),
+      { ...bytes, date: '2025-01-01' },
+      { now: () => 3, uuid: () => 'inc' },
+      dek,
+    )
+    const merged = mergeWorking(emptyWorking(published()), incoming)
+    expect(merged.manifest.photos.map((p) => p.date)).toEqual(['2025-05-01', '2025-01-01', '2024-05-20'])
   })
 })
 

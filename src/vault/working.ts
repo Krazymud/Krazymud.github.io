@@ -69,6 +69,16 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
+// Same order as scripts/lib/vaultBuild.ts; PhotoGrid groups consecutive photos by month.
+function byDateDesc(a: { date: string; source: string }, b: { date: string; source: string }): number {
+  if (a.date === b.date) return a.source.localeCompare(b.source)
+  return a.date < b.date ? 1 : -1
+}
+
+function sortPhotos(photos: PhotoEntry[]): PhotoEntry[] {
+  return [...photos].sort(byDateDesc)
+}
+
 function removeTombstone(tombs: Tombstone[], source: string): Tombstone[] {
   return tombs.filter((item) => item.source !== source)
 }
@@ -189,7 +199,7 @@ export function mergeWorking(base: WorkingVault, incoming: WorkingVault): Workin
 
   return {
     manifest: {
-      photos: photos.records,
+      photos: sortPhotos(photos.records),
       notes: notes.records,
       lists: lists.records,
     },
@@ -336,7 +346,7 @@ export async function addPhoto(
   return {
     manifest: {
       ...working.manifest,
-      photos: [...working.manifest.photos, entry],
+      photos: sortPhotos([...working.manifest.photos, entry]),
     },
     updatedAt: { ...working.updatedAt, [source]: clock.now() },
     tombstones: { ...working.tombstones, photos: removeTombstone(working.tombstones.photos, source) },
@@ -368,7 +378,7 @@ export async function sealVaultFile(
     version: previous.version,
     kdf: previous.kdf,
     wrappedKey: previous.wrappedKey,
-    manifest: await encryptJson(dek, working.manifest),
+    manifest: await encryptJson(dek, { ...working.manifest, photos: sortPhotos(working.manifest.photos) }),
   }
 }
 
