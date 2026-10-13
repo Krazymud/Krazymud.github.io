@@ -149,7 +149,12 @@ describe('VaultContent published edits', () => {
     expect(await screen.findByText('改过的正文')).toBeInTheDocument()
   })
 
-  it('reads a just-synced note body from GitHub when the static site has not deployed it yet', async () => {
+  it('keeps a just-synced note body readable when the site and GitHub cannot serve the new blob yet', async () => {
+    readBlobFile.mockImplementation(async (_fetch, _token, name) => {
+      const bytes = await vault.fetchBytes(`blobs/${name}.bin`)
+      if (!bytes) throw new GitHubWriteError(SYNC_PENDING)
+      return bytes
+    })
     renderVault('/vault?tab=notes')
     const create = await screen.findByRole('button', { name: '新笔记' })
     await waitFor(() => expect(create).toBeEnabled())
@@ -158,15 +163,34 @@ describe('VaultContent published edits', () => {
     fireEvent.change(screen.getByRole('textbox', { name: '正文' }), { target: { value: '刚写好' } })
     fireEvent.click(screen.getByRole('button', { name: '保存' }))
     await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
-    const sent = await committed(commitVaultUpdate.mock.calls[0][0])
-    const added = sent.notes.find((note) => note.title === '新写的')!
     expect(await screen.findByText('刚写好')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText('正在同步…')).not.toBeInTheDocument())
     fireEvent.click(screen.getByRole('tab', { name: '清单' }))
     fireEvent.click(screen.getByRole('tab', { name: '笔记' }))
     expect(await screen.findByText('刚写好')).toBeInTheDocument()
-    expect(readBlobFile).toHaveBeenCalledWith(apiFetch, 'tok', added.blob)
     expect(screen.queryByText('这篇笔记打不开')).not.toBeInTheDocument()
+  })
+
+  it('keeps a just-edited list readable when the site and GitHub cannot serve the new blob yet', async () => {
+    readBlobFile.mockImplementation(async (_fetch, _token, name) => {
+      const bytes = await vault.fetchBytes(`blobs/${name}.bin`)
+      if (!bytes) throw new GitHubWriteError(SYNC_PENDING)
+      return bytes
+    })
+    renderVault('/vault?tab=lists')
+    const edit = await screen.findByRole('button', { name: '编辑' })
+    await screen.findByText('已完成 1 / 2')
+    await waitFor(() => expect(edit).toBeEnabled())
+    fireEvent.click(edit)
+    fireEvent.change(screen.getByLabelText('条目 2'), { target: { value: '去北海道' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+
+    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.queryByText('正在同步…')).not.toBeInTheDocument())
+    expect(screen.queryByText('这个清单打不开')).not.toBeInTheDocument()
+    expect(await screen.findByText('已完成 1 / 2')).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: /一起去的地方/ }))
+    expect(await screen.findByText('去北海道')).toBeInTheDocument()
   })
 
   it('deletes a published note after confirmation', async () => {
