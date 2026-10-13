@@ -1,4 +1,5 @@
 import type { VaultKey } from './crypto'
+import { GARAGE_DB, GARAGE_DB_VERSION, upgradeGarageDb } from './db'
 
 export interface KeyStore {
   load(): Promise<VaultKey | null>
@@ -6,7 +7,6 @@ export interface KeyStore {
   clear(): Promise<void>
 }
 
-const DB_NAME = 'midnight-garage'
 const STORE = 'vault'
 const KEY = 'dek'
 
@@ -24,8 +24,8 @@ export function createKeyStore(factory: IDBFactory | null): KeyStore | null {
 
   function open(): Promise<IDBDatabase> {
     database ??= new Promise((resolve, reject) => {
-      const request = idb.open(DB_NAME, 1)
-      request.onupgradeneeded = () => request.result.createObjectStore(STORE)
+      const request = idb.open(GARAGE_DB, GARAGE_DB_VERSION)
+      request.onupgradeneeded = () => upgradeGarageDb(request.result)
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
     })
