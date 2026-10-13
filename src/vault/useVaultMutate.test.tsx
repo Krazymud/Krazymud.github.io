@@ -500,4 +500,28 @@ describe('useVaultMutate', () => {
     await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
     expect(commitVaultUpdate.mock.calls[0][0].deleteWebJson).toBeUndefined()
   })
+
+  it('clears IDB web pending after absorbing legacy pending with no remote web.json', async () => {
+    const doc: WebDoc = {
+      notes: [{ id: 'n-idb', title: '本地遗留', date: '2024-06-01', body: '正文', updatedAt: 50 }],
+      lists: [],
+      checks: {},
+      tombstones: { notes: [], lists: [] },
+    }
+    readWebFileText.mockResolvedValue(null)
+    await store.savePending(await sealWebFile(vault.dek, doc))
+    await store.saveSynced(await sealWebFile(vault.dek, doc))
+
+    mount()
+
+    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.queryByText(SYNCING)).toBeNull())
+    const call = commitVaultUpdate.mock.calls[0][0]
+    expect(call.deleteWebJson).toBeUndefined()
+    const sent = await committedManifest(call)
+    expect(sent.notes.find((n) => n.source === 'web/notes/n-idb')?.title).toBe('本地遗留')
+    expect(screen.getByText('本地遗留')).toBeInTheDocument()
+    expect(await store.loadPending()).toBeNull()
+    expect(await store.loadSynced()).toBeNull()
+  })
 })

@@ -94,6 +94,7 @@ export function useVaultMutate(options: {
   const tokenRef = useRef<string | null>(null)
   const syncingRef = useRef(false)
   const webJsonRef = useRef(false)
+  const webMigratedRef = useRef(false)
   const unsyncedRef = useRef(false)
   const depth = useRef(0)
   const tail = useRef(Promise.resolve())
@@ -177,7 +178,8 @@ export function useVaultMutate(options: {
         })
         fileRef.current = vaultFile
         freshRef.current = true
-        if (webJsonRef.current) {
+        if (webMigratedRef.current) {
+          webMigratedRef.current = false
           webJsonRef.current = false
           try {
             await storeRef.current?.clearPending()
@@ -337,6 +339,7 @@ export function useVaultMutate(options: {
               }
             })
             migrated = true
+            webMigratedRef.current = true
             webJsonRef.current = remoteText !== null
           }
         } catch {
