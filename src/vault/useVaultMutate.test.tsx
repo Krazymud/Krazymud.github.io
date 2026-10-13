@@ -123,8 +123,8 @@ beforeEach(async () => {
   readBlobFile.mockReset()
   readWebFileText.mockReset()
   readWebFileText.mockResolvedValue(null)
-  readVaultFile.mockResolvedValue(vault.file)
-  commitVaultUpdate.mockResolvedValue(undefined)
+  readVaultFile.mockResolvedValue({ file: vault.file, commitSha: 'base0' })
+  commitVaultUpdate.mockResolvedValue('commit1')
 })
 
 afterEach(() => {
@@ -133,7 +133,7 @@ afterEach(() => {
 
 describe('useVaultMutate', () => {
   it('locks edits with the syncing message until the commit finishes', async () => {
-    const gate = deferred<void>()
+    const gate = deferred<string>()
     commitVaultUpdate.mockReturnValue(gate.promise)
     mount()
     await ready()
@@ -150,7 +150,7 @@ describe('useVaultMutate', () => {
     expect(screen.getByText('新笔记')).toBeInTheDocument()
 
     await act(async () => {
-      gate.resolve()
+      gate.resolve('commit1')
       await gate.promise
     })
 
@@ -258,7 +258,10 @@ describe('useVaultMutate', () => {
       ...manifest,
       notes: [...manifest.notes, { title: '别处写的', date: '2026-10-12', blob: 'remote-note', source: 'web/notes/remote', hash: 'r' }],
     }
-    readVaultFile.mockResolvedValue(await sealVaultFile(vault.dek, emptyWorking(remoteManifest), vault.file))
+    readVaultFile.mockResolvedValue({
+      file: await sealVaultFile(vault.dek, emptyWorking(remoteManifest), vault.file),
+      commitSha: 'remote1',
+    })
     mount()
     expect(await screen.findByText('别处写的')).toBeInTheDocument()
   })
@@ -273,7 +276,7 @@ describe('useVaultMutate', () => {
     mount()
     await ready()
     await waitFor(() => expect(saveButton()).toBeEnabled())
-    readVaultFile.mockResolvedValue(remoteFile)
+    readVaultFile.mockResolvedValue({ file: remoteFile, commitSha: 'remote1' })
 
     fireEvent.click(saveButton())
 
@@ -282,13 +285,56 @@ describe('useVaultMutate', () => {
     expect(screen.queryByText('还没同步')).toBeNull()
     expect(screen.queryByRole('alert')).toBeNull()
 
+    expect(commitVaultUpdate.mock.calls[0][0].parentSha).toBe('base0')
     const retry = commitVaultUpdate.mock.calls[1][0]
+    expect(retry.parentSha).toBe('remote1')
     const sent = await committedManifest(retry)
     expect(sent.notes.map((n) => n.title).sort()).toEqual(['别处写的', '新笔记', '晚安'])
     const added = sent.notes.find((n) => n.title === '新笔记')!
     expect(Object.keys(retry.blobs)).toEqual([added.blob])
     expect(screen.getByText('别处写的')).toBeInTheDocument()
     expect(await store.loadVaultPending()).toBeNull()
+  })
+
+  it('never overwrites a commit another device pushed after unlock', async () => {
+    const remote = { tip: 'base0', file: vault.file, commits: 0 }
+    readVaultFile.mockImplementation(async () => ({ file: remote.file, commitSha: remote.tip }))
+    commitVaultUpdate.mockImplementation(async (call) => {
+      if (call.parentSha !== remote.tip) throw new gitVault.GitHubRefNotFastForwardError()
+      remote.tip = `mine${++remote.commits}`
+      remote.file = call.vaultFile
+      return remote.tip
+    })
+    mount()
+    await ready()
+    await waitFor(() => expect(saveButton()).toBeEnabled())
+    expect(readVaultFile).toHaveBeenCalledTimes(1)
+
+    const otherManifest: VaultManifest = {
+      ...manifest,
+      notes: [...manifest.notes, { title: '别处写的', date: '2026-10-12', blob: 'remote-note', source: 'web/notes/remote', hash: 'r' }],
+    }
+    remote.file = await sealVaultFile(vault.dek, emptyWorking(otherManifest), vault.file)
+    remote.tip = 'other1'
+
+    fireEvent.click(saveButton())
+
+    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(screen.queryByText(SYNCING)).toBeNull())
+    expect(commitVaultUpdate.mock.calls.map(([call]) => call.parentSha)).toEqual(['base0', 'other1'])
+    expect(remote.tip).toBe('mine1')
+    const published = await decryptJson<VaultManifest>(vault.dek, remote.file.manifest)
+    expect(published.notes.map((n) => n.title).sort()).toEqual(['别处写的', '新笔记', '晚安'])
+    expect(screen.queryByText('还没同步')).toBeNull()
+    expect(screen.getByText('别处写的')).toBeInTheDocument()
+
+    const reads = readVaultFile.mock.calls.length
+    fireEvent.click(screen.getByRole('button', { name: '删除晚安' }))
+    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(3))
+    await waitFor(() => expect(screen.queryByText(SYNCING)).toBeNull())
+    expect(commitVaultUpdate.mock.calls[2][0].parentSha).toBe('mine1')
+    expect(readVaultFile).toHaveBeenCalledTimes(reads)
+    expect(remote.tip).toBe('mine2')
   })
 
   it('gives up after a second non-fast-forward and keeps the edit', async () => {

@@ -87,10 +87,11 @@ beforeEach(async () => {
   readBlobFile.mockReset()
   readWebFileText.mockReset()
   readWebFileText.mockResolvedValue(null)
-  readVaultFile.mockResolvedValue(vault.file)
+  readVaultFile.mockResolvedValue({ file: vault.file, commitSha: 'base0' })
   remote.clear()
   commitVaultUpdate.mockImplementation(async (call) => {
     for (const [name, bytes] of Object.entries(call.blobs)) remote.set(name, bytes)
+    return 'commit1'
   })
   readBlobFile.mockImplementation(async (_fetch, _token, name) => {
     const bytes = remote.get(name) ?? (await vault.fetchBytes(`blobs/${name}.bin`))
@@ -233,7 +234,7 @@ describe('VaultContent published edits', () => {
   })
 
   it('shows 正在同步… and locks editing until the commit finishes', async () => {
-    const gate = deferred<void>()
+    const gate = deferred<string>()
     commitVaultUpdate.mockReturnValue(gate.promise)
     renderVault('/vault?tab=notes')
     const remove = await screen.findByRole('button', { name: '删除' })
@@ -245,7 +246,7 @@ describe('VaultContent published edits', () => {
     expect(screen.getByRole('button', { name: '新笔记' })).toBeDisabled()
 
     await act(async () => {
-      gate.resolve()
+      gate.resolve('commit1')
       await gate.promise
     })
     await waitFor(() => expect(screen.queryByText('正在同步…')).not.toBeInTheDocument())

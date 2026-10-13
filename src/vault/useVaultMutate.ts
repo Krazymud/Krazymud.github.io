@@ -89,7 +89,8 @@ export function useVaultMutate(options: {
 
   const workingRef = useRef(working)
   const fileRef = useRef(file)
-  const freshRef = useRef(false)
+  // The commit fileRef was read from or last written as; null until the repository has been read.
+  const baseShaRef = useRef<string | null>(null)
   const phaseRef = useRef<Phase>('loading')
   const tokenRef = useRef<string | null>(null)
   const syncingRef = useRef(false)
@@ -151,16 +152,16 @@ export function useVaultMutate(options: {
 
   async function rebase(local: WorkingVault, saved: string): Promise<WorkingVault> {
     const remote = await readVaultFile(fetchRef.current, saved)
-    const remoteManifest = await decryptJson<VaultManifest>(dekRef.current, remote.manifest)
+    const remoteManifest = await decryptJson<VaultManifest>(dekRef.current, remote.file.manifest)
     const merged = mergeWorking(emptyWorking(remoteManifest), onlyEdits(local))
-    fileRef.current = remote
-    freshRef.current = true
+    fileRef.current = remote.file
+    baseShaRef.current = remote.commitSha
     return merged
   }
 
   async function push(start: WorkingVault, saved: string): Promise<WorkingVault> {
     let local = start
-    if (!freshRef.current) {
+    if (baseShaRef.current === null) {
       local = await rebase(local, saved)
       adopt(local)
     }
@@ -168,16 +169,17 @@ export function useVaultMutate(options: {
     for (;;) {
       const vaultFile = await sealVaultFile(dekRef.current, local, fileRef.current)
       try {
-        await commitVaultUpdate({
+        const committed = await commitVaultUpdate({
           fetch: fetchRef.current,
           token: saved,
           message: VAULT_COMMIT_MESSAGE,
           vaultFile,
+          parentSha: baseShaRef.current!,
           blobs: referencedBlobs(local),
           ...(webJsonRef.current ? { deleteWebJson: true } : {}),
         })
         fileRef.current = vaultFile
-        freshRef.current = true
+        baseShaRef.current = committed
         if (webMigratedRef.current) {
           webMigratedRef.current = false
           webJsonRef.current = false
@@ -285,14 +287,14 @@ export function useVaultMutate(options: {
 
       let latestFile = file
       let latestManifest = manifest
-      let fresh = false
+      let baseSha: string | null = null
       let denied = false
       if (savedToken) {
         try {
           const remote = await readVaultFile(fetchRef.current, savedToken)
-          latestManifest = await decryptJson<VaultManifest>(dek, remote.manifest)
-          latestFile = remote
-          fresh = true
+          latestManifest = await decryptJson<VaultManifest>(dek, remote.file.manifest)
+          latestFile = remote.file
+          baseSha = remote.commitSha
         } catch (error) {
           denied = isDenied(error)
         }
@@ -349,7 +351,7 @@ export function useVaultMutate(options: {
       if (generation.current !== id) return
 
       fileRef.current = latestFile
-      freshRef.current = fresh
+      baseShaRef.current = baseSha
       tokenRef.current = savedToken
       workingRef.current = next
       phaseRef.current = 'ready'

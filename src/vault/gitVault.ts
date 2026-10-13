@@ -1,4 +1,4 @@
-import { fromBase64, toBase64 } from './crypto'
+import { toBase64 } from './crypto'
 import { GITHUB_WEB, GitHubWriteError, SYNC_PENDING, TOKEN_DENIED, githubApiHeaders, readRemote } from './github'
 import type { VaultFile } from './types'
 
@@ -12,10 +12,6 @@ export class GitHubRefNotFastForwardError extends Error {
     super('ref not fast-forward')
     this.name = 'GitHubRefNotFastForwardError'
   }
-}
-
-function decodeContent(content: string): Uint8Array {
-  return fromBase64(content.replace(/\s/g, ''))
 }
 
 function assertOk(response: Response, denied: boolean): void {
@@ -37,38 +33,43 @@ async function apiJson<T>(
   return (await response.json()) as T
 }
 
-export async function readVaultFile(fetchImpl: typeof fetch, token: string): Promise<VaultFile> {
-  const response = await fetchImpl(
-    `${REPO_BASE}/contents/${VAULT_JSON_PATH}?ref=${GITHUB_WEB.branch}`,
-    { headers: githubApiHeaders(token, false), cache: 'no-store' },
+// The JSON contents response leaves `content` empty for files over 1 MB; the raw media type does not.
+async function readRawFile(fetchImpl: typeof fetch, token: string, path: string, ref: string): Promise<Uint8Array> {
+  const headers = githubApiHeaders(token, false)
+  headers.set('Accept', 'application/vnd.github.raw')
+  const response = await fetchImpl(`${REPO_BASE}/contents/${path}?ref=${encodeURIComponent(ref)}`, {
+    headers,
+    cache: 'no-store',
+  })
+  assertOk(response, false)
+  return new Uint8Array(await response.arrayBuffer())
+}
+
+export async function readVaultFile(
+  fetchImpl: typeof fetch,
+  token: string,
+): Promise<{ file: VaultFile; commitSha: string }> {
+  const ref = await apiJson<{ object: { sha: string } }>(
+    fetchImpl,
+    token,
+    `${REPO_BASE}/git/ref/heads/${GITHUB_WEB.branch}`,
+    { cache: 'no-store' },
   )
-  if (response.status === 401 || response.status === 403) throw new GitHubWriteError(TOKEN_DENIED)
-  if (!response.ok) throw new GitHubWriteError(SYNC_PENDING)
-  const body = (await response.json()) as { content?: string }
-  if (!body.content) throw new GitHubWriteError(SYNC_PENDING)
-  const text = new TextDecoder().decode(decodeContent(body.content))
-  return JSON.parse(text) as VaultFile
+  const commitSha = ref.object.sha
+  const bytes = await readRawFile(fetchImpl, token, VAULT_JSON_PATH, commitSha)
+  try {
+    return { file: JSON.parse(new TextDecoder().decode(bytes)) as VaultFile, commitSha }
+  } catch {
+    throw new GitHubWriteError(SYNC_PENDING)
+  }
 }
 
 export async function readWebFileText(fetchImpl: typeof fetch, token: string): Promise<string | null> {
   return (await readRemote(fetchImpl, token)).text
 }
 
-export async function readBlobFile(
-  fetchImpl: typeof fetch,
-  token: string,
-  blobName: string,
-): Promise<Uint8Array> {
-  const path = `public/vault/blobs/${blobName}.bin`
-  const response = await fetchImpl(`${REPO_BASE}/contents/${path}?ref=${GITHUB_WEB.branch}`, {
-    headers: githubApiHeaders(token, false),
-    cache: 'no-store',
-  })
-  if (response.status === 401 || response.status === 403) throw new GitHubWriteError(TOKEN_DENIED)
-  if (!response.ok) throw new GitHubWriteError(SYNC_PENDING)
-  const body = (await response.json()) as { content?: string }
-  if (!body.content) throw new GitHubWriteError(SYNC_PENDING)
-  return decodeContent(body.content)
+export function readBlobFile(fetchImpl: typeof fetch, token: string, blobName: string): Promise<Uint8Array> {
+  return readRawFile(fetchImpl, token, `public/vault/blobs/${blobName}.bin`, GITHUB_WEB.branch)
 }
 
 async function createBlob(fetchImpl: typeof fetch, token: string, bytes: Uint8Array): Promise<string> {
@@ -84,17 +85,12 @@ export async function commitVaultUpdate(options: {
   token: string
   message: string
   vaultFile: VaultFile
+  /** The commit `vaultFile` was built from; the ref update fails with 422 if the branch moved past it. */
+  parentSha: string
   blobs: Record<string, Uint8Array>
   deleteWebJson?: boolean
-}): Promise<void> {
-  const { fetch: fetchImpl, token, message, vaultFile, blobs, deleteWebJson } = options
-
-  const ref = await apiJson<{ object: { sha: string } }>(
-    fetchImpl,
-    token,
-    `${REPO_BASE}/git/ref/heads/${GITHUB_WEB.branch}`,
-  )
-  const parentSha = ref.object.sha
+}): Promise<string> {
+  const { fetch: fetchImpl, token, message, vaultFile, parentSha, blobs, deleteWebJson } = options
 
   const commit = await apiJson<{ tree: { sha: string } }>(
     fetchImpl,
@@ -148,4 +144,5 @@ export async function commitVaultUpdate(options: {
   }
   if (patchResponse.status === 422) throw new GitHubRefNotFastForwardError()
   if (!patchResponse.ok) throw new GitHubWriteError(SYNC_PENDING)
+  return newCommit.sha
 }
