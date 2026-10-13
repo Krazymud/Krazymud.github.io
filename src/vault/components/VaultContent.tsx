@@ -1,16 +1,16 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { studyDay } from '../../trial/day'
 import { todaysMemory } from '../memory'
-import { readBlob, type FetchBytes, type VaultSession } from '../repo'
-import type { ReadBlob } from '../useBlob'
-import { useWebVault } from '../useWebVault'
-import { localCalendarToday, publishedItemDone, type WebClock } from '../web'
+import type { FetchBytes, VaultSession } from '../repo'
+import type { VaultFile } from '../types'
+import { useVaultMutate, type MutateResult } from '../useVaultMutate'
+import { localCalendarToday, type WebClock } from '../web'
 import { defaultWebStore, type WebStore } from '../webStore'
 import { GoldSweep } from './GoldSweep'
-import { ListsTab } from './ListsTab'
+import { ListsTab, type ListDraft } from './ListsTab'
 import { MemoryCard } from './MemoryCard'
-import { NotesTab } from './NotesTab'
+import { NotesTab, type NoteDraft } from './NotesTab'
 import { PhotoGrid } from './PhotoGrid'
 
 type Tab = 'photos' | 'notes' | 'lists'
@@ -21,8 +21,13 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'lists', label: '清单' },
 ]
 
+type Editor = { kind: 'note'; draft: NoteDraft } | { kind: 'list'; draft: ListDraft }
+
+const SAVE_FAILED = '没能保存，请再试一次'
+
 interface VaultContentProps {
   session: VaultSession
+  file: VaultFile
   fetchBytes: FetchBytes
   sweep: boolean
   onLock: () => void
@@ -31,14 +36,13 @@ interface VaultContentProps {
   clock?: WebClock
 }
 
-export function VaultContent({ session, fetchBytes, sweep, onLock, webStore, webFetch, clock }: VaultContentProps) {
+export function VaultContent({ session, file, fetchBytes, sweep, onLock, webStore, webFetch, clock }: VaultContentProps) {
   const [params, setParams] = useSearchParams()
   const [tokenInput, setTokenInput] = useState('')
   const raw = params.get('tab')
   const tab: Tab = raw === 'notes' || raw === 'lists' ? raw : 'photos'
-  const read = useCallback<ReadBlob>((name) => readBlob(fetchBytes, session.dek, name), [fetchBytes, session])
-  const { manifest } = session
-  const memory = useMemo(() => todaysMemory(manifest, studyDay(new Date())), [manifest])
+  const [editor, setEditor] = useState<Editor | null>(null)
+  const [failed, setFailed] = useState(false)
   const store = useMemo(() => (webStore === undefined ? defaultWebStore() : webStore), [webStore])
   const resolvedClock = useMemo<WebClock>(
     () =>
@@ -49,13 +53,27 @@ export function VaultContent({ session, fetchBytes, sweep, onLock, webStore, web
       },
     [clock],
   )
-  const vault = useWebVault({
+  const vault = useVaultMutate({
     dek: session.dek,
+    file,
+    manifest: session.manifest,
     fetchBytes,
     store,
-    webFetch: webFetch ?? globalThis.fetch,
+    apiFetch: webFetch ?? globalThis.fetch,
     clock: resolvedClock,
   })
+  const { manifest, readBlob: read } = vault
+  const memory = useMemo(() => todaysMemory(manifest, studyDay(new Date())), [manifest])
+
+  async function finish(result: Promise<MutateResult>, closeForm: boolean) {
+    const outcome = await result
+    if (outcome.ok) {
+      setFailed(false)
+      if (closeForm) setEditor(null)
+    } else if (outcome.reason === 'locked' || outcome.reason === 'blob') {
+      setFailed(true)
+    }
+  }
 
   return (
     <section>
@@ -70,7 +88,11 @@ export function VaultContent({ session, fetchBytes, sweep, onLock, webStore, web
       {vault.tokenSaved ? (
         <button
           type="button"
-          onClick={() => void vault.forgetToken()}
+          onClick={() => {
+            setEditor(null)
+            setFailed(false)
+            void vault.forgetToken()
+          }}
           className="mt-4 border border-line px-3 py-1 text-xs text-muted hover:text-fg"
         >
           忘记令牌
@@ -115,40 +137,39 @@ export function VaultContent({ session, fetchBytes, sweep, onLock, webStore, web
         ))}
       </div>
       <div role="tabpanel" className="mt-4">
-        {vault.broken && <p className="mb-3 text-sm text-muted">网页上的笔记打不开</p>}
-        {vault.unsynced && <p className="mb-3 text-sm text-muted">还没同步</p>}
+        {vault.syncing && <p className="mb-3 text-sm text-muted">正在同步…</p>}
+        {!vault.syncing && vault.unsynced && <p className="mb-3 text-sm text-muted">还没同步</p>}
+        {failed && <p className="mb-3 text-sm text-muted">{SAVE_FAILED}</p>}
         {tab === 'photos' && <PhotoGrid photos={manifest.photos} read={read} />}
         {tab === 'notes' && (
           <NotesTab
             notes={manifest.notes}
             read={read}
-            webNotes={vault.doc.notes}
             canEdit={vault.canEdit}
-            formOpen={vault.editor !== null}
-            draft={vault.editor?.kind === 'note' ? vault.editor.draft : null}
-            onBeginCreate={() => vault.beginNote()}
-            onBeginEdit={(note) => vault.beginNote(note)}
-            onDelete={(id) => vault.deleteNote(id)}
-            onSave={vault.saveNote}
-            onCancel={vault.cancelEdit}
+            formOpen={editor !== null}
+            draft={editor?.kind === 'note' ? editor.draft : null}
+            onBeginCreate={() => setEditor({ kind: 'note', draft: { title: '', date: resolvedClock.today(), body: '' } })}
+            onBeginEdit={(note, body) =>
+              setEditor({ kind: 'note', draft: { source: note.source, title: note.title, date: note.date, body } })
+            }
+            onDelete={(source) => void finish(vault.deleteNote(source), false)}
+            onSave={(input) => void finish(vault.saveNote(input), true)}
+            onCancel={() => setEditor(null)}
           />
         )}
         {tab === 'lists' && (
           <ListsTab
             lists={manifest.lists}
             read={read}
-            webLists={vault.doc.lists}
             canEdit={vault.canEdit}
-            formOpen={vault.editor !== null}
-            draft={vault.editor?.kind === 'list' ? vault.editor.draft : null}
-            publishedDone={(source, index, count, fallback) => publishedItemDone(vault.doc, source, index, count, fallback)}
-            onBeginCreate={() => vault.beginList()}
-            onBeginEdit={(list) => vault.beginList(list)}
-            onDelete={(id) => vault.deleteList(id)}
-            onSave={vault.saveList}
-            onCancel={vault.cancelEdit}
-            onTogglePublished={(source, index, done) => vault.togglePublished(source, index, done)}
-            onToggleWeb={(listId, itemId) => vault.toggleWebItem(listId, itemId)}
+            formOpen={editor !== null}
+            draft={editor?.kind === 'list' ? editor.draft : null}
+            onBeginCreate={() => setEditor({ kind: 'list', draft: { title: '', items: [{ text: '', done: false }] } })}
+            onBeginEdit={(list, items) => setEditor({ kind: 'list', draft: { source: list.source, title: list.title, items } })}
+            onDelete={(source) => void finish(vault.deleteList(source), false)}
+            onSave={(input) => void finish(vault.saveList(input), true)}
+            onCancel={() => setEditor(null)}
+            onToggle={(source, index, done) => void finish(vault.toggleListItem(source, index, done), false)}
           />
         )}
       </div>

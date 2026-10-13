@@ -1,7 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { ListEntry, NoteEntry, PhotoEntry } from '../types'
-import type { WebList, WebNote } from '../web'
 import type { ReadBlob } from '../useBlob'
 import { ListsTab } from './ListsTab'
 import { NotesTab } from './NotesTab'
@@ -94,81 +93,67 @@ describe('NotesTab', () => {
   })
 })
 
-const webNote: WebNote = {
-  id: 'w1',
-  title: '网页笔记',
-  date: '2026-10-13',
-  body: '看到 **加粗** <script>alert(1)</script>',
-  updatedAt: 1,
-}
+describe('published notes editing', () => {
+  const props = { notes: notes.slice(0, 1), read: reader({ n1: '已发布 **正文**' }) }
 
-describe('web notes', () => {
-  it('shows the empty sentence and a disabled create button without writing', () => {
-    const onBeginCreate = vi.fn()
-    render(<NotesTab notes={[]} read={reader({})} webNotes={[]} canEdit={false} onBeginCreate={onBeginCreate} />)
-    expect(screen.getByText('还没有笔记')).toBeInTheDocument()
+  it('offers no edit or delete without canEdit', async () => {
+    render(<NotesTab {...props} onBeginCreate={() => undefined} onBeginEdit={() => undefined} onDelete={() => undefined} />)
+    await screen.findByText('已发布 正文')
+    expect(screen.queryByRole('button', { name: '编辑' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '删除' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '新笔记' })).toBeDisabled()
   })
 
-  it('edits only a web note and renders its body without raw HTML', () => {
+  it('edits a published note with its loaded body and keeps its source', async () => {
     const onBeginEdit = vi.fn()
-    const onDelete = vi.fn()
+    render(<NotesTab {...props} canEdit onBeginEdit={onBeginEdit} onDelete={() => undefined} />)
+    await screen.findByText('已发布 正文')
+    fireEvent.click(screen.getByRole('button', { name: '编辑' }))
+    expect(onBeginEdit).toHaveBeenCalledWith(notes[0], '已发布 **正文**')
+  })
+
+  it('waits for the body before editing and disables edit when it cannot be read', async () => {
+    render(<NotesTab notes={notes.slice(1)} read={reader({})} canEdit onBeginEdit={() => undefined} onDelete={() => undefined} />)
+    await screen.findByText('这篇笔记打不开')
+    expect(screen.getByRole('button', { name: '编辑' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '删除' })).toBeEnabled()
+  })
+
+  it('shows the form in place of the card being edited', async () => {
+    const onSave = vi.fn()
     render(
       <NotesTab
-        notes={notes.slice(0, 1)}
-        read={reader({ n1: '已发布' })}
-        webNotes={[webNote]}
+        {...props}
         canEdit
-        onBeginCreate={() => undefined}
-        onBeginEdit={onBeginEdit}
-        onDelete={onDelete}
+        formOpen
+        draft={{ source: 'notes/a.md', title: '晚安', date: '2024-05-21', body: '已发布 **正文**' }}
+        onBeginEdit={() => undefined}
+        onDelete={() => undefined}
+        onSave={onSave}
+        onCancel={() => undefined}
       />,
     )
-    expect(screen.queryByRole('button', { name: '编辑' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /网页笔记/ }))
-    expect(screen.getByText('加粗').tagName).toBe('STRONG')
-    expect(document.querySelector('.vault-markdown script')).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: '编辑' }))
-    expect(onBeginEdit).toHaveBeenCalledWith(webNote)
+    expect(screen.getByRole('textbox', { name: '正文' })).toHaveValue('已发布 **正文**')
+    fireEvent.change(screen.getByRole('textbox', { name: '标题' }), { target: { value: '晚安啦' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    expect(onSave).toHaveBeenCalledWith({ source: 'notes/a.md', title: '晚安啦', date: '2024-05-21', body: '已发布 **正文**' })
+    expect(screen.queryByRole('button', { name: /晚安/ })).not.toBeInTheDocument()
+  })
+
+  it('confirms before deleting by source, and not while a form is open', async () => {
+    const onDelete = vi.fn()
+    const { rerender } = render(<NotesTab {...props} canEdit onBeginEdit={() => undefined} onDelete={onDelete} />)
+    await screen.findByText('已发布 正文')
     fireEvent.click(screen.getByRole('button', { name: '删除' }))
     fireEvent.click(screen.getByRole('button', { name: '取消' }))
     expect(onDelete).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: '删除' }))
-    fireEvent.click(screen.getByRole('button', { name: /网页笔记/ }))
-    expect(screen.queryByRole('button', { name: '确认删除' })).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '删除' }))
-    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
-    expect(onDelete).toHaveBeenCalledWith('w1')
-    expect(screen.getByRole('button', { name: /晚安/ })).toBeInTheDocument()
-    expect(within(screen.getByRole('button', { name: /晚安/ }).closest('li')!).queryByRole('button', { name: '编辑' })).toBeNull()
-  })
-
-  it('does not confirm a delete while a form is open', () => {
-    const onDelete = vi.fn()
-    const { rerender } = render(
-      <NotesTab
-        notes={[]}
-        read={reader({})}
-        webNotes={[webNote]}
-        canEdit
-        onBeginEdit={() => undefined}
-        onDelete={onDelete}
-      />,
-    )
-    fireEvent.click(screen.getByRole('button', { name: '删除' }))
-    rerender(
-      <NotesTab
-        notes={[]}
-        read={reader({})}
-        webNotes={[webNote]}
-        canEdit
-        formOpen
-        onBeginEdit={() => undefined}
-        onDelete={onDelete}
-      />,
-    )
+    rerender(<NotesTab {...props} canEdit formOpen onBeginEdit={() => undefined} onDelete={onDelete} />)
     fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
     expect(onDelete).not.toHaveBeenCalled()
+    rerender(<NotesTab {...props} canEdit onBeginEdit={() => undefined} onDelete={onDelete} />)
+    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
+    expect(onDelete).toHaveBeenCalledWith('notes/a.md')
   })
 
   it('does not save an empty title or a bad date, and cancel writes nothing', () => {
@@ -198,6 +183,15 @@ describe('web notes', () => {
     expect(onCancel).toHaveBeenCalledOnce()
     expect(onSave).not.toHaveBeenCalled()
   })
+
+  it('lists newer notes first', async () => {
+    render(<NotesTab notes={[notes[1], notes[0]]} read={reader({ n1: 'a', n2: 'b' })} />)
+    await screen.findByText('a')
+    expect(screen.getAllByRole('listitem').map((li) => li.textContent)).toEqual([
+      expect.stringContaining('晚安'),
+      expect.stringContaining('坏掉的'),
+    ])
+  })
 })
 
 const lists: ListEntry[] = [{ title: '一起去的地方', blob: 'l1', source: 'lists/a.md', hash: 'a' }]
@@ -223,133 +217,97 @@ describe('ListsTab', () => {
   })
 })
 
-const webList: WebList = {
-  id: 'wl1',
-  title: '网页清单',
-  items: [
-    { id: 'a', text: '第一件', done: false },
-    { id: 'b', text: '第二件', done: true },
-  ],
-  updatedAt: 1,
-}
-
-describe('web lists', () => {
-  it('checks a published row without offering edit or delete', async () => {
+describe('published list editing', () => {
+  it('toggles a published row by source and index', async () => {
     const onToggle = vi.fn()
-    render(
-      <ListsTab
-        lists={lists}
-        read={reader({ l1: listJson })}
-        canEdit
-        publishedDone={(_source, index, count, fallback) => (index >= count ? fallback : index === 0 ? false : fallback)}
-        onTogglePublished={onToggle}
-        onBeginCreate={() => undefined}
-      />,
-    )
-    expect(await screen.findByText('已完成 0 / 2')).toBeInTheDocument()
+    render(<ListsTab lists={lists} read={reader({ l1: listJson })} canEdit onToggle={onToggle} onBeginCreate={() => undefined} />)
+    expect(await screen.findByText('已完成 1 / 2')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /一起去的地方/ }))
-    const row = screen.getByRole('button', { name: /去看海/ })
+    const row = screen.getByRole('button', { name: /去冰岛看极光/ })
     expect(row).toHaveAttribute('aria-pressed', 'false')
     fireEvent.click(row)
-    expect(onToggle).toHaveBeenCalledWith('lists/a.md', 0, true)
+    expect(onToggle).toHaveBeenCalledWith('lists/a.md', 1, true)
+    fireEvent.click(screen.getByRole('button', { name: /去看海/ }))
+    expect(onToggle).toHaveBeenCalledWith('lists/a.md', 0, false)
+  })
+
+  it('offers no edit, delete or toggle without canEdit', async () => {
+    render(<ListsTab lists={lists} read={reader({ l1: listJson })} onToggle={() => undefined} onBeginCreate={() => undefined} />)
+    fireEvent.click(await screen.findByRole('button', { name: /一起去的地方/ }))
+    expect(screen.getByRole('button', { name: '新清单' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /去看海/ })).toBeDisabled()
     expect(screen.queryByRole('button', { name: '编辑' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '删除' })).not.toBeInTheDocument()
   })
 
-  it('disables published checks when editing is off', async () => {
+  it('edits a published list with its loaded items', async () => {
+    const onBeginEdit = vi.fn()
+    render(<ListsTab lists={lists} read={reader({ l1: listJson })} canEdit onBeginEdit={onBeginEdit} onDelete={() => undefined} />)
+    await screen.findByText('已完成 1 / 2')
+    fireEvent.click(screen.getByRole('button', { name: '编辑' }))
+    expect(onBeginEdit).toHaveBeenCalledWith(lists[0], [
+      { text: '去看海', done: true },
+      { text: '去冰岛看极光', done: false },
+    ])
+  })
+
+  it('disables edit for a list that cannot be read', async () => {
+    render(<ListsTab lists={lists} read={reader({})} canEdit onBeginEdit={() => undefined} onDelete={() => undefined} />)
+    await screen.findByText('这个清单打不开')
+    expect(screen.getByRole('button', { name: '编辑' })).toBeDisabled()
+  })
+
+  it('confirms a whole-list delete by source, and not while a form is open', async () => {
+    const onDelete = vi.fn()
+    const view = render(<ListsTab lists={lists} read={reader({ l1: listJson })} canEdit onBeginEdit={() => undefined} onDelete={onDelete} />)
+    await screen.findByText('已完成 1 / 2')
+    fireEvent.click(screen.getByRole('button', { name: '删除' }))
+    view.rerender(<ListsTab lists={lists} read={reader({ l1: listJson })} canEdit formOpen onBeginEdit={() => undefined} onDelete={onDelete} />)
+    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
+    expect(onDelete).not.toHaveBeenCalled()
+    view.rerender(<ListsTab lists={lists} read={reader({ l1: listJson })} canEdit onBeginEdit={() => undefined} onDelete={onDelete} />)
+    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
+    expect(onDelete).toHaveBeenCalledWith('lists/a.md')
+  })
+
+  it('saves an edited list with its source, dropping blank rows', async () => {
+    const onSave = vi.fn()
     render(
       <ListsTab
         lists={lists}
         read={reader({ l1: listJson })}
-        canEdit={false}
-        onTogglePublished={() => undefined}
-        onBeginCreate={() => undefined}
-      />,
-    )
-    fireEvent.click(await screen.findByRole('button', { name: /一起去的地方/ }))
-    expect(screen.getByRole('button', { name: '新清单' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: /去看海/ })).toBeDisabled()
-  })
-
-  it('edits a web list, drops a blank row, and confirms a whole-list delete', () => {
-    const onSave = vi.fn()
-    const onDelete = vi.fn()
-    const onToggle = vi.fn()
-    const { rerender } = render(
-      <ListsTab
-        lists={[]}
-        read={reader({})}
-        webLists={[webList]}
-        canEdit
-        onBeginCreate={() => undefined}
-        onBeginEdit={() => undefined}
-        onDelete={onDelete}
-        onToggleWeb={onToggle}
-      />,
-    )
-    fireEvent.click(screen.getByRole('button', { name: /网页清单/ }))
-    fireEvent.click(screen.getByRole('button', { name: /第二件/ }))
-    expect(onToggle).toHaveBeenCalledWith('wl1', 'b')
-    fireEvent.click(screen.getByRole('button', { name: '删除' }))
-    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
-    expect(onDelete).toHaveBeenCalledWith('wl1')
-
-    rerender(
-      <ListsTab
-        lists={[]}
-        read={reader({})}
-        webLists={[]}
         canEdit
         formOpen
-        draft={{ title: '买菜', items: [{ text: '   ', done: false }, { id: 'a', text: '牛奶', done: false }] }}
+        draft={{ source: 'lists/a.md', title: '买菜', items: [{ text: '   ', done: false }, { text: '牛奶', done: true }] }}
         onBeginCreate={() => undefined}
         onSave={onSave}
         onCancel={() => undefined}
       />,
     )
+    expect(screen.queryByRole('button', { name: /一起去的地方/ })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '加一条' }))
     const rows = screen.getAllByRole('textbox')
     fireEvent.change(rows[rows.length - 1], { target: { value: '面包' } })
     fireEvent.click(screen.getAllByRole('button', { name: '删除' })[0])
     fireEvent.click(screen.getByRole('button', { name: '保存' }))
     expect(onSave).toHaveBeenCalledWith({
+      source: 'lists/a.md',
       title: '买菜',
       items: [
-        { id: 'a', text: '牛奶', done: false },
+        { text: '牛奶', done: true },
         { text: '面包', done: false },
       ],
     })
   })
 
-  it('does not confirm a delete while a form is open', () => {
-    const onDelete = vi.fn()
-    const { rerender } = render(
-      <ListsTab
-        lists={[]}
-        read={reader({})}
-        webLists={[webList]}
-        canEdit
-        onBeginEdit={() => undefined}
-        onDelete={onDelete}
-      />,
-    )
-    fireEvent.click(screen.getByRole('button', { name: '删除' }))
-    rerender(
-      <ListsTab
-        lists={[]}
-        read={reader({})}
-        webLists={[webList]}
-        canEdit
-        formOpen
-        onBeginEdit={() => undefined}
-        onDelete={onDelete}
-      />,
-    )
-    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
-    expect(onDelete).not.toHaveBeenCalled()
+  it('does not save a list without a title', () => {
+    const onSave = vi.fn()
+    render(<ListsTab lists={[]} read={reader({})} canEdit formOpen draft={{ title: ' ', items: [] }} onSave={onSave} onCancel={() => undefined} />)
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    expect(onSave).not.toHaveBeenCalled()
   })
 
-  it('says there are no lists when both collections are empty', () => {
+  it('says there are no lists', () => {
     render(<ListsTab lists={[]} read={reader({})} onBeginCreate={() => undefined} canEdit />)
     expect(screen.getByText('还没有清单')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '新清单' })).toBeEnabled()

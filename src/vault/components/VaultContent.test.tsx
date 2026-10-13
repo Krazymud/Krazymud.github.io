@@ -1,27 +1,46 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { IDBFactory } from 'fake-indexeddb'
 import { createMemoryRouter, RouterProvider } from 'react-router'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { encryptBytes, generateDek } from '../crypto'
-import type { FetchBytes, VaultSession } from '../repo'
-import { emptyWebDoc, openWebFile, sealWebFile, type WebClock, type WebDoc } from '../web'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { decryptBytes, decryptJson } from '../crypto'
+import { GitHubWriteError, SYNC_PENDING, TOKEN_DENIED } from '../github'
+import * as gitVault from '../gitVault'
+import type { VaultSession } from '../repo'
+import { makeTestVault, type TestVault } from '../testVault'
+import type { ListContent, VaultManifest } from '../types'
+import type { WebClock } from '../web'
 import { createWebStore, type WebStore } from '../webStore'
 import { VaultContent } from './VaultContent'
 
-const clock: WebClock = { now: () => 50, uuid: () => 'note-1', today: () => '2026-10-13' }
+vi.mock('../gitVault', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../gitVault')>()),
+  commitVaultUpdate: vi.fn(),
+  readVaultFile: vi.fn(),
+  readBlobFile: vi.fn(),
+  readWebFileText: vi.fn(),
+}))
+
+const commitVaultUpdate = vi.mocked(gitVault.commitVaultUpdate)
+const readVaultFile = vi.mocked(gitVault.readVaultFile)
+const readBlobFile = vi.mocked(gitVault.readBlobFile)
+const readWebFileText = vi.mocked(gitVault.readWebFileText)
+
+type Commit = Parameters<typeof gitVault.commitVaultUpdate>[0]
+
+let counter = 0
+const clock: WebClock = {
+  now: () => 1_000 + ++counter,
+  uuid: () => `uuid-${counter}`,
+  today: () => '2026-10-13',
+}
+const apiFetch = vi.fn() as unknown as typeof fetch
+
+let vault: TestVault
 let session: VaultSession
 let store: WebStore
-let site: Uint8Array | null
-let siteError: Error | null
-let webFetch: ReturnType<typeof vi.fn>
+const remote = new Map<string, Uint8Array>()
 
-const fetchBytes: FetchBytes = async (path) => {
-  if (path !== 'web.json') return null
-  if (siteError) throw siteError
-  return site
-}
-
-function renderVault() {
+function renderVault(path = '/vault') {
   const router = createMemoryRouter(
     [
       {
@@ -29,321 +48,279 @@ function renderVault() {
         element: (
           <VaultContent
             session={session}
-            fetchBytes={fetchBytes}
+            file={vault.file}
+            fetchBytes={vault.fetchBytes}
             sweep={false}
             onLock={() => undefined}
             webStore={store}
-            webFetch={webFetch as typeof fetch}
+            webFetch={apiFetch}
             clock={clock}
           />
         ),
       },
     ],
-    { initialEntries: ['/vault'] },
+    { initialEntries: [path] },
   )
   return render(<RouterProvider router={router} />)
 }
 
-function github(handler: (method: string) => Response | Promise<Response>) {
-  webFetch = vi.fn(async (_url: string, init?: RequestInit) => handler(init?.method ?? 'GET'))
+async function committed(call: Commit): Promise<VaultManifest> {
+  return decryptJson<VaultManifest>(vault.dek, call.vaultFile.manifest)
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((res) => {
+    resolve = res
+  })
+  return { promise, resolve }
 }
 
 beforeEach(async () => {
-  session = {
-    dek: await generateDek(),
-    manifest: { photos: [], notes: [], lists: [] },
-  }
+  counter = 0
+  vault = await makeTestVault()
+  session = { dek: vault.dek, manifest: await decryptJson<VaultManifest>(vault.dek, vault.file.manifest) }
   store = createWebStore(new IDBFactory())!
-  site = null
-  siteError = null
-  github((method) => new Response('{}', { status: method === 'PUT' ? 201 : 404 }))
+  await store.saveToken('tok')
+  commitVaultUpdate.mockReset()
+  readVaultFile.mockReset()
+  readBlobFile.mockReset()
+  readWebFileText.mockReset()
+  readWebFileText.mockResolvedValue(null)
+  readVaultFile.mockResolvedValue(vault.file)
+  remote.clear()
+  commitVaultUpdate.mockImplementation(async (call) => {
+    for (const [name, bytes] of Object.entries(call.blobs)) remote.set(name, bytes)
+  })
+  readBlobFile.mockImplementation(async (_fetch, _token, name) => {
+    const bytes = remote.get(name) ?? (await vault.fetchBytes(`blobs/${name}.bin`))
+    if (!bytes) throw new GitHubWriteError(SYNC_PENDING)
+    return bytes
+  })
 })
 
-describe('VaultContent web sync', () => {
-  it('disables edits until a token is saved, then commits a new note', async () => {
-    renderVault()
-    fireEvent.click(await screen.findByRole('tab', { name: '笔记' }))
+afterEach(() => {
+  cleanup()
+})
+
+describe('VaultContent published edits', () => {
+  it('shows edit and delete on a published note once the token is ready', async () => {
+    renderVault('/vault?tab=notes')
+    const edit = await screen.findByRole('button', { name: '编辑' })
+    await waitFor(() => expect(edit).toBeEnabled())
+    expect(screen.getByRole('button', { name: '删除' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: '新笔记' })).toBeEnabled()
+  })
+
+  it('keeps published notes read-only without a token', async () => {
+    await store.forgetToken()
+    renderVault('/vault?tab=notes')
+    expect(await screen.findByText('晚安')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('button', { name: '保存令牌' })).toBeEnabled())
+    expect(screen.queryByRole('button', { name: '编辑' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '删除' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '新笔记' })).toBeDisabled()
+    expect(commitVaultUpdate).not.toHaveBeenCalled()
+  })
+
+  it('loads the body into the form and commits the edit under the same source', async () => {
+    renderVault('/vault?tab=notes')
+    const edit = await screen.findByRole('button', { name: '编辑' })
+    await waitFor(() => expect(edit).toBeEnabled())
+    await screen.findByText(/今天的风很温柔/)
+    fireEvent.click(edit)
+
+    expect(screen.getByRole('textbox', { name: '正文' })).toHaveValue('今天的风很**温柔**。\n\n第二段。')
+    expect(screen.getByRole('textbox', { name: '标题' })).toHaveValue('晚安')
+    fireEvent.change(screen.getByRole('textbox', { name: '标题' }), { target: { value: '晚安啦' } })
+    fireEvent.change(screen.getByRole('textbox', { name: '正文' }), { target: { value: '改过的正文' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+
+    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    const sent = await committed(commitVaultUpdate.mock.calls[0][0])
+    expect(sent.notes).toHaveLength(1)
+    expect(sent.notes[0]).toMatchObject({ title: '晚安啦', source: 'notes/a.md', date: '2024-05-21' })
+    const blob = commitVaultUpdate.mock.calls[0][0].blobs[sent.notes[0].blob]
+    expect(new TextDecoder().decode(await decryptBytes(vault.dek, blob))).toBe('改过的正文')
+
+    expect(await screen.findByText('晚安啦')).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: '标题' })).not.toBeInTheDocument()
+    expect(await screen.findByText('改过的正文')).toBeInTheDocument()
+  })
+
+  it('reads a just-synced note body from GitHub when the static site has not deployed it yet', async () => {
+    renderVault('/vault?tab=notes')
+    const create = await screen.findByRole('button', { name: '新笔记' })
+    await waitFor(() => expect(create).toBeEnabled())
+    fireEvent.click(create)
+    fireEvent.change(screen.getByRole('textbox', { name: '标题' }), { target: { value: '新写的' } })
+    fireEvent.change(screen.getByRole('textbox', { name: '正文' }), { target: { value: '刚写好' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    const sent = await committed(commitVaultUpdate.mock.calls[0][0])
+    const added = sent.notes.find((note) => note.title === '新写的')!
+    expect(await screen.findByText('刚写好')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('正在同步…')).not.toBeInTheDocument())
+    fireEvent.click(screen.getByRole('tab', { name: '清单' }))
+    fireEvent.click(screen.getByRole('tab', { name: '笔记' }))
+    expect(await screen.findByText('刚写好')).toBeInTheDocument()
+    expect(readBlobFile).toHaveBeenCalledWith(apiFetch, 'tok', added.blob)
+    expect(screen.queryByText('这篇笔记打不开')).not.toBeInTheDocument()
+  })
+
+  it('deletes a published note after confirmation', async () => {
+    renderVault('/vault?tab=notes')
+    const remove = await screen.findByRole('button', { name: '删除' })
+    await waitFor(() => expect(remove).toBeEnabled())
+    fireEvent.click(remove)
+    expect(commitVaultUpdate).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
+
+    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    const sent = await committed(commitVaultUpdate.mock.calls[0][0])
+    expect(sent.notes).toEqual([])
+    expect(await screen.findByText('还没有笔记')).toBeInTheDocument()
+  })
+
+  it('toggles a published list item through the vault commit, not web.json', async () => {
+    renderVault('/vault?tab=lists')
+    const header = await screen.findByRole('button', { name: /一起去的地方/ })
+    await waitFor(() => expect(header).toBeEnabled())
+    fireEvent.click(header)
+    const row = await screen.findByRole('button', { name: /去冰岛看极光/ })
+    await waitFor(() => expect(row).toBeEnabled())
+    fireEvent.click(row)
+
+    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    const call = commitVaultUpdate.mock.calls[0][0]
+    expect(call.deleteWebJson).toBeUndefined()
+    const sent = await committed(call)
+    expect(sent.lists[0].source).toBe('lists/a.md')
+    const content = JSON.parse(
+      new TextDecoder().decode(await decryptBytes(vault.dek, call.blobs[sent.lists[0].blob])),
+    ) as ListContent
+    expect(content.items.map((item) => item.done)).toEqual([true, true])
+    expect(await screen.findByText('已完成 2 / 2')).toBeInTheDocument()
+  })
+
+  it('edits a published list with its items and deletes it', async () => {
+    renderVault('/vault?tab=lists')
+    const edit = await screen.findByRole('button', { name: '编辑' })
+    await screen.findByText('已完成 1 / 2')
+    await waitFor(() => expect(edit).toBeEnabled())
+    fireEvent.click(edit)
+    expect(screen.getByLabelText('条目 1')).toHaveValue('去看海')
+    fireEvent.change(screen.getByLabelText('条目 2'), { target: { value: '去北海道' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+
+    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    const call = commitVaultUpdate.mock.calls[0][0]
+    const sent = await committed(call)
+    expect(sent.lists[0]).toMatchObject({ source: 'lists/a.md', title: '一起去的地方' })
+    const content = JSON.parse(
+      new TextDecoder().decode(await decryptBytes(vault.dek, call.blobs[sent.lists[0].blob])),
+    ) as ListContent
+    expect(content.items).toEqual([
+      { text: '去看海', done: true },
+      { text: '去北海道', done: false },
+    ])
+
+    await waitFor(() => expect(screen.queryByText('正在同步…')).not.toBeInTheDocument())
+    fireEvent.click(await screen.findByRole('button', { name: '删除' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
+    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(2))
+    expect((await committed(commitVaultUpdate.mock.calls[1][0])).lists).toEqual([])
+  })
+
+  it('shows 正在同步… and locks editing until the commit finishes', async () => {
+    const gate = deferred<void>()
+    commitVaultUpdate.mockReturnValue(gate.promise)
+    renderVault('/vault?tab=notes')
+    const remove = await screen.findByRole('button', { name: '删除' })
+    await waitFor(() => expect(remove).toBeEnabled())
+    fireEvent.click(remove)
+    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
+
+    expect(await screen.findByText('正在同步…')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '新笔记' })).toBeDisabled()
+
+    await act(async () => {
+      gate.resolve()
+      await gate.promise
+    })
+    await waitFor(() => expect(screen.queryByText('正在同步…')).not.toBeInTheDocument())
+    expect(screen.queryByText('还没同步')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '新笔记' })).toBeEnabled()
+  })
+
+  it('keeps the edit and shows the pending and token messages when GitHub rejects the token', async () => {
+    commitVaultUpdate.mockRejectedValue(new GitHubWriteError(TOKEN_DENIED))
+    renderVault('/vault?tab=notes')
+    const remove = await screen.findByRole('button', { name: '删除' })
+    await waitFor(() => expect(remove).toBeEnabled())
+    fireEvent.click(remove)
+    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
+
+    expect(await screen.findByText('还没同步')).toBeInTheDocument()
+    expect(await screen.findByText(TOKEN_DENIED)).toBeInTheDocument()
     expect(screen.getByText('还没有笔记')).toBeInTheDocument()
+    expect(await store.loadVaultPending()).not.toBeNull()
+  })
+
+  it('shows 还没同步 without a token message for a network failure', async () => {
+    commitVaultUpdate.mockRejectedValue(new GitHubWriteError(SYNC_PENDING))
+    renderVault('/vault?tab=notes')
+    const remove = await screen.findByRole('button', { name: '删除' })
+    await waitFor(() => expect(remove).toBeEnabled())
+    fireEvent.click(remove)
+    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
+
+    expect(await screen.findByText('还没同步')).toBeInTheDocument()
+    expect(screen.queryByText(TOKEN_DENIED)).not.toBeInTheDocument()
+  })
+
+  it('does not commit a note with an empty title', async () => {
+    renderVault('/vault?tab=notes')
+    const create = await screen.findByRole('button', { name: '新笔记' })
+    await waitFor(() => expect(create).toBeEnabled())
+    fireEvent.click(create)
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    expect(screen.getByRole('textbox', { name: '标题' })).toHaveAttribute('aria-invalid', 'true')
+    expect(commitVaultUpdate).not.toHaveBeenCalled()
+  })
+})
+
+describe('VaultContent token', () => {
+  it('saves a token, syncs, and enables editing', async () => {
+    await store.forgetToken()
+    renderVault('/vault?tab=notes')
     await waitFor(() => expect(screen.getByRole('button', { name: '保存令牌' })).toBeEnabled())
     fireEvent.change(screen.getByLabelText('令牌'), { target: { value: '  token-1  ' } })
     fireEvent.click(screen.getByRole('button', { name: '保存令牌' }))
     await waitFor(() => expect(screen.getByRole('button', { name: '新笔记' })).toBeEnabled())
-    fireEvent.click(screen.getByRole('button', { name: '新笔记' }))
-    fireEvent.change(screen.getByRole('textbox', { name: '标题' }), { target: { value: '网页日记' } })
-    fireEvent.click(screen.getByRole('button', { name: '保存' }))
-    expect(await screen.findByText('网页日记')).toBeInTheDocument()
-    await waitFor(() =>
-      expect(webFetch.mock.calls.some((call) => (call[1] as RequestInit | undefined)?.method === 'PUT')).toBe(true),
-    )
-    const put = webFetch.mock.calls.find((call) => (call[1] as RequestInit | undefined)?.method === 'PUT')
-    const body = JSON.parse(String((put![1] as RequestInit).body)) as { message: string; content: string }
-    expect(body.message).toBe('content(vault): update web notes')
-    const doc = await openWebFile(session.dek, new TextDecoder().decode(Uint8Array.from(atob(body.content), (char) => char.charCodeAt(0))))
-    expect(doc.notes[0]).toMatchObject({ id: 'note-1', title: '网页日记', date: '2026-10-13' })
-    await waitFor(async () => expect(await store.loadPending()).toBeNull())
-    const synced = await store.loadSynced()
-    expect(synced).not.toBeNull()
-    expect((await openWebFile(session.dek, synced!)).notes[0]).toMatchObject({
-      id: 'note-1',
-      title: '网页日记',
-      date: '2026-10-13',
-    })
-    expect(screen.queryByLabelText('今日回忆')).not.toBeInTheDocument()
+    expect(await store.loadToken()).toBe('token-1')
+    expect(readVaultFile).toHaveBeenCalledWith(apiFetch, 'token-1')
   })
 
-  it('does not submit a file the current key cannot open', async () => {
-    site = new TextEncoder().encode(JSON.stringify({ version: 2, sealed: 'nope' }))
-    renderVault()
-    expect(await screen.findByText('网页上的笔记打不开')).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByRole('button', { name: '保存令牌' })).toBeEnabled())
-    fireEvent.change(screen.getByLabelText('令牌'), { target: { value: 'token-1' } })
-    fireEvent.click(screen.getByRole('button', { name: '保存令牌' }))
-    expect(await screen.findByRole('button', { name: '忘记令牌' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('tab', { name: '笔记' }))
-    expect(screen.getByRole('button', { name: '新笔记' })).toBeDisabled()
-    expect(webFetch).not.toHaveBeenCalled()
-  })
-
-  it('stops editing when GitHub returns a file the current key cannot open', async () => {
-    await store.saveToken('token-1')
-    const text = '{"version":2,"sealed":"nope"}'
-    github((method) =>
-      new Response(JSON.stringify(method === 'GET' ? { sha: 'stale', content: btoa(text) } : {}), {
-        status: method === 'PUT' ? 201 : 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    )
-    renderVault()
-    fireEvent.click(await screen.findByRole('tab', { name: '笔记' }))
-    const create = await screen.findByRole('button', { name: '新笔记' })
-    await waitFor(() => expect(create).toBeEnabled())
-    fireEvent.click(create)
-    fireEvent.change(screen.getByRole('textbox', { name: '标题' }), { target: { value: '打不开' } })
-    fireEvent.click(screen.getByRole('button', { name: '保存' }))
-    expect(await screen.findByText('网页上的笔记打不开')).toBeInTheDocument()
-    expect(screen.getByText('打不开')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '新笔记' })).toBeDisabled()
-    expect(screen.queryByText('还没同步')).not.toBeInTheDocument()
-    expect(webFetch.mock.calls.some((call) => (call[1] as RequestInit | undefined)?.method === 'PUT')).toBe(false)
-  })
-
-  it('keeps a check and shows the pending banner when the token cannot write', async () => {
-    const published = {
-      title: '一起去的地方',
-      blob: 'l1',
-      source: 'lists/a.md',
-      hash: 'a',
-    }
-    session = {
-      ...session,
-      manifest: {
-        photos: [],
-        notes: [],
-        lists: [published],
-      },
-    }
-    await store.saveToken('token-1')
-    github((method) => new Response(method === 'GET' ? JSON.stringify({ message: 'no' }) : '{}', { status: method === 'GET' ? 404 : 401 }))
-    const listPlain = new TextEncoder().encode(JSON.stringify({ items: [{ text: '去看海', done: false }] }))
-    const listBlob = await encryptBytes(session.dek, listPlain)
-    const fetchLists: FetchBytes = async (path) => {
-      if (path === 'web.json') return null
-      if (path === 'blobs/l1.bin') return listBlob
-      return null
-    }
-    const router = createMemoryRouter(
-      [
-        {
-          path: '/vault',
-          element: (
-            <VaultContent
-              session={session}
-              fetchBytes={fetchLists}
-              sweep={false}
-              onLock={() => undefined}
-              webStore={store}
-              webFetch={webFetch as typeof fetch}
-              clock={clock}
-            />
-          ),
-        },
-      ],
-      { initialEntries: ['/vault?tab=lists'] },
-    )
-    render(<RouterProvider router={router} />)
-    const header = await screen.findByRole('button', { name: /一起去的地方/ })
-    await waitFor(() => expect(header).toBeEnabled())
-    fireEvent.click(header)
-    const row = await screen.findByRole('button', { name: /去看海/ })
-    await waitFor(() => expect(row).toBeEnabled())
-    fireEvent.click(row)
-    expect(screen.getByRole('button', { name: /去看海/ })).toHaveAttribute('aria-pressed', 'true')
-    expect(await screen.findByText('还没同步')).toBeInTheDocument()
-    expect(await screen.findByText('令牌不能写这个仓库')).toBeInTheDocument()
-    expect(screen.getByText('去看海').className).toContain('line-through')
-    expect(await store.loadPending()).not.toBeNull()
-  })
-
-  it('shows a pending document when the site file cannot be read', async () => {
-    const pending: WebDoc = {
-      ...emptyWebDoc(),
-      notes: [{ id: 'p1', title: '还在本机', date: '2026-10-13', body: '', updatedAt: 4 }],
-    }
-    await store.savePending(await sealWebFile(session.dek, pending))
-    await store.saveToken('token-1')
-    siteError = new Error('offline')
-    github(() => new Response('{}', { status: 404 }))
-    renderVault()
-    fireEvent.click(await screen.findByRole('tab', { name: '笔记' }))
-    expect(await screen.findByText('还在本机')).toBeInTheDocument()
-    expect(screen.getByText('还没同步')).toBeInTheDocument()
-  })
-
-  it('forgets the token and cancels a form without writing', async () => {
-    await store.saveToken('token-1')
-    renderVault()
-    fireEvent.click(await screen.findByRole('tab', { name: '笔记' }))
+  it('forgets the token, closes the form and goes read-only', async () => {
+    renderVault('/vault?tab=notes')
     const create = await screen.findByRole('button', { name: '新笔记' })
     await waitFor(() => expect(create).toBeEnabled())
     fireEvent.click(create)
     fireEvent.change(screen.getByRole('textbox', { name: '标题' }), { target: { value: '不保存' } })
-    fireEvent.click(screen.getByRole('button', { name: '取消' }))
-    expect(screen.queryByDisplayValue('不保存')).not.toBeInTheDocument()
-    expect(webFetch).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: '忘记令牌' }))
+    expect(screen.queryByDisplayValue('不保存')).not.toBeInTheDocument()
     expect(await screen.findByRole('button', { name: '保存令牌' })).toBeInTheDocument()
-    expect(await store.loadToken()).toBeNull()
     expect(screen.getByRole('button', { name: '新笔记' })).toBeDisabled()
-  })
-
-  it('shows an unsynced pending note without a token, then pushes it when a token is saved', async () => {
-    const pending: WebDoc = {
-      ...emptyWebDoc(),
-      notes: [{ id: 'p1', title: '还在本机', date: '2026-10-13', body: '', updatedAt: 4 }],
-    }
-    await store.savePending(await sealWebFile(session.dek, pending))
-    renderVault()
-    fireEvent.click(await screen.findByRole('tab', { name: '笔记' }))
-    expect(await screen.findByText('还在本机')).toBeInTheDocument()
-    expect(screen.getByText('还没同步')).toBeInTheDocument()
-    expect(webFetch).not.toHaveBeenCalled()
-    await waitFor(() => expect(screen.getByRole('button', { name: '保存令牌' })).toBeEnabled())
-    fireEvent.change(screen.getByLabelText('令牌'), { target: { value: 'token-1' } })
-    fireEvent.click(screen.getByRole('button', { name: '保存令牌' }))
-    await waitFor(() =>
-      expect(webFetch.mock.calls.some((call) => (call[1] as RequestInit | undefined)?.method === 'PUT')).toBe(true),
-    )
-  })
-
-  it('keeps the newer note in IndexedDB while an earlier GitHub read is still pending', async () => {
-    await store.saveToken('token-1')
-    let releaseGet: (response: Response) => void = () => undefined
-    let gets = 0
-    github((method) => {
-      if (method === 'GET' && gets++ === 0) {
-        return new Promise<Response>((resolve) => {
-          releaseGet = resolve
-        })
-      }
-      return new Response('{}', { status: method === 'PUT' ? 201 : 404 })
-    })
-    renderVault()
-    fireEvent.click(await screen.findByRole('tab', { name: '笔记' }))
-    const create = await screen.findByRole('button', { name: '新笔记' })
-    await waitFor(() => expect(create).toBeEnabled())
-    fireEvent.click(create)
-    fireEvent.change(screen.getByRole('textbox', { name: '标题' }), { target: { value: '第一篇' } })
-    fireEvent.click(screen.getByRole('button', { name: '保存' }))
-    expect(await screen.findByText('第一篇')).toBeInTheDocument()
-    await waitFor(() => expect(webFetch).toHaveBeenCalled())
-    fireEvent.click(screen.getByRole('button', { name: '新笔记' }))
-    fireEvent.change(screen.getByRole('textbox', { name: '标题' }), { target: { value: '第二篇' } })
-    fireEvent.click(screen.getByRole('button', { name: '保存' }))
-    expect(screen.getByText('第二篇')).toBeInTheDocument()
-    try {
-      await waitFor(async () => {
-        const text = await store.loadPending()
-        expect(text).not.toBeNull()
-        const doc = await openWebFile(session.dek, text!)
-        expect(doc.notes.map((note) => note.title)).toEqual(['第二篇'])
-      })
-    } finally {
-      releaseGet(new Response('{}', { status: 404 }))
-    }
-    await waitFor(() =>
-      expect(webFetch.mock.calls.some((call) => (call[1] as RequestInit | undefined)?.method === 'PUT')).toBe(true),
-    )
-  })
-
-  it('closes an unsaved note form and disables editing when the token is forgotten', async () => {
-    await store.saveToken('token-1')
-    renderVault()
-    fireEvent.click(await screen.findByRole('tab', { name: '笔记' }))
-    const create = await screen.findByRole('button', { name: '新笔记' })
-    await waitFor(() => expect(create).toBeEnabled())
-    fireEvent.click(create)
-    fireEvent.change(screen.getByRole('textbox', { name: '标题' }), { target: { value: '不保存' } })
-    fireEvent.click(screen.getByRole('button', { name: '忘记令牌' }))
-    expect(screen.queryByDisplayValue('不保存')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '新笔记' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: '编辑' })).not.toBeInTheDocument()
     await waitFor(async () => expect(await store.loadToken()).toBeNull())
-    expect(await store.loadPending()).toBeNull()
+    expect(commitVaultUpdate).not.toHaveBeenCalled()
   })
 
-  it('shows both items from a newer synced list when the site list is stale', async () => {
-    const siteDoc: WebDoc = {
-      ...emptyWebDoc(),
-      lists: [{ id: 'list-1', title: '出行', items: [{ id: 'a', text: '只有旧的', done: false }], updatedAt: 1 }],
-    }
-    const synced: WebDoc = {
-      ...emptyWebDoc(),
-      lists: [
-        {
-          id: 'list-1',
-          title: '出行',
-          items: [
-            { id: 'a', text: '第一项', done: false },
-            { id: 'b', text: '第二项', done: false },
-          ],
-          updatedAt: 2,
-        },
-      ],
-    }
-    site = new TextEncoder().encode(await sealWebFile(session.dek, siteDoc))
-    await store.saveSynced(await sealWebFile(session.dek, synced))
+  it('still shows the photo grid', async () => {
     renderVault()
-    fireEvent.click(await screen.findByRole('tab', { name: '清单' }))
-    fireEvent.click(await screen.findByRole('button', { name: /出行/ }))
-    expect(await screen.findByText('第一项')).toBeInTheDocument()
-    expect(screen.getByText('第二项')).toBeInTheDocument()
-    expect(screen.queryByText('只有旧的')).not.toBeInTheDocument()
-    expect(webFetch).not.toHaveBeenCalled()
-  })
-
-  it('shows the site note title when that note is newer than the synced copy', async () => {
-    const siteDoc: WebDoc = {
-      ...emptyWebDoc(),
-      notes: [{ id: 'n1', title: '站点标题', date: '2026-10-13', body: '', updatedAt: 10 }],
-    }
-    const synced: WebDoc = {
-      ...emptyWebDoc(),
-      notes: [{ id: 'n1', title: '旧标题', date: '2026-10-13', body: '', updatedAt: 4 }],
-    }
-    site = new TextEncoder().encode(await sealWebFile(session.dek, siteDoc))
-    await store.saveSynced(await sealWebFile(session.dek, synced))
-    renderVault()
-    fireEvent.click(await screen.findByRole('tab', { name: '笔记' }))
-    expect(await screen.findByText('站点标题')).toBeInTheDocument()
-    expect(screen.queryByText('旧标题')).not.toBeInTheDocument()
-  })
-
-  it('removes an undecryptable synced value and still renders', async () => {
-    await store.saveSynced('not-a-vault-file')
-    renderVault()
-    await waitFor(() => expect(screen.getByRole('button', { name: '保存令牌' })).toBeEnabled())
-    expect(screen.getByText('PRIVATE VAULT')).toBeInTheDocument()
-    expect(screen.queryByText('网页上的笔记打不开')).not.toBeInTheDocument()
-    expect(await store.loadSynced()).toBeNull()
+    const grid = await screen.findByRole('tabpanel')
+    expect(within(grid).getAllByRole('heading').length).toBeGreaterThan(0)
+    expect(screen.queryByText('还没有照片')).not.toBeInTheDocument()
   })
 })

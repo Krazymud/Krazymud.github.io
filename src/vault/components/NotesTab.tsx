@@ -2,23 +2,58 @@ import { useState } from 'react'
 import Markdown, { type Components } from 'react-markdown'
 import type { NoteEntry } from '../types'
 import { useBlobText, type ReadBlob } from '../useBlob'
-import { isRealDate, type WebNote } from '../web'
+import { isRealDate } from '../web'
+
+export interface NoteDraft {
+  source?: string
+  title: string
+  date: string
+  body: string
+}
 
 const markdownComponents: Components = {
   a: ({ node: _node, ...props }) => <a {...props} target="_blank" rel="noreferrer" />,
 }
 
+const secondaryButton = 'border border-line px-3 py-1 text-xs text-muted hover:text-fg disabled:opacity-40'
+const commitButton = 'border border-accent-hi bg-accent/30 px-3 py-1 text-xs font-bold disabled:opacity-40'
+
 function preview(markdown: string): string {
   return markdown.replace(/[#*_`>]/g, '').replace(/\s+/g, ' ').trim()
 }
 
-export function NoteCard({ note, read }: { note: NoteEntry; read: ReadBlob }) {
+export function NoteCard({
+  note,
+  read,
+  canEdit = false,
+  formOpen = false,
+  onEdit,
+  onDelete,
+}: {
+  note: NoteEntry
+  read: ReadBlob
+  canEdit?: boolean
+  formOpen?: boolean
+  onEdit?: (note: NoteEntry, body: string) => void
+  onDelete?: (source: string) => void
+}) {
   const [open, setOpen] = useState(false)
+  const [confirm, setConfirm] = useState(false)
   const body = useBlobText(note.blob, read)
 
   return (
     <li className="border border-line bg-panel/90">
-      <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="w-full px-4 py-3 text-left">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => {
+          setOpen((value) => {
+            if (value) setConfirm(false)
+            return !value
+          })
+        }}
+        className="w-full px-4 py-3 text-left"
+      >
         <span className="block text-xs text-muted">{note.date}</span>
         <span className="mt-1 block font-bold">{note.title}</span>
         {!open && body.status === 'ready' && <span className="mt-1 line-clamp-2 block text-sm text-muted">{preview(body.text)}</span>}
@@ -29,20 +64,54 @@ export function NoteCard({ note, read }: { note: NoteEntry; read: ReadBlob }) {
           <Markdown components={markdownComponents}>{body.text}</Markdown>
         </div>
       )}
+      {canEdit && onEdit && onDelete && (
+        <div className="flex gap-2 border-t border-line px-4 py-3">
+          {confirm ? (
+            <>
+              <button
+                type="button"
+                disabled={formOpen}
+                onClick={() => {
+                  if (formOpen) return
+                  setConfirm(false)
+                  onDelete(note.source)
+                }}
+                className={commitButton}
+              >
+                确认删除
+              </button>
+              <button type="button" onClick={() => setConfirm(false)} className={secondaryButton}>
+                取消
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={formOpen || body.status !== 'ready'}
+                onClick={() => body.status === 'ready' && onEdit(note, body.text)}
+                className={secondaryButton}
+              >
+                编辑
+              </button>
+              <button type="button" disabled={formOpen} onClick={() => setConfirm(true)} className={secondaryButton}>
+                删除
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </li>
   )
 }
-
-const secondaryButton = 'border border-line px-3 py-1 text-xs text-muted hover:text-fg disabled:opacity-40'
-const commitButton = 'border border-accent-hi bg-accent/30 px-3 py-1 text-xs font-bold disabled:opacity-40'
 
 function NoteForm({
   initial,
   onSave,
   onCancel,
 }: {
-  initial: { title: string; date: string; body: string }
-  onSave: (input: { title: string; date: string; body: string }) => void
+  initial: NoteDraft
+  onSave: (input: NoteDraft) => void
   onCancel: () => void
 }) {
   const [title, setTitle] = useState(initial.title)
@@ -63,7 +132,7 @@ function NoteForm({
           setInvalid('date')
           return
         }
-        onSave({ title: title.trim(), date, body })
+        onSave({ ...(initial.source ? { source: initial.source } : {}), title: title.trim(), date, body })
       }}
     >
       <label className="block text-xs text-muted">
@@ -105,80 +174,9 @@ function NoteForm({
   )
 }
 
-function WebNoteCard({
-  note,
-  canEdit,
-  formOpen,
-  onEdit,
-  onDelete,
-}: {
-  note: WebNote
-  canEdit: boolean
-  formOpen: boolean
-  onEdit: (note: WebNote) => void
-  onDelete: (id: string) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const [confirm, setConfirm] = useState(false)
-  return (
-    <li className="border border-line bg-panel/90">
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => {
-          setOpen((value) => {
-            if (value) setConfirm(false)
-            return !value
-          })
-        }}
-        className="w-full px-4 py-3 text-left"
-      >
-        <span className="block text-xs text-muted">{note.date}</span>
-        <span className="mt-1 block font-bold">{note.title}</span>
-        {!open && <span className="mt-1 line-clamp-2 block text-sm text-muted">{preview(note.body)}</span>}
-      </button>
-      {open && (
-        <div className="vault-markdown border-t border-line px-4 py-3 text-sm leading-relaxed">
-          <Markdown components={markdownComponents}>{note.body}</Markdown>
-        </div>
-      )}
-      <div className="flex gap-2 border-t border-line px-4 py-3">
-        {confirm ? (
-          <>
-            <button
-              type="button"
-              disabled={!canEdit || formOpen}
-              onClick={() => {
-                if (!canEdit || formOpen) return
-                onDelete(note.id)
-              }}
-              className={commitButton}
-            >
-              确认删除
-            </button>
-            <button type="button" onClick={() => setConfirm(false)} className={secondaryButton}>
-              取消
-            </button>
-          </>
-        ) : (
-          <>
-            <button type="button" disabled={!canEdit || formOpen} onClick={() => onEdit(note)} className={secondaryButton}>
-              编辑
-            </button>
-            <button type="button" disabled={!canEdit || formOpen} onClick={() => setConfirm(true)} className={secondaryButton}>
-              删除
-            </button>
-          </>
-        )}
-      </div>
-    </li>
-  )
-}
-
 export function NotesTab({
   notes,
   read,
-  webNotes = [],
   canEdit = false,
   formOpen = false,
   draft = null,
@@ -190,17 +188,17 @@ export function NotesTab({
 }: {
   notes: NoteEntry[]
   read: ReadBlob
-  webNotes?: WebNote[]
   canEdit?: boolean
   formOpen?: boolean
-  draft?: { id?: string; title: string; date: string; body: string } | null
+  draft?: NoteDraft | null
   onBeginCreate?: () => void
-  onBeginEdit?: (note: WebNote) => void
-  onDelete?: (id: string) => void
-  onSave?: (input: { title: string; date: string; body: string }) => void
+  onBeginEdit?: (note: NoteEntry, body: string) => void
+  onDelete?: (source: string) => void
+  onSave?: (input: NoteDraft) => void
   onCancel?: () => void
 }) {
-  const creating = draft !== null && draft.id === undefined
+  const creating = draft !== null && draft.source === undefined
+  const ordered = [...notes].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
   return (
     <div className="space-y-3">
       {onBeginCreate && (
@@ -209,26 +207,24 @@ export function NotesTab({
         </button>
       )}
       {creating && <NoteForm key="new" initial={draft} onSave={onSave!} onCancel={onCancel!} />}
-      {notes.length === 0 && webNotes.length === 0 ? (
+      {notes.length === 0 ? (
         <p className="py-10 text-center text-sm text-muted">还没有笔记</p>
       ) : (
         <ul className="space-y-3">
-          {notes.map((note) => (
-            <NoteCard key={note.blob} note={note} read={read} />
-          ))}
-          {webNotes.map((note) =>
-            draft?.id === note.id ? (
-              <li key={note.id}>
+          {ordered.map((note) =>
+            draft?.source === note.source ? (
+              <li key={note.source}>
                 <NoteForm initial={draft} onSave={onSave!} onCancel={onCancel!} />
               </li>
             ) : (
-              <WebNoteCard
-                key={note.id}
+              <NoteCard
+                key={note.source}
                 note={note}
+                read={read}
                 canEdit={canEdit}
                 formOpen={formOpen}
-                onEdit={onBeginEdit!}
-                onDelete={onDelete!}
+                onEdit={onBeginEdit}
+                onDelete={onDelete}
               />
             ),
           )}

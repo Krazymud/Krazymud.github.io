@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { decryptJson, type VaultKey } from './crypto'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { decryptBytes, decryptJson, type VaultKey } from './crypto'
 import { GitHubWriteError, SYNC_PENDING, TOKEN_DENIED } from './github'
 import { commitVaultUpdate, GitHubRefNotFastForwardError, readBlobFile, readVaultFile, readWebFileText } from './gitVault'
 import type { FetchBytes } from './repo'
@@ -368,6 +368,24 @@ export function useVaultMutate(options: {
 
   const canEdit = phase === 'ready' && token !== null && !syncing
 
+  // Edits are readable at once from memory; the static site only serves a blob after its next deploy,
+  // so a freshly committed blob falls back to GitHub when a token is saved.
+  const readBlob = useCallback(async (name: string): Promise<Uint8Array<ArrayBuffer>> => {
+    const local = workingRef.current.dirtyBlobs[name]
+    if (local) return decryptBytes(dekRef.current, local)
+    let bytes: Uint8Array | null = null
+    let failure: unknown = null
+    try {
+      bytes = await bytesRef.current(`blobs/${name}.bin`)
+    } catch (error) {
+      failure = error
+    }
+    const saved = tokenRef.current
+    if (bytes === null && saved) bytes = await readBlobFile(fetchRef.current, saved, name)
+    if (bytes === null) throw failure ?? new Error(`missing blob ${name}`)
+    return decryptBytes(dekRef.current, bytes)
+  }, [])
+
   return {
     working,
     manifest: working.manifest,
@@ -377,6 +395,7 @@ export function useVaultMutate(options: {
     tokenError,
     tokenSaved: token !== null,
     canEdit,
+    readBlob,
     saveToken: async (value: string) => {
       const current = storeRef.current
       const next = value.trim()

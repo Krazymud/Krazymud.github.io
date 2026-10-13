@@ -126,7 +126,7 @@ export function VaultScreen({ fetchBytes = fetchVaultBytes, keyStore }: VaultScr
       return (
         <>
           <div inert={state.door}>
-            <VaultContent session={state.session} fetchBytes={fetchBytes} sweep={!state.door} onLock={() => void lock(state.file)} />
+            <VaultContent session={state.session} file={state.file} fetchBytes={fetchBytes} sweep={!state.door} onLock={() => void lock(state.file)} />
           </div>
           {state.door && <VaultDoor onDone={doorDone} />}
         </>
