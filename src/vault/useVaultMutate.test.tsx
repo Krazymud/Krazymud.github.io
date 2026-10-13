@@ -433,4 +433,33 @@ describe('useVaultMutate', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(TOKEN_DENIED)
     expect(screen.getByText('晚安')).toBeInTheDocument()
   })
+
+  it('reaches ready read-only when IndexedDB cannot load the token', async () => {
+    const brokenStore: WebStore = {
+      ...store,
+      loadToken: vi.fn().mockRejectedValue(new DOMException('IDB read failed')),
+      loadVaultPending: vi.fn().mockRejectedValue(new DOMException('IDB read failed')),
+    }
+    mount({ store: brokenStore })
+    await ready()
+    expect(screen.getByText('no-token')).toBeInTheDocument()
+    expect(screen.getByText('晚安')).toBeInTheDocument()
+    expect(saveButton()).toBeDisabled()
+    expect(readVaultFile).not.toHaveBeenCalled()
+    expect(commitVaultUpdate).not.toHaveBeenCalled()
+  })
+
+  it('does not commit when list hydration hits a network TypeError', async () => {
+    readBlobFile.mockRejectedValue(new TypeError('Failed to fetch'))
+    mount()
+    await ready()
+    await waitFor(() => expect(saveButton()).toBeEnabled())
+
+    fireEvent.click(screen.getByRole('button', { name: '打勾' }))
+
+    await waitFor(() => expect(screen.queryByText(SYNCING)).toBeNull())
+    expect(commitVaultUpdate).not.toHaveBeenCalled()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(await store.loadVaultPending()).toBeNull()
+  })
 })

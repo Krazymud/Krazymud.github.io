@@ -215,9 +215,15 @@ export function useVaultMutate(options: {
     const entry = current.manifest.lists.find((item) => item.source === source)
     if (!entry || current.dirtyBlobs[entry.blob]) return current
     const saved = tokenRef.current
-    const bytes = saved
-      ? await readBlobFile(fetchRef.current, saved, entry.blob)
-      : await bytesRef.current(`blobs/${entry.blob}.bin`)
+    let bytes: Uint8Array | null
+    try {
+      bytes = saved
+        ? await readBlobFile(fetchRef.current, saved, entry.blob)
+        : await bytesRef.current(`blobs/${entry.blob}.bin`)
+    } catch (error) {
+      if (error instanceof GitHubWriteError) throw error
+      throw new WorkingBlobError()
+    }
     if (bytes === null) throw new WorkingBlobError()
     return { ...current, dirtyBlobs: { ...current.dirtyBlobs, [entry.blob]: bytes } }
   }
@@ -257,7 +263,14 @@ export function useVaultMutate(options: {
     const id = ++generation.current
     void (async () => {
       const current = store
-      const savedToken = current ? await current.loadToken() : null
+      let savedToken: string | null = null
+      if (current) {
+        try {
+          savedToken = await current.loadToken()
+        } catch {
+          savedToken = null
+        }
+      }
       if (generation.current !== id) return
 
       let latestFile = file
@@ -277,7 +290,14 @@ export function useVaultMutate(options: {
       if (generation.current !== id) return
 
       let pending: WorkingVault | null = null
-      const sealed = current ? await current.loadVaultPending() : null
+      let sealed: string | null = null
+      if (current) {
+        try {
+          sealed = await current.loadVaultPending()
+        } catch {
+          sealed = null
+        }
+      }
       if (generation.current !== id) return
       if (sealed !== null) {
         try {
