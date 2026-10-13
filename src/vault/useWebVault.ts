@@ -57,6 +57,8 @@ export function useWebVault(options: {
   const unsyncedRef = useRef(false)
   const alive = useRef(true)
   const tail = useRef(Promise.resolve())
+  const persistTail = useRef(Promise.resolve())
+  const persistGen = useRef(0)
   const generation = useRef(0)
   const clockRef = useRef(clock)
   const storeRef = useRef(store)
@@ -72,12 +74,34 @@ export function useWebVault(options: {
     setUnsynced(value)
   }
 
-  async function send(next: WebDoc) {
+  function rememberPending(next: WebDoc): Promise<void> {
+    const current = storeRef.current
+    if (!current) return Promise.resolve()
+    const gen = ++persistGen.current
+    const sealed = sealWebFile(dekRef.current, next)
+    const run = persistTail.current.then(async () => {
+      try {
+        const text = await sealed
+        if (persistGen.current !== gen) return
+        await current.savePending(text)
+      } catch {
+        if (!alive.current || persistGen.current !== gen) return
+        markUnsynced(true)
+      }
+    })
+    const done = run.then(
+      () => undefined,
+      () => undefined,
+    )
+    persistTail.current = done
+    return done
+  }
+
+  async function send(next: WebDoc, persisted: Promise<void> = Promise.resolve()) {
+    await persisted
     const current = storeRef.current
     const saved = tokenRef.current
     if (!current || !saved || brokenRef.current) return
-    const text = await sealWebFile(dekRef.current, next)
-    await current.savePending(text)
     try {
       const result = await syncWebFile({
         fetch: fetchRef.current,
@@ -85,12 +109,20 @@ export function useWebVault(options: {
         local: next,
         dek: dekRef.current,
       })
-      await current.clearPending()
-      if (!alive.current) return
-      if (docRef.current === next) {
-        docRef.current = result.doc
-        setDoc(result.doc)
-      }
+      if (!alive.current || docRef.current !== next) return
+      const gen = persistGen.current
+      const cleared = persistTail.current.then(async () => {
+        if (!alive.current || docRef.current !== next || persistGen.current !== gen) return false
+        await current.clearPending()
+        return alive.current && docRef.current === next && persistGen.current === gen
+      })
+      persistTail.current = cleared.then(
+        () => undefined,
+        () => undefined,
+      )
+      if (!(await cleared)) return
+      docRef.current = result.doc
+      setDoc(result.doc)
       markUnsynced(false)
       setTokenError(null)
     } catch (error) {
@@ -100,8 +132,8 @@ export function useWebVault(options: {
     }
   }
 
-  function enqueue(next: WebDoc) {
-    const run = tail.current.then(() => send(next))
+  function enqueue(next: WebDoc, persisted: Promise<void> = Promise.resolve()) {
+    const run = tail.current.then(() => send(next, persisted))
     tail.current = run.then(
       () => undefined,
       () => undefined,
@@ -112,7 +144,8 @@ export function useWebVault(options: {
   function commit(next: WebDoc) {
     docRef.current = next
     setDoc(next)
-    void enqueue(next)
+    const persisted = rememberPending(next)
+    void enqueue(next, persisted)
   }
 
   function publish(next: WebDoc) {
@@ -169,6 +202,7 @@ export function useWebVault(options: {
       docRef.current = view
       setDoc(view)
       setPhase('ready')
+      if (pendingDoc && !savedToken) markUnsynced(true)
       if (siteFailed && pendingDoc) markUnsynced(true)
       if (pendingDoc && savedToken) await enqueue(view)
     })()
@@ -225,35 +259,38 @@ export function useWebVault(options: {
     forgetToken: async () => {
       const current = storeRef.current
       if (!current) return
-      await current.forgetToken()
       tokenRef.current = null
       setToken(null)
       setTokenError(null)
+      setEditor(null)
+      await current.forgetToken()
     },
     beginNote,
     beginList,
     cancelEdit: () => setEditor(null),
     saveNote: (input: { title: string; date: string; body: string }) => {
+      if (!canEdit || tokenRef.current === null) return
       if (editor?.kind !== 'note') return
       const result = saveWebNote(docRef.current, { id: editor.draft.id, ...input }, clockRef.current)
       if (result.ok) publish(result.doc)
     },
     saveList: (input: { title: string; items: { id?: string; text: string; done: boolean }[] }) => {
+      if (!canEdit || tokenRef.current === null) return
       if (editor?.kind !== 'list') return
       const result = saveWebList(docRef.current, { id: editor.draft.id, ...input }, clockRef.current)
       if (result.ok) publish(result.doc)
     },
     deleteNote: (id: string) => {
-      if (canEdit) publish(deleteWebNote(docRef.current, id, clockRef.current.now()))
+      if (canEdit && tokenRef.current !== null) publish(deleteWebNote(docRef.current, id, clockRef.current.now()))
     },
     deleteList: (id: string) => {
-      if (canEdit) publish(deleteWebList(docRef.current, id, clockRef.current.now()))
+      if (canEdit && tokenRef.current !== null) publish(deleteWebList(docRef.current, id, clockRef.current.now()))
     },
     togglePublished: (source: string, index: number, done: boolean) => {
-      if (canEdit) commit(togglePublishedCheck(docRef.current, source, index, done, clockRef.current.now()))
+      if (canEdit && tokenRef.current !== null) commit(togglePublishedCheck(docRef.current, source, index, done, clockRef.current.now()))
     },
     toggleWebItem: (listId: string, itemId: string) => {
-      if (canEdit) commit(toggleWebListItem(docRef.current, listId, itemId, clockRef.current.now()))
+      if (canEdit && tokenRef.current !== null) commit(toggleWebListItem(docRef.current, listId, itemId, clockRef.current.now()))
     },
   }
 }

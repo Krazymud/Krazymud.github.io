@@ -44,7 +44,7 @@ function renderVault() {
   return render(<RouterProvider router={router} />)
 }
 
-function github(handler: (method: string) => Response) {
+function github(handler: (method: string) => Response | Promise<Response>) {
   webFetch = vi.fn(async (_url: string, init?: RequestInit) => handler(init?.method ?? 'GET'))
 }
 
@@ -184,5 +184,79 @@ describe('VaultContent web sync', () => {
     expect(await screen.findByRole('button', { name: '保存令牌' })).toBeInTheDocument()
     expect(await store.loadToken()).toBeNull()
     expect(screen.getByRole('button', { name: '新笔记' })).toBeDisabled()
+  })
+
+  it('shows an unsynced pending note without a token, then pushes it when a token is saved', async () => {
+    const pending: WebDoc = {
+      ...emptyWebDoc(),
+      notes: [{ id: 'p1', title: '还在本机', date: '2026-10-13', body: '', updatedAt: 4 }],
+    }
+    await store.savePending(await sealWebFile(session.dek, pending))
+    renderVault()
+    fireEvent.click(await screen.findByRole('tab', { name: '笔记' }))
+    expect(await screen.findByText('还在本机')).toBeInTheDocument()
+    expect(screen.getByText('还没同步')).toBeInTheDocument()
+    expect(webFetch).not.toHaveBeenCalled()
+    await waitFor(() => expect(screen.getByRole('button', { name: '保存令牌' })).toBeEnabled())
+    fireEvent.change(screen.getByLabelText('令牌'), { target: { value: 'token-1' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存令牌' }))
+    await waitFor(() =>
+      expect(webFetch.mock.calls.some((call) => (call[1] as RequestInit | undefined)?.method === 'PUT')).toBe(true),
+    )
+  })
+
+  it('keeps the newer note in IndexedDB while an earlier GitHub read is still pending', async () => {
+    await store.saveToken('token-1')
+    let releaseGet: (response: Response) => void = () => undefined
+    let gets = 0
+    github((method) => {
+      if (method === 'GET' && gets++ === 0) {
+        return new Promise<Response>((resolve) => {
+          releaseGet = resolve
+        })
+      }
+      return new Response('{}', { status: method === 'PUT' ? 201 : 404 })
+    })
+    renderVault()
+    fireEvent.click(await screen.findByRole('tab', { name: '笔记' }))
+    const create = await screen.findByRole('button', { name: '新笔记' })
+    await waitFor(() => expect(create).toBeEnabled())
+    fireEvent.click(create)
+    fireEvent.change(screen.getByRole('textbox', { name: '标题' }), { target: { value: '第一篇' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    expect(await screen.findByText('第一篇')).toBeInTheDocument()
+    await waitFor(() => expect(webFetch).toHaveBeenCalled())
+    fireEvent.click(screen.getByRole('button', { name: '新笔记' }))
+    fireEvent.change(screen.getByRole('textbox', { name: '标题' }), { target: { value: '第二篇' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    expect(screen.getByText('第二篇')).toBeInTheDocument()
+    try {
+      await waitFor(async () => {
+        const text = await store.loadPending()
+        expect(text).not.toBeNull()
+        const doc = await openWebFile(session.dek, text!)
+        expect(doc.notes.map((note) => note.title)).toEqual(['第二篇'])
+      })
+    } finally {
+      releaseGet(new Response('{}', { status: 404 }))
+    }
+    await waitFor(() =>
+      expect(webFetch.mock.calls.some((call) => (call[1] as RequestInit | undefined)?.method === 'PUT')).toBe(true),
+    )
+  })
+
+  it('closes an unsaved note form and disables editing when the token is forgotten', async () => {
+    await store.saveToken('token-1')
+    renderVault()
+    fireEvent.click(await screen.findByRole('tab', { name: '笔记' }))
+    const create = await screen.findByRole('button', { name: '新笔记' })
+    await waitFor(() => expect(create).toBeEnabled())
+    fireEvent.click(create)
+    fireEvent.change(screen.getByRole('textbox', { name: '标题' }), { target: { value: '不保存' } })
+    fireEvent.click(screen.getByRole('button', { name: '忘记令牌' }))
+    expect(screen.queryByDisplayValue('不保存')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '新笔记' })).toBeDisabled()
+    await waitFor(async () => expect(await store.loadToken()).toBeNull())
+    expect(await store.loadPending()).toBeNull()
   })
 })
