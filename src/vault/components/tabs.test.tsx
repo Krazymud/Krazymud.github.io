@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { ListEntry, NoteEntry, PhotoEntry } from '../types'
+import type { WebNote } from '../web'
 import type { ReadBlob } from '../useBlob'
 import { ListsTab } from './ListsTab'
 import { NotesTab } from './NotesTab'
@@ -90,6 +91,84 @@ describe('NotesTab', () => {
   it('says so when there are no notes', () => {
     render(<NotesTab notes={[]} read={reader({})} />)
     expect(screen.getByText('还没有笔记')).toBeInTheDocument()
+  })
+})
+
+const webNote: WebNote = {
+  id: 'w1',
+  title: '网页笔记',
+  date: '2026-10-13',
+  body: '看到 **加粗** <script>alert(1)</script>',
+  updatedAt: 1,
+}
+
+describe('web notes', () => {
+  it('shows the empty sentence and a disabled create button without writing', () => {
+    const onBeginCreate = vi.fn()
+    render(<NotesTab notes={[]} read={reader({})} webNotes={[]} canEdit={false} onBeginCreate={onBeginCreate} />)
+    expect(screen.getByText('还没有笔记')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '新笔记' })).toBeDisabled()
+  })
+
+  it('edits only a web note and renders its body without raw HTML', () => {
+    const onBeginEdit = vi.fn()
+    const onDelete = vi.fn()
+    render(
+      <NotesTab
+        notes={notes.slice(0, 1)}
+        read={reader({ n1: '已发布' })}
+        webNotes={[webNote]}
+        canEdit
+        onBeginCreate={() => undefined}
+        onBeginEdit={onBeginEdit}
+        onDelete={onDelete}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: '编辑' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /网页笔记/ }))
+    expect(screen.getByText('加粗').tagName).toBe('STRONG')
+    expect(document.querySelector('.vault-markdown script')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '编辑' }))
+    expect(onBeginEdit).toHaveBeenCalledWith(webNote)
+    fireEvent.click(screen.getByRole('button', { name: '删除' }))
+    fireEvent.click(screen.getByRole('button', { name: '取消' }))
+    expect(onDelete).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: '删除' }))
+    fireEvent.click(screen.getByRole('button', { name: /网页笔记/ }))
+    expect(screen.queryByRole('button', { name: '确认删除' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '删除' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
+    expect(onDelete).toHaveBeenCalledWith('w1')
+    expect(screen.getByRole('button', { name: /晚安/ })).toBeInTheDocument()
+    expect(within(screen.getByRole('button', { name: /晚安/ }).closest('li')!).queryByRole('button', { name: '编辑' })).toBeNull()
+  })
+
+  it('does not save an empty title or a bad date, and cancel writes nothing', () => {
+    const onSave = vi.fn()
+    const onCancel = vi.fn()
+    render(
+      <NotesTab
+        notes={[]}
+        read={reader({})}
+        canEdit
+        formOpen
+        draft={{ title: '  ', date: '2026-02-31', body: '' }}
+        onBeginCreate={() => undefined}
+        onSave={onSave}
+        onCancel={onCancel}
+      />,
+    )
+    expect(screen.getByRole('button', { name: '新笔记' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    expect(onSave).not.toHaveBeenCalled()
+    expect(screen.getByRole('textbox', { name: '标题' })).toHaveAttribute('aria-invalid', 'true')
+    fireEvent.change(screen.getByRole('textbox', { name: '标题' }), { target: { value: '标题' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    expect(screen.getByLabelText('日期')).toHaveAttribute('aria-invalid', 'true')
+    fireEvent.change(screen.getByLabelText('日期'), { target: { value: '2026-10-13' } })
+    fireEvent.click(screen.getByRole('button', { name: '取消' }))
+    expect(onCancel).toHaveBeenCalledOnce()
+    expect(onSave).not.toHaveBeenCalled()
   })
 })
 
