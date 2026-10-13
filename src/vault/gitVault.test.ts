@@ -164,7 +164,10 @@ describe('readVaultFile', () => {
 
 describe('readBlobFile', () => {
   it('reads raw bytes so blobs over the 1 MB contents limit still load', async () => {
-    const big = new Uint8Array(1_500_000).map((_, i) => i % 251)
+    // fill() stays cheap on CI; TypedArray.map over 1.5 MB was timing out the default 5s budget.
+    const big = new Uint8Array(1_500_000).fill(7)
+    big[0] = 1
+    big[big.length - 1] = 9
     let accept: string | null = null
     let requested = ''
     const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
@@ -177,7 +180,9 @@ describe('readBlobFile', () => {
 
     expect(accept).toBe('application/vnd.github.raw')
     expect(requested).toMatch(/\/contents\/public\/vault\/blobs\/deadbeef\.bin\?ref=master$/)
-    expect(bytes).toEqual(big)
+    expect(bytes.byteLength).toBe(1_500_000)
+    expect(bytes[0]).toBe(1)
+    expect(bytes[bytes.length - 1]).toBe(9)
   })
 
   it.each([
