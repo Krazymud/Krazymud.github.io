@@ -243,6 +243,7 @@ export async function openWebFile(dek: VaultKey, text: string): Promise<WebDoc> 
     return await decryptJson<WebDoc>(dek, sealed)
   } catch (error) {
     if (error instanceof DecryptError) throw new WebFileError()
+    if (error instanceof DOMException && error.name === 'InvalidCharacterError') throw new WebFileError()
     throw error
   }
 }

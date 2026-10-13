@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest'
 import { generateDek } from './crypto'
 import {
@@ -190,5 +191,7 @@ describe('web document', () => {
     expect(await openWebFile(dek, text)).toEqual(emptyWebDoc())
     await expect(openWebFile(other, text)).rejects.toBeInstanceOf(WebFileError)
     await expect(openWebFile(dek, JSON.stringify({ version: 2, sealed: 'x' }))).rejects.toThrow('网页上的笔记打不开')
+    await expect(openWebFile(dek, JSON.stringify({ version: 1, sealed: 'not-valid' }))).rejects.toBeInstanceOf(WebFileError)
+    await expect(openWebFile(dek, JSON.stringify({ version: 1, sealed: 'not-valid' }))).rejects.toThrow('网页上的笔记打不开')
   })
 })

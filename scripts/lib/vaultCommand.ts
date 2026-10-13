@@ -257,7 +257,6 @@ async function prepareWebDoc(outDir: string, dek: VaultKey): Promise<{ doc: WebD
       return await openWebFile(dek, text)
     } catch (error) {
       if (error instanceof WebFileError) return null
-      if (error instanceof DOMException && error.name === 'InvalidCharacterError') return null
       throw error
     }
   }
