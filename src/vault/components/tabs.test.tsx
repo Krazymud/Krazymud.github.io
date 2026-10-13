@@ -313,3 +313,46 @@ describe('published list editing', () => {
     expect(screen.getByRole('button', { name: '新清单' })).toBeEnabled()
   })
 })
+
+describe('PhotoGrid editing', () => {
+  const processed = { full: new Uint8Array([1]), thumb: new Uint8Array([2]), width: 10, height: 20, date: '2024-06-01' }
+  const pickFile = () =>
+    fireEvent.change(screen.getByTestId('photo-file-input'), { target: { files: [new File(['x'], 'a.jpg', { type: 'image/jpeg' })] } })
+
+  it('hides editing controls without canEdit and disables them while syncing', () => {
+    const { rerender } = render(<PhotoGrid photos={photos} read={reader({})} onAdd={vi.fn()} onDelete={vi.fn()} />)
+    expect(screen.queryByRole('button', { name: '加照片' })).toBeNull()
+    rerender(<PhotoGrid photos={photos} read={reader({})} canEdit syncing onAdd={vi.fn()} onDelete={vi.fn()} />)
+    expect(screen.getByRole('button', { name: '加照片' })).toBeDisabled()
+    expect(screen.getAllByRole('button', { name: '删除' })[0]).toBeDisabled()
+  })
+
+  it('processes a picked file, confirms caption/date and adds it', async () => {
+    const onAdd = vi.fn().mockResolvedValue(true)
+    const processPhoto = vi.fn().mockResolvedValue(processed)
+    render(<PhotoGrid photos={[]} read={reader({})} canEdit onAdd={onAdd} processPhoto={processPhoto} />)
+    expect(screen.getByTestId('photo-file-input')).toHaveAttribute('accept', 'image/*')
+    pickFile()
+    fireEvent.change(await screen.findByLabelText('照片说明'), { target: { value: '海边' } })
+    fireEvent.click(screen.getByRole('button', { name: '存入' }))
+    await waitFor(() => expect(onAdd).toHaveBeenCalledWith({ ...processed, caption: '海边', date: '2024-06-01' }))
+    await waitFor(() => expect(screen.queryByLabelText('照片说明')).toBeNull())
+  })
+
+  it('shows 这张照片打不开 on PhotoProcessError', async () => {
+    const { PhotoProcessError } = await import('../photoProcess')
+    const processPhoto = vi.fn().mockRejectedValue(new PhotoProcessError())
+    render(<PhotoGrid photos={[]} read={reader({})} canEdit onAdd={vi.fn()} processPhoto={processPhoto} />)
+    pickFile()
+    expect(await screen.findByText('这张照片打不开')).toBeInTheDocument()
+  })
+
+  it('deletes only after a second confirm click', () => {
+    const onDelete = vi.fn()
+    render(<PhotoGrid photos={photos} read={reader({})} canEdit onAdd={vi.fn()} onDelete={onDelete} />)
+    fireEvent.click(screen.getAllByRole('button', { name: '删除' })[0])
+    expect(onDelete).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
+    expect(onDelete).toHaveBeenCalledWith('photos/a.jpg')
+  })
+})

@@ -140,7 +140,20 @@ export function VaultContent({ session, file, fetchBytes, sweep, onLock, webStor
         {vault.syncing && <p className="mb-3 text-sm text-muted">正在同步…</p>}
         {!vault.syncing && vault.unsynced && <p className="mb-3 text-sm text-muted">还没同步</p>}
         {failed && <p className="mb-3 text-sm text-muted">{SAVE_FAILED}</p>}
-        {tab === 'photos' && <PhotoGrid photos={manifest.photos} read={read} />}
+        {tab === 'photos' && (
+          <PhotoGrid
+            photos={manifest.photos}
+            read={read}
+            canEdit={vault.canEdit}
+            syncing={vault.syncing}
+            onAdd={async (input) => {
+              const outcome = await vault.addPhoto(input)
+              await finish(Promise.resolve(outcome), false)
+              return outcome.ok
+            }}
+            onDelete={(source) => void finish(vault.deletePhoto(source), false)}
+          />
+        )}
         {tab === 'notes' && (
           <NotesTab
             notes={manifest.notes}
