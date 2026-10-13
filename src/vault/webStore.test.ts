@@ -2,7 +2,7 @@ import { IDBFactory } from 'fake-indexeddb'
 import { describe, expect, it, vi } from 'vitest'
 import { decryptBytes, encryptBytes } from './crypto'
 import { createKeyStore } from './keyStore'
-import { emptyWebDoc, type WebDoc } from './web'
+import { emptyWebDoc } from './web'
 import { createWebStore, loadPendingDoc, loadSyncedDoc } from './webStore'
 
 describe('createWebStore', () => {
