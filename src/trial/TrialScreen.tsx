@@ -14,7 +14,6 @@ import { LoadError } from './components/LoadError'
 import { QuestionCard } from './components/QuestionCard'
 import { ResultPanel } from './components/ResultPanel'
 
-export const WRONG_DELAY_MS = 1500
 export const GRADE_TIMEOUT_MS = 5000
 export const NITRO_COMBOS = [5, 10]
 
@@ -82,10 +81,10 @@ export function TrialScreen({ source, now = () => new Date() }: TrialScreenProps
   }, [missingWord, update])
 
   useEffect(() => {
-    if (picked === null) return
-    const timer = setTimeout(() => commit(correct ? 'ok' : 'again'), correct ? GRADE_TIMEOUT_MS : WRONG_DELAY_MS)
+    if (!correct) return
+    const timer = setTimeout(() => commit('ok'), GRADE_TIMEOUT_MS)
     return () => clearTimeout(timer)
-  }, [picked, correct, commit])
+  }, [correct, commit])
 
   useLayoutEffect(() => {
     if (!question || picked !== null) return
@@ -146,6 +145,15 @@ export function TrialScreen({ source, now = () => new Date() }: TrialScreenProps
       <div className="mt-6 w-full">
         <QuestionCard question={question} picked={picked} onPick={setPicked} />
         {correct && <GradeBar timeoutMs={GRADE_TIMEOUT_MS} onGrade={commit} />}
+        {picked !== null && !correct && (
+          <button
+            type="button"
+            onClick={() => commit('again')}
+            className="mt-6 w-full border border-accent-hi bg-accent/30 py-3 font-bold"
+          >
+            下一题
+          </button>
+        )}
       </div>
     </section>
   )

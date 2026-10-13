@@ -77,14 +77,19 @@ describe('TrialScreen', () => {
     expect(saved().words.alpha).toMatchObject({ interval: 3, lastResult: 'ok' })
   })
 
-  it('grades a wrong answer as again and moves on after 1.5 seconds', async () => {
+  it('grades a wrong answer as again only after 下一题 is pressed', async () => {
     renderTrial()
     await screen.findByRole('heading', { name: 'alpha' })
     fireEvent.click(options().find((b) => !b.textContent?.includes('阿尔法'))!)
     expect(screen.queryByRole('button', { name: '会了' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '下一题' })).toBeInTheDocument()
+    fireEvent.keyDown(window, { key: '1' })
     act(() => {
-      vi.advanceTimersByTime(1500)
+      vi.advanceTimersByTime(5000)
     })
+    expect(screen.getByRole('heading', { name: 'alpha' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '下一题' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '下一题' }))
     await screen.findByRole('heading', { name: 'bravo' })
     expect(saved().words.alpha).toMatchObject({ interval: 1, lastResult: 'again' })
   })
@@ -180,9 +185,7 @@ describe('TrialScreen', () => {
     for (const word of WORDS) {
       await screen.findByRole('heading', { name: word.w })
       fireEvent.click(options().find((b) => !b.textContent?.includes(word.m.slice(3)))!)
-      act(() => {
-        vi.advanceTimersByTime(1500)
-      })
+      fireEvent.click(await screen.findByRole('button', { name: '下一题' }))
     }
     await screen.findByText('圈速')
     cleanup()
