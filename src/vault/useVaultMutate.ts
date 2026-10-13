@@ -190,7 +190,13 @@ export function useVaultMutate(options: {
             // Absorbing the same web.json again later is harmless.
           }
         }
-        return emptyWorking(local.manifest)
+        // Keep committed blobs in memory: the static site only serves them after the
+        // next Pages deploy, and GitHub Contents can lag the commit that just wrote them.
+        // Remounted cards (list/note after the edit form closes) still decrypt here.
+        return {
+          ...emptyWorking(local.manifest),
+          dirtyBlobs: referencedBlobs(local),
+        }
       } catch (error) {
         if (!(error instanceof GitHubRefNotFastForwardError)) throw error
         if (retried) throw new GitHubWriteError(SYNC_PENDING)
@@ -370,8 +376,8 @@ export function useVaultMutate(options: {
 
   const canEdit = phase === 'ready' && token !== null && !syncing
 
-  // Edits are readable at once from memory; the static site only serves a blob after its next deploy,
-  // so a freshly committed blob falls back to GitHub when a token is saved.
+  // Prefer in-memory dirty blobs (kept after a successful push). Fall back to the static
+  // site, then GitHub Contents when a token is saved (Pages deploy lag / cold reload).
   const readBlob = useCallback(async (name: string): Promise<Uint8Array<ArrayBuffer>> => {
     const local = workingRef.current.dirtyBlobs[name]
     if (local) return decryptBytes(dekRef.current, local)

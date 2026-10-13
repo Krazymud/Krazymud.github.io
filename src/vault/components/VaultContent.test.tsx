@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { decryptBytes, decryptJson } from '../crypto'
 import { GitHubWriteError, SYNC_PENDING, TOKEN_DENIED } from '../github'
 import * as gitVault from '../gitVault'
+import * as photoProcess from '../photoProcess'
 import type { VaultSession } from '../repo'
 import { makeTestVault, type TestVault } from '../testVault'
 import type { ListContent, VaultManifest } from '../types'
@@ -20,10 +21,23 @@ vi.mock('../gitVault', async (importOriginal) => ({
   readWebFileText: vi.fn(),
 }))
 
+vi.mock('../photoProcess', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../photoProcess')>()),
+  processVaultPhoto: vi.fn(),
+}))
+
 const commitVaultUpdate = vi.mocked(gitVault.commitVaultUpdate)
 const readVaultFile = vi.mocked(gitVault.readVaultFile)
 const readBlobFile = vi.mocked(gitVault.readBlobFile)
 const readWebFileText = vi.mocked(gitVault.readWebFileText)
+const processVaultPhoto = vi.mocked(photoProcess.processVaultPhoto)
+
+/** Site + GitHub only know the published vault — new commit blobs are invisible (Pages lag). */
+async function rejectUnpublishedBlobs(_fetch: typeof fetch, _token: string, name: string) {
+  const bytes = await vault.fetchBytes(`blobs/${name}.bin`)
+  if (!bytes) throw new GitHubWriteError(SYNC_PENDING)
+  return bytes
+}
 
 type Commit = Parameters<typeof gitVault.commitVaultUpdate>[0]
 
@@ -86,6 +100,7 @@ beforeEach(async () => {
   readVaultFile.mockReset()
   readBlobFile.mockReset()
   readWebFileText.mockReset()
+  processVaultPhoto.mockReset()
   readWebFileText.mockResolvedValue(null)
   readVaultFile.mockResolvedValue({ file: vault.file, commitSha: 'base0' })
   remote.clear()
@@ -149,7 +164,8 @@ describe('VaultContent published edits', () => {
     expect(await screen.findByText('改过的正文')).toBeInTheDocument()
   })
 
-  it('reads a just-synced note body from GitHub when the static site has not deployed it yet', async () => {
+  it('keeps a just-synced note body readable when the site and GitHub cannot serve the new blob yet', async () => {
+    readBlobFile.mockImplementation(rejectUnpublishedBlobs)
     renderVault('/vault?tab=notes')
     const create = await screen.findByRole('button', { name: '新笔记' })
     await waitFor(() => expect(create).toBeEnabled())
@@ -158,15 +174,71 @@ describe('VaultContent published edits', () => {
     fireEvent.change(screen.getByRole('textbox', { name: '正文' }), { target: { value: '刚写好' } })
     fireEvent.click(screen.getByRole('button', { name: '保存' }))
     await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
-    const sent = await committed(commitVaultUpdate.mock.calls[0][0])
-    const added = sent.notes.find((note) => note.title === '新写的')!
     expect(await screen.findByText('刚写好')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText('正在同步…')).not.toBeInTheDocument())
     fireEvent.click(screen.getByRole('tab', { name: '清单' }))
     fireEvent.click(screen.getByRole('tab', { name: '笔记' }))
     expect(await screen.findByText('刚写好')).toBeInTheDocument()
-    expect(readBlobFile).toHaveBeenCalledWith(apiFetch, 'tok', added.blob)
     expect(screen.queryByText('这篇笔记打不开')).not.toBeInTheDocument()
+  })
+
+  it('keeps a just-edited note readable when the site and GitHub cannot serve the new blob yet', async () => {
+    readBlobFile.mockImplementation(rejectUnpublishedBlobs)
+    renderVault('/vault?tab=notes')
+    const edit = await screen.findByRole('button', { name: '编辑' })
+    await screen.findByText(/今天的风很温柔/)
+    await waitFor(() => expect(edit).toBeEnabled())
+    fireEvent.click(edit)
+    fireEvent.change(screen.getByRole('textbox', { name: '正文' }), { target: { value: '改完立刻看' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+
+    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.queryByText('正在同步…')).not.toBeInTheDocument())
+    expect(screen.queryByText('这篇笔记打不开')).not.toBeInTheDocument()
+    expect(await screen.findByText('改完立刻看')).toBeInTheDocument()
+  })
+
+  it('keeps a just-edited list readable when the site and GitHub cannot serve the new blob yet', async () => {
+    readBlobFile.mockImplementation(rejectUnpublishedBlobs)
+    renderVault('/vault?tab=lists')
+    const edit = await screen.findByRole('button', { name: '编辑' })
+    await screen.findByText('已完成 1 / 2')
+    await waitFor(() => expect(edit).toBeEnabled())
+    fireEvent.click(edit)
+    fireEvent.change(screen.getByLabelText('条目 2'), { target: { value: '去北海道' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+
+    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.queryByText('正在同步…')).not.toBeInTheDocument())
+    expect(screen.queryByText('这个清单打不开')).not.toBeInTheDocument()
+    expect(await screen.findByText('已完成 1 / 2')).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: /一起去的地方/ }))
+    expect(await screen.findByText('去北海道')).toBeInTheDocument()
+  })
+
+  it('keeps a just-added photo readable when the site and GitHub cannot serve the new blob yet', async () => {
+    readBlobFile.mockImplementation(rejectUnpublishedBlobs)
+    processVaultPhoto.mockResolvedValue({
+      full: new Uint8Array([0x89, 0x50, 0x4e, 0x47]),
+      thumb: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d]),
+      width: 12,
+      height: 8,
+      date: '2026-10-13',
+    })
+    renderVault('/vault?tab=photos')
+    const add = await screen.findByRole('button', { name: '加照片' })
+    await waitFor(() => expect(add).toBeEnabled())
+    fireEvent.change(screen.getByTestId('photo-file-input'), {
+      target: { files: [new File(['x'], 'new.jpg', { type: 'image/jpeg' })] },
+    })
+    fireEvent.change(await screen.findByLabelText('照片说明'), { target: { value: '刚拍的' } })
+    fireEvent.click(screen.getByRole('button', { name: '存入' }))
+
+    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.queryByText('正在同步…')).not.toBeInTheDocument())
+    const tile = await screen.findByRole('button', { name: '查看照片 刚拍的' })
+    expect(within(tile).queryByText('打不开')).not.toBeInTheDocument()
+    expect(tile.querySelector('img')).not.toBeNull()
   })
 
   it('deletes a published note after confirmation', async () => {
