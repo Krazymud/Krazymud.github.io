@@ -1,4 +1,4 @@
-import { DecryptError, decryptJson, encryptJson, type VaultKey } from './crypto'
+import { DecryptError, decryptJson, encryptJson, type VaultKey } from './crypto.ts'
 
 export interface WebNote {
   id: string
