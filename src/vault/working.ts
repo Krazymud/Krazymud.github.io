@@ -20,9 +20,12 @@ export interface WorkingVault {
 }
 
 export class WorkingValidationError extends Error {
-  constructor(public reason: 'title' | 'date') {
+  reason: 'title' | 'date'
+
+  constructor(reason: 'title' | 'date') {
     super(reason === 'title' ? '标题不能为空' : '日期无效')
     this.name = 'WorkingValidationError'
+    this.reason = reason
   }
 }
 
@@ -58,7 +61,7 @@ function randomBlobName(): string {
 }
 
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  const digest = await crypto.subtle.digest('SHA-256', new Uint8Array(bytes))
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
