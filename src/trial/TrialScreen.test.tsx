@@ -94,6 +94,29 @@ describe('TrialScreen', () => {
     expect(saved().words.alpha).toMatchObject({ interval: 1, lastResult: 'again' })
   })
 
+  it('grades a wrong answer as again when Enter is pressed', async () => {
+    renderTrial()
+    await screen.findByRole('heading', { name: 'alpha' })
+    fireEvent.click(options().find((b) => !b.textContent?.includes('阿尔法'))!)
+    await screen.findByRole('button', { name: '下一题' })
+    fireEvent.keyDown(window, { key: 'Enter' })
+    await screen.findByRole('heading', { name: 'bravo' })
+    expect(saved().words.alpha).toMatchObject({ interval: 1, lastResult: 'again' })
+    expect(saved().session.cursor).toBe(1)
+  })
+
+  it('does not submit a correct answer when Enter is pressed', async () => {
+    renderTrial()
+    await screen.findByRole('heading', { name: 'alpha' })
+    fireEvent.click(options().find((b) => b.textContent?.includes('阿尔法'))!)
+    await screen.findByRole('button', { name: '还行' })
+    fireEvent.keyDown(window, { key: 'Enter' })
+    expect(screen.getByRole('heading', { name: 'alpha' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '还行' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '会了' })).toBeInTheDocument()
+    expect(saved().words).not.toHaveProperty('alpha')
+  })
+
   it('answers with number keys', async () => {
     renderTrial()
     await screen.findByRole('heading', { name: 'alpha' })

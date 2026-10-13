@@ -96,6 +96,15 @@ export function TrialScreen({ source, now = () => new Date() }: TrialScreenProps
     return () => window.removeEventListener('keydown', onKey)
   }, [question, picked])
 
+  useLayoutEffect(() => {
+    if (!question || picked === null || correct) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Enter') commit('again')
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [question, picked, correct, commit])
+
   const nitro = correct && session !== undefined && NITRO_COMBOS.includes(session.combo + 1)
 
   useEffect(() => {
