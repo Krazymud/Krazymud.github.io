@@ -232,15 +232,22 @@ export function useVaultMutate(options: {
   async function hydrateList(current: WorkingVault, source: string): Promise<WorkingVault> {
     const entry = current.manifest.lists.find((item) => item.source === source)
     if (!entry || current.dirtyBlobs[entry.blob]) return current
-    const saved = tokenRef.current
-    let bytes: Uint8Array | null
+    // Same order as readBlob: site first (list UI already loaded it), then GitHub.
+    // Token holders used to hit GitHub only — Contents lag/denial blocked toggles while the card still opened.
+    let bytes: Uint8Array | null = null
     try {
-      bytes = saved
-        ? await readBlobFile(fetchRef.current, saved, entry.blob)
-        : await bytesRef.current(`blobs/${entry.blob}.bin`)
-    } catch (error) {
-      if (error instanceof GitHubWriteError) throw error
-      throw new WorkingBlobError()
+      bytes = await bytesRef.current(`blobs/${entry.blob}.bin`)
+    } catch {
+      bytes = null
+    }
+    const saved = tokenRef.current
+    if (bytes === null && saved) {
+      try {
+        bytes = await readBlobFile(fetchRef.current, saved, entry.blob)
+      } catch (error) {
+        if (error instanceof GitHubWriteError) throw error
+        throw new WorkingBlobError()
+      }
     }
     if (bytes === null) throw new WorkingBlobError()
     return { ...current, dirtyBlobs: { ...current.dirtyBlobs, [entry.blob]: bytes } }
