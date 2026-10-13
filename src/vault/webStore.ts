@@ -11,12 +11,16 @@ export interface WebStore {
   loadSynced(): Promise<string | null>
   saveSynced(text: string): Promise<void>
   clearSynced(): Promise<void>
+  loadVaultPending(): Promise<string | null>
+  saveVaultPending(text: string): Promise<void>
+  clearVaultPending(): Promise<void>
 }
 
 const STORE = 'vault-web'
 const TOKEN = 'token'
 const PENDING = 'pending'
 const SYNCED = 'synced'
+const VAULT_PENDING = 'vaultPending'
 
 function settle<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -60,6 +64,9 @@ export function createWebStore(factory: IDBFactory | null): WebStore | null {
     loadSynced: () => get(SYNCED),
     saveSynced: (text) => run('readwrite', (store) => store.put(text, SYNCED)).then(() => undefined),
     clearSynced: () => run('readwrite', (store) => store.delete(SYNCED)).then(() => undefined),
+    loadVaultPending: () => get(VAULT_PENDING),
+    saveVaultPending: (text) => run('readwrite', (store) => store.put(text, VAULT_PENDING)).then(() => undefined),
+    clearVaultPending: () => run('readwrite', (store) => store.delete(VAULT_PENDING)).then(() => undefined),
   }
 }
 

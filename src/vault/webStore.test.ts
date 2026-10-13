@@ -88,4 +88,20 @@ describe('createWebStore', () => {
     expect(opened).toEqual(emptyWebDoc())
     expect(await store.loadSynced()).toBe('sealed-text')
   })
+
+  it('keeps the vault pending seal apart from the web document pending text', async () => {
+    const store = createWebStore(new IDBFactory())!
+    expect(await store.loadVaultPending()).toBeNull()
+    await store.savePending('web-pending')
+    await store.saveVaultPending('vault-pending')
+    expect(await store.loadVaultPending()).toBe('vault-pending')
+    expect(await store.loadPending()).toBe('web-pending')
+    await store.clearVaultPending()
+    expect(await store.loadVaultPending()).toBeNull()
+    expect(await store.loadPending()).toBe('web-pending')
+    await store.clearPending()
+    await store.saveVaultPending('again')
+    await store.forgetToken()
+    expect(await store.loadVaultPending()).toBe('again')
+  })
 })
