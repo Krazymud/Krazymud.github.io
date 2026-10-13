@@ -22,7 +22,7 @@ export class GitHubWriteError extends Error {
 
 const CONTENTS = `https://api.github.com/repos/${GITHUB_WEB.owner}/${GITHUB_WEB.repo}/contents/${GITHUB_WEB.path}`
 
-function headers(token: string, jsonBody: boolean): Headers {
+export function githubApiHeaders(token: string, jsonBody: boolean): Headers {
   const result = new Headers({
     Accept: 'application/vnd.github+json',
     Authorization: `Bearer ${token}`,
@@ -41,7 +41,7 @@ async function readRemote(
   token: string,
 ): Promise<{ text: string | null; sha: string | null }> {
   const response = await fetchImpl(`${CONTENTS}?ref=${GITHUB_WEB.branch}`, {
-    headers: headers(token, false),
+    headers: githubApiHeaders(token, false),
     cache: 'no-store',
   })
   if (response.status === 404) return { text: null, sha: null }
@@ -60,7 +60,7 @@ async function putRemote(
 ): Promise<'ok' | 'conflict'> {
   const response = await fetchImpl(CONTENTS, {
     method: 'PUT',
-    headers: headers(token, true),
+    headers: githubApiHeaders(token, true),
     body: JSON.stringify({
       message: WEB_COMMIT_MESSAGE,
       content: toBase64(new TextEncoder().encode(text)),
