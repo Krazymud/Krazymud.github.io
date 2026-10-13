@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { decryptBytes, encryptBytes } from './crypto'
 import { createKeyStore } from './keyStore'
 import { emptyWebDoc, type WebDoc } from './web'
-import { createWebStore, loadPendingDoc } from './webStore'
+import { createWebStore, loadPendingDoc, loadSyncedDoc } from './webStore'
 
 describe('createWebStore', () => {
   it('is unavailable without IndexedDB', () => {
@@ -40,15 +40,18 @@ describe('createWebStore', () => {
     const sealed = await encryptBytes(saved!, new Uint8Array([7]))
     await webs.saveToken('github-token')
     await webs.savePending('{"version":1,"sealed":"abc"}')
+    await webs.saveSynced('{"version":1,"sealed":"synced"}')
     await keys.clear()
 
     expect(await keys.load()).toBeNull()
     expect(await webs.loadToken()).toBe('github-token')
     expect(await webs.loadPending()).toBe('{"version":1,"sealed":"abc"}')
+    expect(await webs.loadSynced()).toBe('{"version":1,"sealed":"synced"}')
     expect(await decryptBytes(saved!, sealed)).toEqual(new Uint8Array([7]))
     await webs.forgetToken()
     expect(await webs.loadToken()).toBeNull()
     expect(await webs.loadPending()).toBe('{"version":1,"sealed":"abc"}')
+    expect(await webs.loadSynced()).toBe('{"version":1,"sealed":"synced"}')
   })
 
   it('drops a pending document it cannot open and does not upload it', async () => {
@@ -67,5 +70,22 @@ describe('createWebStore', () => {
     const opened = await loadPendingDoc(store, async () => emptyWebDoc())
     expect(opened).toEqual(emptyWebDoc())
     expect(await store.loadPending()).toBe('sealed-text')
+  })
+
+  it('drops a synced document it cannot open and leaves the pending copy', async () => {
+    const store = createWebStore(new IDBFactory())!
+    await store.saveSynced('not-a-vault-file')
+    await store.savePending('sealed-pending')
+    const doc = await loadSyncedDoc(store, async () => {
+      throw new Error('bad')
+    })
+    expect(doc).toBeNull()
+    expect(await store.loadSynced()).toBeNull()
+    expect(await store.loadPending()).toBe('sealed-pending')
+
+    await store.saveSynced('sealed-text')
+    const opened = await loadSyncedDoc(store, async () => emptyWebDoc())
+    expect(opened).toEqual(emptyWebDoc())
+    expect(await store.loadSynced()).toBe('sealed-text')
   })
 })

@@ -19,7 +19,7 @@ import {
   type WebList,
   type WebNote,
 } from './web'
-import { loadPendingDoc, type WebStore } from './webStore'
+import { loadPendingDoc, loadSyncedDoc, type WebStore } from './webStore'
 
 interface NoteDraft {
   id?: string
@@ -113,6 +113,7 @@ export function useWebVault(options: {
       const gen = persistGen.current
       const cleared = persistTail.current.then(async () => {
         if (!alive.current || docRef.current !== next || persistGen.current !== gen) return false
+        await current.saveSynced(result.text)
         await current.clearPending()
         return alive.current && docRef.current === next && persistGen.current === gen
       })
@@ -171,7 +172,10 @@ export function useWebVault(options: {
       const current = store
       const savedToken = current ? await current.loadToken() : null
       if (generation.current !== id) return
-      const pendingDoc = current ? await loadPendingDoc(current, (text) => openWebFile(dek, text)) : null
+      const open = (text: string) => openWebFile(dek, text)
+      const pendingDoc = current ? await loadPendingDoc(current, open) : null
+      if (generation.current !== id) return
+      const syncedDoc = current ? await loadSyncedDoc(current, open) : null
       if (generation.current !== id) return
       let remote: WebDoc | null = null
       let broken = false
@@ -203,7 +207,9 @@ export function useWebVault(options: {
         setPhase('broken')
         return
       }
-      const view = pendingDoc ? mergeWebDocs(remote ?? emptyWebDoc(), pendingDoc) : (remote ?? emptyWebDoc())
+      const siteDoc = remote ?? emptyWebDoc()
+      const remembered = syncedDoc ? mergeWebDocs(siteDoc, syncedDoc) : siteDoc
+      const view = pendingDoc ? mergeWebDocs(remembered, pendingDoc) : remembered
       docRef.current = view
       setDoc(view)
       setPhase('ready')

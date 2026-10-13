@@ -82,6 +82,13 @@ describe('VaultContent web sync', () => {
     const doc = await openWebFile(session.dek, new TextDecoder().decode(Uint8Array.from(atob(body.content), (char) => char.charCodeAt(0))))
     expect(doc.notes[0]).toMatchObject({ id: 'note-1', title: '网页日记', date: '2026-10-13' })
     await waitFor(async () => expect(await store.loadPending()).toBeNull())
+    const synced = await store.loadSynced()
+    expect(synced).not.toBeNull()
+    expect((await openWebFile(session.dek, synced!)).notes[0]).toMatchObject({
+      id: 'note-1',
+      title: '网页日记',
+      date: '2026-10-13',
+    })
     expect(screen.queryByLabelText('今日回忆')).not.toBeInTheDocument()
   })
 
@@ -282,5 +289,61 @@ describe('VaultContent web sync', () => {
     expect(screen.getByRole('button', { name: '新笔记' })).toBeDisabled()
     await waitFor(async () => expect(await store.loadToken()).toBeNull())
     expect(await store.loadPending()).toBeNull()
+  })
+
+  it('shows both items from a newer synced list when the site list is stale', async () => {
+    const siteDoc: WebDoc = {
+      ...emptyWebDoc(),
+      lists: [{ id: 'list-1', title: '出行', items: [{ id: 'a', text: '只有旧的', done: false }], updatedAt: 1 }],
+    }
+    const synced: WebDoc = {
+      ...emptyWebDoc(),
+      lists: [
+        {
+          id: 'list-1',
+          title: '出行',
+          items: [
+            { id: 'a', text: '第一项', done: false },
+            { id: 'b', text: '第二项', done: false },
+          ],
+          updatedAt: 2,
+        },
+      ],
+    }
+    site = new TextEncoder().encode(await sealWebFile(session.dek, siteDoc))
+    await store.saveSynced(await sealWebFile(session.dek, synced))
+    renderVault()
+    fireEvent.click(await screen.findByRole('tab', { name: '清单' }))
+    fireEvent.click(await screen.findByRole('button', { name: /出行/ }))
+    expect(await screen.findByText('第一项')).toBeInTheDocument()
+    expect(screen.getByText('第二项')).toBeInTheDocument()
+    expect(screen.queryByText('只有旧的')).not.toBeInTheDocument()
+    expect(webFetch).not.toHaveBeenCalled()
+  })
+
+  it('shows the site note title when that note is newer than the synced copy', async () => {
+    const siteDoc: WebDoc = {
+      ...emptyWebDoc(),
+      notes: [{ id: 'n1', title: '站点标题', date: '2026-10-13', body: '', updatedAt: 10 }],
+    }
+    const synced: WebDoc = {
+      ...emptyWebDoc(),
+      notes: [{ id: 'n1', title: '旧标题', date: '2026-10-13', body: '', updatedAt: 4 }],
+    }
+    site = new TextEncoder().encode(await sealWebFile(session.dek, siteDoc))
+    await store.saveSynced(await sealWebFile(session.dek, synced))
+    renderVault()
+    fireEvent.click(await screen.findByRole('tab', { name: '笔记' }))
+    expect(await screen.findByText('站点标题')).toBeInTheDocument()
+    expect(screen.queryByText('旧标题')).not.toBeInTheDocument()
+  })
+
+  it('removes an undecryptable synced value and still renders', async () => {
+    await store.saveSynced('not-a-vault-file')
+    renderVault()
+    await waitFor(() => expect(screen.getByRole('button', { name: '保存令牌' })).toBeEnabled())
+    expect(screen.getByText('PRIVATE VAULT')).toBeInTheDocument()
+    expect(screen.queryByText('网页上的笔记打不开')).not.toBeInTheDocument()
+    expect(await store.loadSynced()).toBeNull()
   })
 })

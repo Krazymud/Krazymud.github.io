@@ -8,11 +8,15 @@ export interface WebStore {
   loadPending(): Promise<string | null>
   savePending(text: string): Promise<void>
   clearPending(): Promise<void>
+  loadSynced(): Promise<string | null>
+  saveSynced(text: string): Promise<void>
+  clearSynced(): Promise<void>
 }
 
 const STORE = 'vault-web'
 const TOKEN = 'token'
 const PENDING = 'pending'
+const SYNCED = 'synced'
 
 function settle<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -53,6 +57,9 @@ export function createWebStore(factory: IDBFactory | null): WebStore | null {
     loadPending: () => get(PENDING),
     savePending: (text) => run('readwrite', (store) => store.put(text, PENDING)).then(() => undefined),
     clearPending: () => run('readwrite', (store) => store.delete(PENDING)).then(() => undefined),
+    loadSynced: () => get(SYNCED),
+    saveSynced: (text) => run('readwrite', (store) => store.put(text, SYNCED)).then(() => undefined),
+    clearSynced: () => run('readwrite', (store) => store.delete(SYNCED)).then(() => undefined),
   }
 }
 
@@ -60,13 +67,25 @@ export function defaultWebStore(): WebStore | null {
   return createWebStore(typeof indexedDB === 'undefined' ? null : indexedDB)
 }
 
-export async function loadPendingDoc(store: WebStore, open: (text: string) => Promise<WebDoc>): Promise<WebDoc | null> {
-  const text = await store.loadPending()
+async function loadStoredDoc(
+  load: () => Promise<string | null>,
+  clear: () => Promise<void>,
+  open: (text: string) => Promise<WebDoc>,
+): Promise<WebDoc | null> {
+  const text = await load()
   if (text === null) return null
   try {
     return await open(text)
   } catch {
-    await store.clearPending()
+    await clear()
     return null
   }
+}
+
+export function loadPendingDoc(store: WebStore, open: (text: string) => Promise<WebDoc>): Promise<WebDoc | null> {
+  return loadStoredDoc(() => store.loadPending(), () => store.clearPending(), open)
+}
+
+export function loadSyncedDoc(store: WebStore, open: (text: string) => Promise<WebDoc>): Promise<WebDoc | null> {
+  return loadStoredDoc(() => store.loadSynced(), () => store.clearSynced(), open)
 }
