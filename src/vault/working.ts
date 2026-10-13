@@ -8,7 +8,7 @@ import {
   type VaultKey,
 } from './crypto.ts'
 import { isRealDate } from './web.ts'
-import type { ListContent, ListEntry, ListItem, NoteEntry, VaultManifest } from './types.ts'
+import type { ListContent, ListEntry, ListItem, NoteEntry, PhotoEntry, VaultFile, VaultManifest } from './types.ts'
 
 export type Tombstone = { source: string; updatedAt: number }
 
@@ -44,6 +44,10 @@ export function webNoteSource(uuid: string): string {
 
 export function webListSource(uuid: string): string {
   return `web/lists/${uuid}`
+}
+
+export function webPhotoSource(uuid: string): string {
+  return `web/photos/${uuid}`
 }
 
 export function emptyWorking(manifest: VaultManifest): WorkingVault {
@@ -294,6 +298,77 @@ export function deleteList(working: WorkingVault, source: string, now: number): 
       lists: addTombstone(working.tombstones.lists, source, now),
     },
     dirtyBlobs: { ...working.dirtyBlobs },
+  }
+}
+
+export async function addPhoto(
+  working: WorkingVault,
+  input: {
+    caption: string
+    date: string
+    full: Uint8Array
+    thumb: Uint8Array
+    width: number
+    height: number
+  },
+  clock: { now(): number; uuid(): string },
+  dek: VaultKey,
+): Promise<WorkingVault> {
+  if (!isRealDate(input.date)) throw new WorkingValidationError('date')
+
+  const source = webPhotoSource(clock.uuid())
+  const hash = await sha256Hex(input.full)
+  const fullBlob = randomBlobName()
+  const thumbBlob = randomBlobName()
+  const sealedFull = await encryptBytes(dek, input.full)
+  const sealedThumb = await encryptBytes(dek, input.thumb)
+  const entry: PhotoEntry = {
+    caption: input.caption.trim(),
+    date: input.date,
+    width: input.width,
+    height: input.height,
+    thumb: thumbBlob,
+    full: fullBlob,
+    source,
+    hash,
+  }
+
+  return {
+    manifest: {
+      ...working.manifest,
+      photos: [...working.manifest.photos, entry],
+    },
+    updatedAt: { ...working.updatedAt, [source]: clock.now() },
+    tombstones: { ...working.tombstones, photos: removeTombstone(working.tombstones.photos, source) },
+    dirtyBlobs: { ...working.dirtyBlobs, [fullBlob]: sealedFull, [thumbBlob]: sealedThumb },
+  }
+}
+
+export function deletePhoto(working: WorkingVault, source: string, now: number): WorkingVault {
+  return {
+    manifest: {
+      ...working.manifest,
+      photos: working.manifest.photos.filter((item) => item.source !== source),
+    },
+    updatedAt: { ...working.updatedAt, [source]: now },
+    tombstones: {
+      ...working.tombstones,
+      photos: addTombstone(working.tombstones.photos, source, now),
+    },
+    dirtyBlobs: { ...working.dirtyBlobs },
+  }
+}
+
+export async function sealVaultFile(
+  dek: VaultKey,
+  working: WorkingVault,
+  previous: VaultFile,
+): Promise<VaultFile> {
+  return {
+    version: previous.version,
+    kdf: previous.kdf,
+    wrappedKey: previous.wrappedKey,
+    manifest: await encryptJson(dek, working.manifest),
   }
 }
 
