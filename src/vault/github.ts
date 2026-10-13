@@ -36,7 +36,7 @@ function decodeContent(content: string): string {
   return new TextDecoder().decode(fromBase64(content.replace(/\s/g, '')))
 }
 
-async function readRemote(
+export async function readRemote(
   fetchImpl: typeof fetch,
   token: string,
 ): Promise<{ text: string | null; sha: string | null }> {

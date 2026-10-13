@@ -7,7 +7,7 @@ import {
   toBase64,
   type VaultKey,
 } from './crypto.ts'
-import { isRealDate } from './web.ts'
+import { isRealDate, type WebDoc } from './web.ts'
 import type { ListContent, ListEntry, ListItem, NoteEntry, PhotoEntry, VaultFile, VaultManifest } from './types.ts'
 
 export type Tombstone = { source: string; updatedAt: number }
@@ -452,4 +452,79 @@ export async function openWorking(dek: VaultKey, text: string): Promise<WorkingV
     tombstones: payload.tombstones ?? { notes: [], lists: [], photos: [] },
     dirtyBlobs,
   }
+}
+
+export async function absorbWebDoc(
+  working: WorkingVault,
+  webDoc: WebDoc,
+  dek: VaultKey,
+  clock: { now(): number; uuid(): string },
+  loadBlob?: (name: string) => Promise<Uint8Array | null>,
+): Promise<WorkingVault> {
+  let next = working
+  const known = (source: string) => Math.max(next.updatedAt[source] ?? 0, ...next.tombstones.notes.concat(next.tombstones.lists).filter((t) => t.source === source).map((t) => t.updatedAt))
+  const at = (updatedAt: number) => ({ now: () => updatedAt, uuid: clock.uuid })
+
+  for (const tomb of webDoc.tombstones.notes) {
+    const source = webNoteSource(tomb.id)
+    if (tomb.updatedAt > known(source)) next = deleteNote(next, source, tomb.updatedAt)
+  }
+  for (const tomb of webDoc.tombstones.lists) {
+    const source = webListSource(tomb.id)
+    if (tomb.updatedAt > known(source)) next = deleteList(next, source, tomb.updatedAt)
+  }
+
+  for (const note of webDoc.notes) {
+    const source = webNoteSource(note.id)
+    if (note.updatedAt <= known(source)) continue
+    try {
+      next = await saveNote(next, { source, title: note.title, date: note.date, body: note.body }, at(note.updatedAt), dek)
+    } catch (error) {
+      if (!(error instanceof WorkingValidationError)) throw error
+    }
+  }
+  for (const list of webDoc.lists) {
+    const source = webListSource(list.id)
+    if (list.updatedAt <= known(source)) continue
+    try {
+      next = await saveList(
+        next,
+        { source, title: list.title, items: list.items.map((item) => ({ text: item.text, done: item.done })) },
+        at(list.updatedAt),
+        dek,
+      )
+    } catch (error) {
+      if (!(error instanceof WorkingValidationError)) throw error
+    }
+  }
+
+  for (const [source, items] of Object.entries(webDoc.checks)) {
+    const entry = next.manifest.lists.find((item) => item.source === source)
+    if (!entry) continue
+    const sealed = next.dirtyBlobs[entry.blob] ?? (await loadBlob?.(entry.blob)) ?? null
+    if (!sealed) throw new WorkingBlobError()
+    const content = JSON.parse(new TextDecoder().decode(await decryptBytes(dek, sealed))) as ListContent
+    let latest = 0
+    let changed = false
+    const listItems = content.items.map((item) => ({ ...item }))
+    for (const [key, check] of Object.entries(items)) {
+      const index = Number(key)
+      if (!Number.isInteger(index) || index < 0 || index >= listItems.length) continue
+      if (check.updatedAt <= (next.updatedAt[source] ?? 0)) continue
+      listItems[index].done = check.done
+      latest = Math.max(latest, check.updatedAt)
+      changed = true
+    }
+    if (!changed) continue
+    const plain = encoder.encode(JSON.stringify({ items: listItems } satisfies ListContent))
+    const blob = randomBlobName()
+    const nextEntry: ListEntry = { ...entry, blob, hash: await sha256Hex(plain) }
+    next = {
+      ...next,
+      manifest: { ...next.manifest, lists: next.manifest.lists.map((item) => (item.source === source ? nextEntry : item)) },
+      updatedAt: { ...next.updatedAt, [source]: latest },
+      dirtyBlobs: { ...next.dirtyBlobs, [blob]: await encryptBytes(dek, plain) },
+    }
+  }
+  return next
 }

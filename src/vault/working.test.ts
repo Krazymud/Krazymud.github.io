@@ -1,9 +1,10 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { generateDek } from './crypto'
+import { decryptBytes, encryptBytes, generateDek } from './crypto'
 import { unlockWithKey } from './repo'
 import { makeTestVault } from './testVault'
 import {
+  absorbWebDoc,
   addPhoto,
   deletePhoto,
   emptyWorking,
@@ -15,6 +16,7 @@ import {
   webPhotoSource,
 } from './working'
 import type { VaultManifest } from './types'
+import type { WebDoc } from './web'
 
 const baseManifest = (): VaultManifest => ({
   photos: [],
@@ -142,5 +144,77 @@ describe('sealVaultFile', () => {
     const roundTrip = await unlockWithKey(sealed, vault.dek)
     expect(roundTrip.manifest.notes).toHaveLength(2)
     expect(roundTrip.manifest.notes.some((n) => n.title === '新')).toBe(true)
+  })
+})
+
+describe('absorbWebDoc', () => {
+  const doc = (): WebDoc => ({
+    notes: [{ id: 'n1', title: '网页笔记', date: '2024-06-01', body: '正文', updatedAt: 50 }],
+    lists: [
+      {
+        id: 'l1',
+        title: '网页清单',
+        items: [
+          { id: 'i1', text: '甲', done: true },
+          { id: 'i2', text: '乙', done: false },
+        ],
+        updatedAt: 60,
+      },
+    ],
+    checks: {},
+    tombstones: { notes: [{ id: 'gone', updatedAt: 70 }], lists: [] },
+  })
+  const clock = { now: () => 999, uuid: () => 'x' }
+
+  it('turns web notes and lists into web/ sources with their own timestamps', async () => {
+    const dek = await generateDek()
+    const next = await absorbWebDoc(emptyWorking(baseManifest()), doc(), dek, clock)
+    const note = next.manifest.notes.find((n) => n.source === 'web/notes/n1')
+    const list = next.manifest.lists.find((l) => l.source === 'web/lists/l1')
+    expect(note?.title).toBe('网页笔记')
+    expect(next.updatedAt['web/notes/n1']).toBe(50)
+    expect(list?.title).toBe('网页清单')
+    const plain = await decryptBytes(dek, next.dirtyBlobs[list!.blob])
+    expect(JSON.parse(new TextDecoder().decode(plain))).toEqual({
+      items: [
+        { text: '甲', done: true },
+        { text: '乙', done: false },
+      ],
+    })
+    expect(next.tombstones.notes).toEqual([{ source: 'web/notes/gone', updatedAt: 70 }])
+  })
+
+  it('keeps a newer working record over the web copy', async () => {
+    const dek = await generateDek()
+    const first = await absorbWebDoc(emptyWorking(baseManifest()), doc(), dek, clock)
+    const edited = await saveNote(
+      first,
+      { source: 'web/notes/n1', title: '更新', date: '2024-06-01', body: 'b' },
+      { now: () => 500, uuid: () => 'u' },
+      dek,
+    )
+    const again = await absorbWebDoc(edited, doc(), dek, clock)
+    expect(again.manifest.notes.find((n) => n.source === 'web/notes/n1')?.title).toBe('更新')
+  })
+
+  it('writes checks into a published list blob by index', async () => {
+    const dek = await generateDek()
+    const sealed = await encryptBytes(dek, new TextEncoder().encode(JSON.stringify({ items: [{ text: 'a', done: false }, { text: 'b', done: false }] })))
+    const manifest: VaultManifest = {
+      photos: [],
+      notes: [],
+      lists: [{ title: '清单', blob: 'lb', source: 'lists/a.md', hash: 'h' }],
+    }
+    const web = doc()
+    web.checks = { 'lists/a.md': { '1': { done: true, updatedAt: 80 }, '9': { done: true, updatedAt: 80 } } }
+    const next = await absorbWebDoc(emptyWorking(manifest), web, dek, clock, async (name) => (name === 'lb' ? sealed : null))
+    const entry = next.manifest.lists.find((l) => l.source === 'lists/a.md')!
+    expect(entry.blob).not.toBe('lb')
+    expect(next.updatedAt['lists/a.md']).toBe(80)
+    const plain = await decryptBytes(dek, next.dirtyBlobs[entry.blob])
+    expect(JSON.parse(new TextDecoder().decode(plain)).items).toEqual([
+      { text: 'a', done: false },
+      { text: 'b', done: true },
+    ])
   })
 })

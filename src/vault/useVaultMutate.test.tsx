@@ -9,6 +9,7 @@ import { makeTestVault, type TestVault } from './testVault'
 import type { ListContent, VaultFile, VaultManifest } from './types'
 import { useVaultMutate } from './useVaultMutate'
 import { emptyWorking, openWorking, saveNote, sealWorking, sealVaultFile } from './working'
+import { sealWebFile, type WebDoc } from './web'
 import { createWebStore, type WebStore } from './webStore'
 
 vi.mock('./gitVault', async (importOriginal) => ({
@@ -16,11 +17,13 @@ vi.mock('./gitVault', async (importOriginal) => ({
   commitVaultUpdate: vi.fn(),
   readVaultFile: vi.fn(),
   readBlobFile: vi.fn(),
+  readWebFileText: vi.fn(),
 }))
 
 const commitVaultUpdate = vi.mocked(gitVault.commitVaultUpdate)
 const readVaultFile = vi.mocked(gitVault.readVaultFile)
 const readBlobFile = vi.mocked(gitVault.readBlobFile)
+const readWebFileText = vi.mocked(gitVault.readWebFileText)
 
 type Commit = Parameters<typeof gitVault.commitVaultUpdate>[0]
 
@@ -118,6 +121,8 @@ beforeEach(async () => {
   commitVaultUpdate.mockReset()
   readVaultFile.mockReset()
   readBlobFile.mockReset()
+  readWebFileText.mockReset()
+  readWebFileText.mockResolvedValue(null)
   readVaultFile.mockResolvedValue(vault.file)
   commitVaultUpdate.mockResolvedValue(undefined)
 })
@@ -461,5 +466,38 @@ describe('useVaultMutate', () => {
     expect(commitVaultUpdate).not.toHaveBeenCalled()
     expect(screen.queryByRole('alert')).toBeNull()
     expect(await store.loadVaultPending()).toBeNull()
+  })
+
+  it('absorbs web.json into the vault, deletes it on commit, and clears old web pending keys', async () => {
+    const doc: WebDoc = {
+      notes: [{ id: 'n1', title: '网页笔记', date: '2024-06-01', body: '正文', updatedAt: 50 }],
+      lists: [],
+      checks: {},
+      tombstones: { notes: [], lists: [] },
+    }
+    readWebFileText.mockResolvedValue(await sealWebFile(vault.dek, doc))
+    await store.savePending(await sealWebFile(vault.dek, doc))
+    await store.saveSynced(await sealWebFile(vault.dek, doc))
+
+    mount()
+
+    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.queryByText(SYNCING)).toBeNull())
+    const call = commitVaultUpdate.mock.calls[0][0]
+    expect(call.deleteWebJson).toBe(true)
+    const sent = await committedManifest(call)
+    expect(sent.notes.find((n) => n.source === 'web/notes/n1')?.title).toBe('网页笔记')
+    expect(screen.getByText('网页笔记')).toBeInTheDocument()
+    expect(await store.loadPending()).toBeNull()
+    expect(await store.loadSynced()).toBeNull()
+  })
+
+  it('does not delete web.json when none exists', async () => {
+    mount()
+    await ready()
+    await waitFor(() => expect(saveButton()).toBeEnabled())
+    fireEvent.click(saveButton())
+    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    expect(commitVaultUpdate.mock.calls[0][0].deleteWebJson).toBeUndefined()
   })
 })

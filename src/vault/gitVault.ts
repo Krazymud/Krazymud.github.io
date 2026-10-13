@@ -1,5 +1,5 @@
 import { fromBase64, toBase64 } from './crypto'
-import { GITHUB_WEB, GitHubWriteError, SYNC_PENDING, TOKEN_DENIED, githubApiHeaders } from './github'
+import { GITHUB_WEB, GitHubWriteError, SYNC_PENDING, TOKEN_DENIED, githubApiHeaders, readRemote } from './github'
 import type { VaultFile } from './types'
 
 export const VAULT_JSON_PATH = 'public/vault/vault.json'
@@ -48,6 +48,10 @@ export async function readVaultFile(fetchImpl: typeof fetch, token: string): Pro
   if (!body.content) throw new GitHubWriteError(SYNC_PENDING)
   const text = new TextDecoder().decode(decodeContent(body.content))
   return JSON.parse(text) as VaultFile
+}
+
+export async function readWebFileText(fetchImpl: typeof fetch, token: string): Promise<string | null> {
+  return (await readRemote(fetchImpl, token)).text
 }
 
 export async function readBlobFile(

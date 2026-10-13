@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { decryptJson, type VaultKey } from './crypto'
 import { GitHubWriteError, SYNC_PENDING, TOKEN_DENIED } from './github'
-import { commitVaultUpdate, GitHubRefNotFastForwardError, readBlobFile, readVaultFile } from './gitVault'
+import { commitVaultUpdate, GitHubRefNotFastForwardError, readBlobFile, readVaultFile, readWebFileText } from './gitVault'
 import type { FetchBytes } from './repo'
 import type { VaultFile, VaultManifest } from './types'
-import type { WebStore } from './webStore'
+import { loadPendingDoc, type WebStore } from './webStore'
+import { openWebFile, mergeWebDocs, type WebDoc } from './web'
 import {
+  absorbWebDoc,
   addPhoto as addWorkingPhoto,
   deleteList as deleteWorkingList,
   deleteNote as deleteWorkingNote,
@@ -35,11 +37,6 @@ export type MutateResult = { ok: true } | { ok: false; reason: 'title' | 'date' 
 type Phase = 'loading' | 'ready'
 
 type Apply = (working: WorkingVault) => Promise<WorkingVault>
-
-// TODO(Task 6): fold a readable remote or pending web.json into the working vault and delete it on commit.
-async function migrateWebDoc(working: WorkingVault): Promise<WorkingVault> {
-  return working
-}
 
 function isDenied(error: unknown): boolean {
   return error instanceof GitHubWriteError && error.message === TOKEN_DENIED
@@ -96,6 +93,7 @@ export function useVaultMutate(options: {
   const phaseRef = useRef<Phase>('loading')
   const tokenRef = useRef<string | null>(null)
   const syncingRef = useRef(false)
+  const webJsonRef = useRef(false)
   const unsyncedRef = useRef(false)
   const depth = useRef(0)
   const tail = useRef(Promise.resolve())
@@ -175,9 +173,19 @@ export function useVaultMutate(options: {
           message: VAULT_COMMIT_MESSAGE,
           vaultFile,
           blobs: referencedBlobs(local),
+          ...(webJsonRef.current ? { deleteWebJson: true } : {}),
         })
         fileRef.current = vaultFile
         freshRef.current = true
+        if (webJsonRef.current) {
+          webJsonRef.current = false
+          try {
+            await storeRef.current?.clearPending()
+            await storeRef.current?.clearSynced()
+          } catch {
+            // Absorbing the same web.json again later is harmless.
+          }
+        }
         return emptyWorking(local.manifest)
       } catch (error) {
         if (!(error instanceof GitHubRefNotFastForwardError)) throw error
@@ -310,7 +318,31 @@ export function useVaultMutate(options: {
 
       let next = emptyWorking(latestManifest)
       if (pending) next = mergeWorking(next, onlyEdits(pending))
-      next = await migrateWebDoc(next)
+      let migrated = false
+      if (savedToken) {
+        try {
+          const remoteText = await readWebFileText(fetchRef.current, savedToken)
+          let webDoc: WebDoc | null = null
+          if (remoteText !== null) webDoc = await openWebFile(dek, remoteText)
+          if (current) {
+            const old = await loadPendingDoc(current, (text) => openWebFile(dek, text))
+            if (old) webDoc = webDoc ? mergeWebDocs(webDoc, old) : old
+          }
+          if (webDoc !== null) {
+            next = await absorbWebDoc(next, webDoc, dek, clockRef.current, async (name) => {
+              try {
+                return await readBlobFile(fetchRef.current, savedToken, name)
+              } catch {
+                return null
+              }
+            })
+            migrated = true
+            webJsonRef.current = remoteText !== null
+          }
+        } catch {
+          migrated = false
+        }
+      }
       if (generation.current !== id) return
 
       fileRef.current = latestFile
@@ -322,8 +354,9 @@ export function useVaultMutate(options: {
       setToken(savedToken)
       setTokenError(denied ? TOKEN_DENIED : null)
       setPhase('ready')
-      if (pending !== null) markUnsynced(true)
-      if (pending !== null && savedToken !== null) await exclusive(syncPending)
+      if (pending !== null || migrated) markUnsynced(true)
+      if (migrated) await persist(next)
+      if ((pending !== null || migrated) && savedToken !== null) await exclusive(syncPending)
     })()
     return () => {
       generation.current += 1
