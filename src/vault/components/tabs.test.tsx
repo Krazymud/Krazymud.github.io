@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { ListEntry, NoteEntry, PhotoEntry } from '../types'
-import type { WebNote } from '../web'
+import type { WebList, WebNote } from '../web'
 import type { ReadBlob } from '../useBlob'
 import { ListsTab } from './ListsTab'
 import { NotesTab } from './NotesTab'
@@ -192,5 +192,110 @@ describe('ListsTab', () => {
   it('marks a list that cannot be decrypted', async () => {
     render(<ListsTab lists={lists} read={reader({})} />)
     expect(await screen.findByText('这个清单打不开')).toBeInTheDocument()
+  })
+})
+
+const webList: WebList = {
+  id: 'wl1',
+  title: '网页清单',
+  items: [
+    { id: 'a', text: '第一件', done: false },
+    { id: 'b', text: '第二件', done: true },
+  ],
+  updatedAt: 1,
+}
+
+describe('web lists', () => {
+  it('checks a published row without offering edit or delete', async () => {
+    const onToggle = vi.fn()
+    render(
+      <ListsTab
+        lists={lists}
+        read={reader({ l1: listJson })}
+        canEdit
+        publishedDone={(_source, index, count, fallback) => (index >= count ? fallback : index === 0 ? false : fallback)}
+        onTogglePublished={onToggle}
+        onBeginCreate={() => undefined}
+      />,
+    )
+    expect(await screen.findByText('已完成 0 / 2')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /一起去的地方/ }))
+    const row = screen.getByRole('button', { name: /去看海/ })
+    expect(row).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(row)
+    expect(onToggle).toHaveBeenCalledWith('lists/a.md', 0, true)
+    expect(screen.queryByRole('button', { name: '编辑' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '删除' })).not.toBeInTheDocument()
+  })
+
+  it('disables published checks when editing is off', async () => {
+    render(
+      <ListsTab
+        lists={lists}
+        read={reader({ l1: listJson })}
+        canEdit={false}
+        onTogglePublished={() => undefined}
+        onBeginCreate={() => undefined}
+      />,
+    )
+    fireEvent.click(await screen.findByRole('button', { name: /一起去的地方/ }))
+    expect(screen.getByRole('button', { name: '新清单' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /去看海/ })).toBeDisabled()
+  })
+
+  it('edits a web list, drops a blank row, and confirms a whole-list delete', () => {
+    const onSave = vi.fn()
+    const onDelete = vi.fn()
+    const onToggle = vi.fn()
+    const { rerender } = render(
+      <ListsTab
+        lists={[]}
+        read={reader({})}
+        webLists={[webList]}
+        canEdit
+        onBeginCreate={() => undefined}
+        onBeginEdit={() => undefined}
+        onDelete={onDelete}
+        onToggleWeb={onToggle}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /网页清单/ }))
+    fireEvent.click(screen.getByRole('button', { name: /第二件/ }))
+    expect(onToggle).toHaveBeenCalledWith('wl1', 'b')
+    fireEvent.click(screen.getByRole('button', { name: '删除' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
+    expect(onDelete).toHaveBeenCalledWith('wl1')
+
+    rerender(
+      <ListsTab
+        lists={[]}
+        read={reader({})}
+        webLists={[]}
+        canEdit
+        formOpen
+        draft={{ title: '买菜', items: [{ text: '   ', done: false }, { id: 'a', text: '牛奶', done: false }] }}
+        onBeginCreate={() => undefined}
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: '加一条' }))
+    const rows = screen.getAllByRole('textbox')
+    fireEvent.change(rows[rows.length - 1], { target: { value: '面包' } })
+    fireEvent.click(screen.getAllByRole('button', { name: '删除' })[0])
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    expect(onSave).toHaveBeenCalledWith({
+      title: '买菜',
+      items: [
+        { id: 'a', text: '牛奶', done: false },
+        { text: '面包', done: false },
+      ],
+    })
+  })
+
+  it('says there are no lists when both collections are empty', () => {
+    render(<ListsTab lists={[]} read={reader({})} onBeginCreate={() => undefined} canEdit />)
+    expect(screen.getByText('还没有清单')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '新清单' })).toBeEnabled()
   })
 })
