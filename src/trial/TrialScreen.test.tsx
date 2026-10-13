@@ -61,13 +61,17 @@ describe('TrialScreen', () => {
     expect(saved().words.alpha).toMatchObject({ interval: 7, due: '2026-10-16', lastResult: 'good' })
   })
 
-  it('defaults a correct answer to ok after 4 seconds', async () => {
+  it('defaults a correct answer to ok after 5 seconds', async () => {
     renderTrial()
     await screen.findByRole('heading', { name: 'alpha' })
     fireEvent.click(options().find((b) => b.textContent?.includes('阿尔法'))!)
-    await screen.findByRole('button', { name: '还行' })
+    expect(screen.getByRole('button', { name: '还行' })).toBeInTheDocument()
     act(() => {
-      vi.advanceTimersByTime(4000)
+      vi.advanceTimersByTime(4999)
+    })
+    expect(screen.getByRole('heading', { name: 'alpha' })).toBeInTheDocument()
+    act(() => {
+      vi.advanceTimersByTime(1)
     })
     await screen.findByRole('heading', { name: 'bravo' })
     expect(saved().words.alpha).toMatchObject({ interval: 3, lastResult: 'ok' })

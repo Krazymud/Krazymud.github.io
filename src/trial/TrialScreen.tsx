@@ -15,7 +15,7 @@ import { QuestionCard } from './components/QuestionCard'
 import { ResultPanel } from './components/ResultPanel'
 
 export const WRONG_DELAY_MS = 1500
-export const GRADE_TIMEOUT_MS = 4000
+export const GRADE_TIMEOUT_MS = 5000
 export const NITRO_COMBOS = [5, 10]
 
 interface TrialScreenProps {
