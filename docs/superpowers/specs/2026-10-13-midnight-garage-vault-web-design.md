@@ -3,6 +3,8 @@
 日期：2026-10-13
 状态：待审阅
 
+**部分约定已被 [`2026-10-13-midnight-garage-vault-mutate-design.md`](./2026-10-13-midnight-garage-vault-mutate-design.md) 取代**（网页可改已发布内容并写回 `public/vault/` blobs，不只 `web.json`）。
+
 上级文档：`docs/superpowers/specs/2026-10-09-midnight-garage-vault-design.md`。该文档把保险库定为只读；本文只增加网页上的笔记、清单和勾选，并让这些改动加密后提交回仓库。照片、口令、已发布正文的来源都不改。
 
 ## 1. 范围

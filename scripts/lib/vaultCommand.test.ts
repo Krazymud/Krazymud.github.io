@@ -18,7 +18,13 @@ import {
 } from '../../src/vault/crypto.ts'
 import type { VaultFile, VaultManifest } from '../../src/vault/types.ts'
 import { emptyWebDoc, openWebFile } from '../../src/vault/web.ts'
-import { runRekey, runVault, writeVaultFile, WrongPassphraseError } from './vaultCommand.ts'
+import {
+  runRekey,
+  runVault,
+  VAULT_PUBLISH_WEB_WARNING,
+  writeVaultFile,
+  WrongPassphraseError,
+} from './vaultCommand.ts'
 import { VaultError } from './vaultSource.ts'
 
 const rmFault = vi.hoisted(() => ({ fails: null as ((fileName: string) => boolean) | null }))
@@ -66,6 +72,12 @@ async function openAsBrowser(passphrase: string): Promise<VaultManifest> {
 }
 
 describe('runVault', () => {
+  it('logs a web-edit warning after publish', async () => {
+    const lines: string[] = []
+    await runVault({ sourceDir: src, outDir: out, passphrase: PASS, iterations: 1000, log: (line) => lines.push(line) })
+    expect(lines.at(-1)).toBe(VAULT_PUBLISH_WEB_WARNING)
+  })
+
   it('creates a vault the browser code can open', async () => {
     expect(await run()).toMatchObject({ photos: 1, notes: 1, lists: 1, written: 4, removed: 0 })
     const manifest = await openAsBrowser(PASS)

@@ -33,6 +33,9 @@ import { openWebFile, WebFileError, type WebDoc } from '../../src/vault/web.ts'
 export const VAULT_FILE = 'vault.json'
 export const BLOB_DIR = 'blobs'
 export const SIZE_WARNING_BYTES = 300 * 1024 * 1024
+/** Shown after a successful publish; stale vault-src can overwrite web-side blob edits. */
+export const VAULT_PUBLISH_WEB_WARNING =
+  '提示：网页上改过的已发布内容以 public/vault/ 为准；用过时 vault-src 重跑 npm run vault 可能覆盖这些改动。'
 
 const IGNORED_FILES = new Set(['.ds_store', 'thumbs.db', 'desktop.ini'])
 
@@ -200,6 +203,7 @@ export async function runVault(options: RunVaultOptions): Promise<RunVaultResult
 
   let totalBytes = (await stat(join(outDir, VAULT_FILE))).size
   for (const file of await readdir(blobDir)) totalBytes += (await stat(join(blobDir, file))).size
+  log(VAULT_PUBLISH_WEB_WARNING)
   return {
     photos: manifest.photos.length,
     notes: manifest.notes.length,
