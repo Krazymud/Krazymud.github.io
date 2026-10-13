@@ -73,4 +73,68 @@ describe('processVaultPhoto', () => {
     expect(result.thumb.byteLength).toBeGreaterThan(0)
     expect(result).toMatchObject({ width: 2000, height: 1500, date: '2026-10-13' })
   })
+
+  function stubBitmap() {
+    vi.mocked(exifr.parse).mockResolvedValue(undefined)
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => ({ width: 800, height: 600, close: vi.fn() })),
+    )
+  }
+
+  const PNG_BYTES = TINY_PNG.slice(0, 16)
+
+  it('keeps the PNG Safari returns when it cannot encode webp', async () => {
+    stubBitmap()
+    mockCanvasPipeline()
+    const toBlob = vi
+      .spyOn(HTMLCanvasElement.prototype, 'toBlob')
+      .mockImplementation((cb) => cb(new Blob([PNG_BYTES], { type: 'image/png' })))
+
+    const result = await processVaultPhoto(new File([TINY_PNG], 'p.png', { type: 'image/png' }))
+
+    expect(result.full).toEqual(PNG_BYTES)
+    expect(result.thumb).toEqual(PNG_BYTES)
+    expect(toBlob.mock.calls.map((c) => c[1])).toEqual(['image/webp', 'image/webp'])
+  })
+
+  it('re-encodes as PNG when webp encoding yields nothing', async () => {
+    stubBitmap()
+    mockCanvasPipeline()
+    const toBlob = vi
+      .spyOn(HTMLCanvasElement.prototype, 'toBlob')
+      .mockImplementation((cb, type) => cb(type === 'image/png' ? new Blob([PNG_BYTES], { type: 'image/png' }) : null))
+
+    const result = await processVaultPhoto(new File([TINY_PNG], 'p.png', { type: 'image/png' }))
+
+    expect(result.full).toEqual(PNG_BYTES)
+    expect(result.thumb).toEqual(PNG_BYTES)
+    expect(toBlob.mock.calls.map((c) => c[1])).toEqual(['image/webp', 'image/png', 'image/webp', 'image/png'])
+  })
+
+  it('re-encodes as PNG when the browser returns some other type for webp', async () => {
+    stubBitmap()
+    mockCanvasPipeline()
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((cb, type) =>
+      cb(
+        type === 'image/png'
+          ? new Blob([PNG_BYTES], { type: 'image/png' })
+          : new Blob([new Uint8Array([0xff, 0xd8])], { type: 'image/jpeg' }),
+      ),
+    )
+
+    const result = await processVaultPhoto(new File([TINY_PNG], 'p.png', { type: 'image/png' }))
+
+    expect(result.full).toEqual(PNG_BYTES)
+  })
+
+  it('rejects when neither webp nor PNG can be encoded', async () => {
+    stubBitmap()
+    mockCanvasPipeline()
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((cb) => cb(null))
+
+    await expect(
+      processVaultPhoto(new File([TINY_PNG], 'p.png', { type: 'image/png' })),
+    ).rejects.toBeInstanceOf(PhotoProcessError)
+  })
 })

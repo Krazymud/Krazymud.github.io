@@ -34,15 +34,18 @@ async function blobToBytes(blob: Blob): Promise<Uint8Array> {
   return new Uint8Array(await blob.arrayBuffer())
 }
 
-async function canvasToWebp(canvas: HTMLCanvasElement, quality: number): Promise<Uint8Array> {
-  const blob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (value) => (value ? resolve(value) : reject(new PhotoProcessError())),
-      'image/webp',
-      quality,
-    )
-  })
-  return blobToBytes(blob)
+function encodeCanvas(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob | null> {
+  return new Promise((resolve) => canvas.toBlob(resolve, type, quality))
+}
+
+// Safari cannot encode webp and hands back a PNG instead; any other miss is re-encoded as PNG.
+// Blob names carry no extension and useBlobUrl sniffs the bytes, so either format can be stored.
+async function canvasToImage(canvas: HTMLCanvasElement, quality: number): Promise<Uint8Array> {
+  const webp = await encodeCanvas(canvas, 'image/webp', quality)
+  if (webp && (webp.type === 'image/webp' || webp.type === 'image/png')) return blobToBytes(webp)
+  const png = await encodeCanvas(canvas, 'image/png')
+  if (!png || png.type !== 'image/png') throw new PhotoProcessError()
+  return blobToBytes(png)
 }
 
 function drawInside(ctx: CanvasRenderingContext2D, source: CanvasImageSource, width: number, height: number) {
@@ -135,7 +138,7 @@ export async function processVaultPhoto(
     const fullCtx = fullCanvas.getContext('2d')
     if (!fullCtx) throw new PhotoProcessError()
     drawInside(fullCtx, source, width, height)
-    const full = await canvasToWebp(fullCanvas, FULL_WEBP_QUALITY)
+    const full = await canvasToImage(fullCanvas, FULL_WEBP_QUALITY)
 
     const thumbCanvas = document.createElement('canvas')
     thumbCanvas.width = PHOTO_THUMB_EDGE
@@ -143,7 +146,7 @@ export async function processVaultPhoto(
     const thumbCtx = thumbCanvas.getContext('2d')
     if (!thumbCtx) throw new PhotoProcessError()
     drawCover(thumbCtx, source, srcWidth, srcHeight, PHOTO_THUMB_EDGE)
-    const thumb = await canvasToWebp(thumbCanvas, THUMB_WEBP_QUALITY)
+    const thumb = await canvasToImage(thumbCanvas, THUMB_WEBP_QUALITY)
 
     const date = await photoDate(bytes, now)
     return { full, thumb, width, height, date }
