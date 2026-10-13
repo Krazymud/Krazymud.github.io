@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import sharp from 'sharp'
@@ -10,12 +10,14 @@ import {
   decryptJson,
   deriveKek,
   encryptBytes,
+  encryptJson,
   newKdfParams,
   toBase64,
   unwrapDek,
   type VaultKey,
 } from '../../src/vault/crypto.ts'
 import type { VaultFile, VaultManifest } from '../../src/vault/types.ts'
+import { emptyWebDoc, openWebFile } from '../../src/vault/web.ts'
 import { runRekey, runVault, writeVaultFile, WrongPassphraseError } from './vaultCommand.ts'
 import { VaultError } from './vaultSource.ts'
 
@@ -152,6 +154,21 @@ describe('runVault', () => {
     await expect(run()).rejects.toThrow('不支持的图片格式：photos/b.gif')
     await expect(readFile(join(out, 'vault.json'))).rejects.toThrow()
   })
+
+  it('leaves web.json and web.json.bak bytes unchanged and out of the size', async () => {
+    await run()
+    const web = `{"version":1,"sealed":"${'a'.repeat(5000)}"}`
+    const bak = '{"version":1,"sealed":"bak"}'
+    await writeFile(join(out, 'web.json'), web)
+    await writeFile(join(out, 'web.json.bak'), bak)
+    const result = await run()
+    expect(await readFile(join(out, 'web.json'), 'utf8')).toBe(web)
+    expect(await readFile(join(out, 'web.json.bak'), 'utf8')).toBe(bak)
+    const vaultSize = (await stat(join(out, 'vault.json'))).size
+    let blobSize = 0
+    for (const name of await readdir(join(out, 'blobs'))) blobSize += (await stat(join(out, 'blobs', name))).size
+    expect(result.totalBytes).toBe(vaultSize + blobSize)
+  })
 })
 
 describe('writeVaultFile', () => {
@@ -266,5 +283,83 @@ describe('runRekey', () => {
     await expect(
       runRekey({ outDir: out, oldPassphrase: 'iceland aurora penguin goodbye', newPassphrase: NEW_PASS, iterations: 1000 }),
     ).rejects.toBeInstanceOf(WrongPassphraseError)
+  })
+
+  it('rekeys when there is no web.json', async () => {
+    await run()
+    await runRekey({ outDir: out, oldPassphrase: PASS, newPassphrase: NEW_PASS, iterations: 1000 })
+    const names = await readdir(out)
+    expect(names).not.toContain('web.json')
+    expect(names).not.toContain('web.json.bak')
+  })
+
+  it('re-encrypts web.json with the new data key and deletes a leftover bak', async () => {
+    await run()
+    const dek = (await openAsBrowserWithKey(PASS)).dek
+    const doc = emptyWebDoc()
+    doc.notes.push({ id: 'n1', title: '网页', date: '2026-10-13', body: '正文', updatedAt: 1 })
+    await writeFile(join(out, 'web.json'), JSON.stringify({ version: 1, sealed: await encryptJson(dek, doc) }))
+    await writeFile(join(out, 'web.json.bak'), 'leftover')
+    await runRekey({ outDir: out, oldPassphrase: PASS, newPassphrase: NEW_PASS, iterations: 1000 })
+    expect(await readdir(out)).not.toContain('web.json.bak')
+    const opened = await openWebFile((await openAsBrowserWithKey(NEW_PASS)).dek, await readFile(join(out, 'web.json'), 'utf8'))
+    expect(opened.notes).toEqual(doc.notes)
+    await expect(openWebFile(dek, await readFile(join(out, 'web.json'), 'utf8'))).rejects.toThrow('网页上的笔记打不开')
+  })
+
+  it('restores a readable bak before rekey when web.json cannot be opened', async () => {
+    await run()
+    const dek = (await openAsBrowserWithKey(PASS)).dek
+    const doc = emptyWebDoc()
+    doc.lists.push({ id: 'l1', title: '清单', items: [], updatedAt: 2 })
+    const bak = JSON.stringify({ version: 1, sealed: await encryptJson(dek, doc) })
+    await writeFile(join(out, 'web.json.bak'), bak)
+    await writeFile(join(out, 'web.json'), '{"version":1,"sealed":"not-valid"}')
+    await runRekey({ outDir: out, oldPassphrase: PASS, newPassphrase: NEW_PASS, iterations: 1000 })
+    const opened = await openWebFile((await openAsBrowserWithKey(NEW_PASS)).dek, await readFile(join(out, 'web.json'), 'utf8'))
+    expect(opened.lists[0].title).toBe('清单')
+    expect(await readdir(out)).not.toContain('web.json.bak')
+  })
+
+  it('restores a missing web.json from bak', async () => {
+    await run()
+    const dek = (await openAsBrowserWithKey(PASS)).dek
+    const doc = emptyWebDoc()
+    doc.notes.push({ id: 'n1', title: '从备份回来', date: '2026-10-13', body: '', updatedAt: 2 })
+    await writeFile(join(out, 'web.json.bak'), JSON.stringify({ version: 1, sealed: await encryptJson(dek, doc) }))
+    await runRekey({ outDir: out, oldPassphrase: PASS, newPassphrase: NEW_PASS, iterations: 1000 })
+    const opened = await openWebFile((await openAsBrowserWithKey(NEW_PASS)).dek, await readFile(join(out, 'web.json'), 'utf8'))
+    expect(opened.notes[0].title).toBe('从备份回来')
+    expect(await readdir(out)).not.toContain('web.json.bak')
+  })
+
+  it('writes nothing when web.json and its bak cannot be opened', async () => {
+    await run()
+    const beforeVault = await vaultText()
+    const beforeBlobs = await blobs()
+    const broken = '{"version":2,"sealed":"nope"}'
+    await writeFile(join(out, 'web.json'), broken)
+    await writeFile(join(out, 'web.json.bak'), 'also-broken')
+    await expect(runRekey({ outDir: out, oldPassphrase: PASS, newPassphrase: NEW_PASS, iterations: 1000 })).rejects.toThrow(
+      'web.json 已损坏，无法更换口令',
+    )
+    expect(await readFile(join(out, 'web.json'), 'utf8')).toBe(broken)
+    expect(await readFile(join(out, 'web.json.bak'), 'utf8')).toBe('also-broken')
+    expect(await vaultText()).toBe(beforeVault)
+    expect(await blobs()).toEqual(beforeBlobs)
+  })
+
+  it('restores web.json when vault.json cannot be written', async () => {
+    await run()
+    const dek = (await openAsBrowserWithKey(PASS)).dek
+    const original = JSON.stringify({ version: 1, sealed: await encryptJson(dek, emptyWebDoc()) })
+    await writeFile(join(out, 'web.json'), original)
+    const files = await blobs()
+    await mkdir(join(out, 'vault.json.tmp'))
+    await expect(runRekey({ outDir: out, oldPassphrase: PASS, newPassphrase: NEW_PASS, iterations: 1000 })).rejects.toThrow()
+    expect(await readFile(join(out, 'web.json'), 'utf8')).toBe(original)
+    expect(await readdir(out)).not.toContain('web.json.bak')
+    expect(await blobs()).toEqual(files)
+    expect((await openAsBrowser(PASS)).notes).toHaveLength(1)
   })
 })

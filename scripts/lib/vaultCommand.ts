@@ -28,6 +28,7 @@ import {
   sortLists,
   VaultError,
 } from './vaultSource.ts'
+import { openWebFile, WebFileError, type WebDoc } from '../../src/vault/web.ts'
 
 export const VAULT_FILE = 'vault.json'
 export const BLOB_DIR = 'blobs'
@@ -229,6 +230,52 @@ function renameBlobs(manifest: VaultManifest, names: Map<string, string>): Vault
   }
 }
 
+const WEB_FILE = 'web.json'
+const WEB_BAK = 'web.json.bak'
+const WEB_BROKEN = 'web.json 已损坏，无法更换口令'
+
+async function readOptional(path: string): Promise<string | null> {
+  if (!existsSync(path)) return null
+  return readFile(path, 'utf8')
+}
+
+async function moveOver(from: string, to: string): Promise<void> {
+  await rm(to, { force: true })
+  await rename(from, to)
+}
+
+async function prepareWebDoc(outDir: string, dek: VaultKey): Promise<{ doc: WebDoc; text: string } | null> {
+  const webPath = join(outDir, WEB_FILE)
+  const bakPath = join(outDir, WEB_BAK)
+  const webText = await readOptional(webPath)
+  const bakText = await readOptional(bakPath)
+  if (webText === null && bakText === null) return null
+
+  const opened = async (text: string | null): Promise<WebDoc | null> => {
+    if (text === null) return null
+    try {
+      return await openWebFile(dek, text)
+    } catch (error) {
+      if (error instanceof WebFileError) return null
+      if (error instanceof DOMException && error.name === 'InvalidCharacterError') return null
+      throw error
+    }
+  }
+
+  const webDoc = await opened(webText)
+  if (webDoc && webText !== null) {
+    if (bakText !== null) await rm(bakPath, { force: true })
+    return { doc: webDoc, text: webText }
+  }
+  const bakDoc = await opened(bakText)
+  if (bakDoc && bakText !== null) {
+    if (webText === null) await rename(bakPath, webPath)
+    else await moveOver(bakPath, webPath)
+    return { doc: bakDoc, text: bakText }
+  }
+  throw new VaultError(WEB_BROKEN)
+}
+
 // Order matters for crash safety: new blobs, then vault.json, then the old blobs.
 export async function runRekey(options: RunRekeyOptions): Promise<RunRekeyResult> {
   const { outDir } = options
@@ -237,10 +284,12 @@ export async function runRekey(options: RunRekeyOptions): Promise<RunRekeyResult
   const weak = checkPassphrase(options.newPassphrase)
   if (weak) throw new VaultError(weak)
   const { dek: oldDek, manifest } = await openVault(existing, options.oldPassphrase)
+  const prepared = await prepareWebDoc(outDir, oldDek)
 
   const dek = await generateDek()
   const blobDir = join(outDir, BLOB_DIR)
   const names = new Map<string, string>()
+  let moved = false
   try {
     for (const oldName of referencedBlobs(manifest)) {
       const oldPath = join(blobDir, `${oldName}.bin`)
@@ -257,6 +306,15 @@ export async function runRekey(options: RunRekeyOptions): Promise<RunRekeyResult
       await writeFile(join(blobDir, `${newName}.bin`), await encryptBytes(dek, plain))
     }
 
+    if (prepared) {
+      await moveOver(join(outDir, WEB_FILE), join(outDir, WEB_BAK))
+      moved = true
+      await writeFile(
+        join(outDir, WEB_FILE),
+        JSON.stringify({ version: 1, sealed: await encryptJson(dek, prepared.doc) }),
+      )
+    }
+
     const kdf = newKdfParams(options.iterations)
     await writeVaultFile(outDir, {
       version: 1,
@@ -265,13 +323,14 @@ export async function runRekey(options: RunRekeyOptions): Promise<RunRekeyResult
       manifest: await encryptJson(dek, renameBlobs(manifest, names)),
     })
   } catch (error) {
+    if (moved) await moveOver(join(outDir, WEB_BAK), join(outDir, WEB_FILE))
     for (const newName of names.values()) {
       await rm(join(blobDir, `${newName}.bin`), { force: true }).catch(() => undefined)
     }
     throw error
   }
 
-  // The rekey has succeeded at this point; leftovers are removed by the next `npm run vault`.
+  if (moved) await rm(join(outDir, WEB_BAK), { force: true }).catch(() => undefined)
   const undeleted: string[] = []
   for (const oldName of names.keys()) {
     await rm(join(blobDir, `${oldName}.bin`), { force: true }).catch(() => undeleted.push(`${BLOB_DIR}/${oldName}.bin`))
