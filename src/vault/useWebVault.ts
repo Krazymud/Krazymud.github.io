@@ -127,6 +127,11 @@ export function useWebVault(options: {
       setTokenError(null)
     } catch (error) {
       if (!alive.current) return
+      if (error instanceof WebFileError) {
+        brokenRef.current = true
+        setPhase('broken')
+        return
+      }
       markUnsynced(true)
       setTokenError(error instanceof GitHubWriteError && error.message === TOKEN_DENIED ? TOKEN_DENIED : null)
     }

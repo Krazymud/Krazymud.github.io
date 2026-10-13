@@ -278,6 +278,9 @@ async function prepareWebDoc(outDir: string, dek: VaultKey): Promise<{ doc: WebD
 // Order matters for crash safety: new blobs, then vault.json, then the old blobs.
 export async function runRekey(options: RunRekeyOptions): Promise<RunRekeyResult> {
   const { outDir } = options
+  if (existsSync(join(outDir, WEB_FILE))) {
+    process.stderr.write('web.json 可能落后于 master，请先 git pull\n')
+  }
   const existing = await readVaultFile(outDir)
   if (!existing) throw new VaultError('还没有保险库，先运行 npm run vault')
   const weak = checkPassphrase(options.newPassphrase)

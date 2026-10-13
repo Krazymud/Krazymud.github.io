@@ -92,9 +92,33 @@ describe('VaultContent web sync', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: '保存令牌' })).toBeEnabled())
     fireEvent.change(screen.getByLabelText('令牌'), { target: { value: 'token-1' } })
     fireEvent.click(screen.getByRole('button', { name: '保存令牌' }))
+    expect(await screen.findByRole('button', { name: '忘记令牌' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('tab', { name: '笔记' }))
     expect(screen.getByRole('button', { name: '新笔记' })).toBeDisabled()
     expect(webFetch).not.toHaveBeenCalled()
+  })
+
+  it('stops editing when GitHub returns a file the current key cannot open', async () => {
+    await store.saveToken('token-1')
+    const text = '{"version":2,"sealed":"nope"}'
+    github((method) =>
+      new Response(JSON.stringify(method === 'GET' ? { sha: 'stale', content: btoa(text) } : {}), {
+        status: method === 'PUT' ? 201 : 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    renderVault()
+    fireEvent.click(await screen.findByRole('tab', { name: '笔记' }))
+    const create = await screen.findByRole('button', { name: '新笔记' })
+    await waitFor(() => expect(create).toBeEnabled())
+    fireEvent.click(create)
+    fireEvent.change(screen.getByRole('textbox', { name: '标题' }), { target: { value: '打不开' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    expect(await screen.findByText('网页上的笔记打不开')).toBeInTheDocument()
+    expect(screen.getByText('打不开')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '新笔记' })).toBeDisabled()
+    expect(screen.queryByText('还没同步')).not.toBeInTheDocument()
+    expect(webFetch.mock.calls.some((call) => (call[1] as RequestInit | undefined)?.method === 'PUT')).toBe(false)
   })
 
   it('keeps a check and shows the pending banner when the token cannot write', async () => {

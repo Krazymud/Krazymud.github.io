@@ -143,6 +143,34 @@ describe('web notes', () => {
     expect(within(screen.getByRole('button', { name: /晚安/ }).closest('li')!).queryByRole('button', { name: '编辑' })).toBeNull()
   })
 
+  it('does not confirm a delete while a form is open', () => {
+    const onDelete = vi.fn()
+    const { rerender } = render(
+      <NotesTab
+        notes={[]}
+        read={reader({})}
+        webNotes={[webNote]}
+        canEdit
+        onBeginEdit={() => undefined}
+        onDelete={onDelete}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: '删除' }))
+    rerender(
+      <NotesTab
+        notes={[]}
+        read={reader({})}
+        webNotes={[webNote]}
+        canEdit
+        formOpen
+        onBeginEdit={() => undefined}
+        onDelete={onDelete}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
+    expect(onDelete).not.toHaveBeenCalled()
+  })
+
   it('does not save an empty title or a bad date, and cancel writes nothing', () => {
     const onSave = vi.fn()
     const onCancel = vi.fn()
@@ -291,6 +319,34 @@ describe('web lists', () => {
         { text: '面包', done: false },
       ],
     })
+  })
+
+  it('does not confirm a delete while a form is open', () => {
+    const onDelete = vi.fn()
+    const { rerender } = render(
+      <ListsTab
+        lists={[]}
+        read={reader({})}
+        webLists={[webList]}
+        canEdit
+        onBeginEdit={() => undefined}
+        onDelete={onDelete}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: '删除' }))
+    rerender(
+      <ListsTab
+        lists={[]}
+        read={reader({})}
+        webLists={[webList]}
+        canEdit
+        formOpen
+        onBeginEdit={() => undefined}
+        onDelete={onDelete}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
+    expect(onDelete).not.toHaveBeenCalled()
   })
 
   it('says there are no lists when both collections are empty', () => {

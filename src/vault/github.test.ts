@@ -12,7 +12,12 @@ function json(status: number, body: unknown): Response {
 async function callsOf(fetchImpl: ReturnType<typeof vi.fn>) {
   return fetchImpl.mock.calls.map((call) => {
     const [url, init] = call as [string, RequestInit | undefined]
-    return { url, method: init?.method ?? 'GET', body: init?.body ? JSON.parse(String(init.body)) : null }
+    return {
+      url,
+      method: init?.method ?? 'GET',
+      cache: init?.cache,
+      body: init?.body ? JSON.parse(String(init.body)) : null,
+    }
   })
 }
 
@@ -30,6 +35,7 @@ describe('syncWebFile', () => {
     expect((await openWebFile(dek, result.text)).notes[0].title).toBe('网页')
     const calls = await callsOf(fetchImpl)
     expect(calls).toHaveLength(2)
+    expect(calls[0].cache).toBe('no-store')
     expect(calls[1].body.message).toBe(WEB_COMMIT_MESSAGE)
     expect(calls[1].body.sha).toBeUndefined()
     expect(calls[1].body.branch).toBe('master')
@@ -78,6 +84,42 @@ describe('syncWebFile', () => {
     expect(calls.filter((call) => call.method === 'PUT')).toHaveLength(2)
     expect(calls[3].body.sha).toBe('second')
     expect((await openWebFile(dek, result.text)).notes.map((note) => note.id).sort()).toEqual(['mine', 'other'])
+  })
+
+  it('refetches once after 422 and uses the new sha', async () => {
+    const dek = await dekPromise
+    const remote = await sealWebFile(dek, {
+      ...emptyWebDoc(),
+      notes: [{ id: 'other', title: '另一台', date: '2026-10-13', body: '', updatedAt: 8 }],
+    })
+    let gets = 0
+    const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) => {
+      if (!init?.method) {
+        gets += 1
+        if (gets === 1) return json(404, { message: 'Not Found' })
+        return json(200, { sha: 'second', content: btoa(remote), encoding: 'base64' })
+      }
+      return json(gets === 1 ? 422 : 200, {})
+    })
+    const local: WebDoc = { ...emptyWebDoc(), notes: [{ id: 'mine', title: '我的', date: '2026-10-13', body: '', updatedAt: 9 }] }
+    const result = await syncWebFile({ fetch: fetchImpl as typeof fetch, token: 't', local, dek })
+    const calls = await callsOf(fetchImpl)
+    expect(calls.filter((call) => call.method === 'GET').map((call) => call.cache)).toEqual(['no-store', 'no-store'])
+    expect(calls.filter((call) => call.method === 'PUT')).toHaveLength(2)
+    expect(calls[1].body.sha).toBeUndefined()
+    expect(calls[3].body.sha).toBe('second')
+    expect((await openWebFile(dek, result.text)).notes.map((note) => note.id).sort()).toEqual(['mine', 'other'])
+  })
+
+  it('stops after a second 422', async () => {
+    const dek = await dekPromise
+    const conflict = vi.fn(async (_url: string, init?: RequestInit) =>
+      json(init?.method ? 422 : 200, { sha: 'x', content: btoa(await sealWebFile(dek, emptyWebDoc())) }),
+    )
+    await expect(syncWebFile({ fetch: conflict as typeof fetch, token: 't', local: emptyWebDoc(), dek })).rejects.toThrow(
+      SYNC_PENDING,
+    )
+    expect(conflict).toHaveBeenCalledTimes(4)
   })
 
   it('stops after a second 409 and does not open a file it cannot decrypt', async () => {

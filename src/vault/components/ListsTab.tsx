@@ -220,7 +220,15 @@ function WebListCard({
       <div className="flex gap-2 border-t border-line px-4 py-3">
         {confirm ? (
           <>
-            <button type="button" onClick={() => onDelete(list.id)} className={commitButton}>
+            <button
+              type="button"
+              disabled={!canEdit || formOpen}
+              onClick={() => {
+                if (!canEdit || formOpen) return
+                onDelete(list.id)
+              }}
+              className={commitButton}
+            >
               确认删除
             </button>
             <button type="button" onClick={() => setConfirm(false)} className={secondaryButton}>

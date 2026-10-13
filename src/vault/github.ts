@@ -40,7 +40,10 @@ async function readRemote(
   fetchImpl: typeof fetch,
   token: string,
 ): Promise<{ text: string | null; sha: string | null }> {
-  const response = await fetchImpl(`${CONTENTS}?ref=${GITHUB_WEB.branch}`, { headers: headers(token, false) })
+  const response = await fetchImpl(`${CONTENTS}?ref=${GITHUB_WEB.branch}`, {
+    headers: headers(token, false),
+    cache: 'no-store',
+  })
   if (response.status === 404) return { text: null, sha: null }
   if (response.status === 401 || response.status === 403) throw new GitHubWriteError(TOKEN_DENIED)
   if (!response.ok) throw new GitHubWriteError(SYNC_PENDING)
@@ -65,7 +68,7 @@ async function putRemote(
       ...(sha ? { sha } : {}),
     }),
   })
-  if (response.status === 409) return 'conflict'
+  if (response.status === 409 || response.status === 422) return 'conflict'
   if (response.status === 401 || response.status === 403) throw new GitHubWriteError(TOKEN_DENIED)
   if (!response.ok) throw new GitHubWriteError(SYNC_PENDING)
   return 'ok'

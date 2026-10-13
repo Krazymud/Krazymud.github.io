@@ -145,7 +145,15 @@ function WebNoteCard({
       <div className="flex gap-2 border-t border-line px-4 py-3">
         {confirm ? (
           <>
-            <button type="button" onClick={() => onDelete(note.id)} className={commitButton}>
+            <button
+              type="button"
+              disabled={!canEdit || formOpen}
+              onClick={() => {
+                if (!canEdit || formOpen) return
+                onDelete(note.id)
+              }}
+              className={commitButton}
+            >
               确认删除
             </button>
             <button type="button" onClick={() => setConfirm(false)} className={secondaryButton}>
