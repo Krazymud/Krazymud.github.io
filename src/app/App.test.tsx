@@ -37,10 +37,10 @@ describe('app shell', () => {
     expect(screen.getByText('今日试炼')).toBeInTheDocument()
   })
 
-  it('switches to the gold theme inside the vault', async () => {
+  it('does not set a vault data-theme on the layout shell', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 404 })))
     renderAt('/vault')
-    expect(document.querySelector('[data-theme="vault"]')).not.toBeNull()
+    expect(document.querySelector('[data-theme="vault"]')).toBeNull()
     expect(await screen.findByText('保险库还是空的。', {}, { timeout: 5000 })).toBeInTheDocument()
   })
 

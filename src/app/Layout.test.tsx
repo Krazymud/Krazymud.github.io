@@ -58,9 +58,19 @@ describe('Layout', () => {
     expect(mutedAtUnlock).toEqual([true, false])
   })
 
+  it('shows qinglu branding and nav labels in the header', () => {
+    renderSettings()
+    const header = document.querySelector('header')!
+    expect(header).toHaveTextContent('青庐')
+    expect(screen.getByRole('link', { name: '日课' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '锦匣' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '案头' })).toBeInTheDocument()
+    expect(screen.queryByText('MIDNIGHT GARAGE')).toBeNull()
+  })
+
   it('unlocks audio on any pointer, click or key press', () => {
     renderSettings()
-    const page = screen.getByRole('heading', { name: '设置' })
+    const page = screen.getByRole('link', { name: '案头' })
     fireEvent.pointerDown(page)
     expect(unlockAudio).toHaveBeenCalledTimes(1)
     fireEvent.click(page)
