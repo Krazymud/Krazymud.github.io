@@ -71,7 +71,7 @@ describe('SceneHost', () => {
 
   it('shows only the still without WebGL 2', async () => {
     const loadStage = vi.fn(async () => fakeStage('ready'))
-    render(<SceneHost scene="garage" loadStage={loadStage} webgl2={() => false} />)
+    render(<SceneHost scene="track" loadStage={loadStage} webgl2={() => false} />)
     await pause(30)
     expect(still()).toBeInTheDocument()
     expect(loadStage).not.toHaveBeenCalled()
@@ -84,7 +84,7 @@ describe('SceneHost', () => {
       removeEventListener: () => {},
     }))
     const loadStage = vi.fn(async () => fakeStage('ready'))
-    render(<SceneHost scene="garage" loadStage={loadStage} webgl2={yes} />)
+    render(<SceneHost scene="track" loadStage={loadStage} webgl2={yes} />)
     await pause(30)
     expect(loadStage).not.toHaveBeenCalled()
   })
@@ -92,7 +92,7 @@ describe('SceneHost', () => {
   it('shows only the still when 3D is switched off in settings', async () => {
     setPrefs({ scene3d: false })
     const loadStage = vi.fn(async () => fakeStage('ready'))
-    render(<SceneHost scene="garage" loadStage={loadStage} webgl2={yes} />)
+    render(<SceneHost scene="track" loadStage={loadStage} webgl2={yes} />)
     await pause(30)
     expect(loadStage).not.toHaveBeenCalled()
   })
@@ -108,24 +108,24 @@ describe('SceneHost', () => {
     const loadStage = vi.fn(async (): Promise<StageModule> => {
       throw new Error('offline')
     })
-    const { unmount } = render(<SceneHost scene="garage" loadStage={loadStage} webgl2={yes} />)
+    const { unmount } = render(<SceneHost scene="track" loadStage={loadStage} webgl2={yes} />)
     await waitFor(() => expect(sceneFailed()).toBe(true))
     expect(still()).toBeInTheDocument()
     unmount()
-    render(<SceneHost scene="garage" loadStage={loadStage} webgl2={yes} />)
+    render(<SceneHost scene="track" loadStage={loadStage} webgl2={yes} />)
     await pause(30)
     expect(loadStage).toHaveBeenCalledTimes(1)
   })
 
   it('falls back to the still when the stage reports a failure', async () => {
-    render(<SceneHost scene="garage" loadStage={async () => fakeStage('fail')} webgl2={yes} />)
+    render(<SceneHost scene="track" loadStage={async () => fakeStage('fail')} webgl2={yes} />)
     await waitFor(() => expect(sceneFailed()).toBe(true))
     expect(screen.queryByTestId('fake-stage')).toBeNull()
     expect(still()).toBeInTheDocument()
   })
 
   it('drops the 3D stage as soon as 3D is switched off', async () => {
-    render(<SceneHost scene="garage" loadStage={async () => fakeStage('wait')} webgl2={yes} />)
+    render(<SceneHost scene="track" loadStage={async () => fakeStage('wait')} webgl2={yes} />)
     await screen.findByTestId('fake-stage')
     act(() => setPrefs({ scene3d: false }))
     expect(screen.queryByTestId('fake-stage')).toBeNull()
@@ -133,7 +133,7 @@ describe('SceneHost', () => {
   })
 
   it('brings the 3D stage back when 3D is switched on again', async () => {
-    render(<SceneHost scene="garage" loadStage={() => import('./three/Stage')} webgl2={yes} />)
+    render(<SceneHost scene="track" loadStage={() => import('./three/Stage')} webgl2={yes} />)
     await screen.findByTestId('fake-stage')
     await waitFor(() => expect(still()).toBeNull(), { timeout: 2000 })
     act(() => setPrefs({ scene3d: false }))
@@ -148,7 +148,7 @@ describe('SceneHost', () => {
   })
 
   it('reports still mode to the loading progress', async () => {
-    render(<SceneHost scene="garage" webgl2={() => false} />)
+    render(<SceneHost scene="track" webgl2={() => false} />)
     await waitFor(() => expect(getLoading()).toEqual({ kind: 'still', fraction: 1 }))
   })
 
@@ -160,7 +160,7 @@ describe('SceneHost', () => {
       ready = onReady
       return <div data-testid="fake-stage" />
     }
-    render(<SceneHost scene="garage" loadStage={async () => ({ Stage })} webgl2={yes} />)
+    render(<SceneHost scene="track" loadStage={async () => ({ Stage })} webgl2={yes} />)
     await screen.findByTestId('fake-stage')
     await waitFor(() => expect(getLoading()).toEqual({ kind: '3d', fraction: 0.3 }))
     act(() => report?.(0.5))
@@ -183,7 +183,7 @@ describe('SceneHost', () => {
       })
     let arrive: ((module: StageModule) => void) | undefined
     const loadStage = () => new Promise<StageModule>((resolve) => (arrive = resolve))
-    render(<SceneHost scene="garage" loadStage={loadStage} prefetch={prefetch} webgl2={yes} />)
+    render(<SceneHost scene="track" loadStage={loadStage} prefetch={prefetch} webgl2={yes} />)
     await waitFor(() => expect(report).toBeDefined())
     act(() => report?.(0.5))
     expect(getLoading().fraction).toBeCloseTo(0.325)
@@ -201,7 +201,7 @@ describe('SceneHost', () => {
       report = onProgress
       return <div data-testid="fake-stage" />
     }
-    render(<SceneHost scene="garage" loadStage={async () => ({ Stage })} webgl2={yes} />)
+    render(<SceneHost scene="track" loadStage={async () => ({ Stage })} webgl2={yes} />)
     await screen.findByTestId('fake-stage')
     act(() => report?.(0.8))
     expect(getLoading().fraction).toBeCloseTo(0.82)
@@ -213,36 +213,21 @@ describe('SceneHost', () => {
     expect(getLoading().fraction).toBeCloseTo(0.625)
   })
 
-  it('dims the scene for each page', () => {
-    const { rerender } = render(<SceneHost scene="track" webgl2={() => false} />)
+  it('dims the track scene', () => {
+    render(<SceneHost scene="track" webgl2={() => false} />)
     expect(screen.getByTestId('scene-dim').style.opacity).toBe('0.45')
-    rerender(<SceneHost scene="garage" webgl2={() => false} />)
-    expect(screen.getByTestId('scene-dim').style.opacity).toBe('0')
   })
 
-  it('tints the still with the time of day in the garage only', () => {
-    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
-    vi.setSystemTime(new Date(2026, 9, 10, 13, 0))
-    const { rerender } = render(<SceneHost scene="garage" webgl2={() => false} />)
-    const tint = screen.getByTestId('scene-tint')
-    expect(tint).toHaveStyle({ backgroundColor: '#fff2e0', opacity: '0.16' })
-    rerender(<SceneHost scene="vault" webgl2={() => false} />)
-    expect(screen.getByTestId('scene-tint')).toHaveStyle({ opacity: '0' })
-  })
-
-  it('drops the tint as soon as the 3D stage is ready', async () => {
-    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
-    vi.setSystemTime(new Date(2026, 9, 10, 13, 0))
-    let ready: (() => void) | undefined
-    function Stage({ onReady }: StageProps) {
-      ready = onReady
-      return <div data-testid="fake-stage" />
-    }
-    render(<SceneHost scene="garage" loadStage={async () => ({ Stage })} webgl2={yes} />)
-    await screen.findByTestId('fake-stage')
-    expect(screen.getByTestId('scene-tint')).toHaveStyle({ opacity: '0.16' })
-    act(() => ready?.())
-    expect(still()).toBeInTheDocument()
-    expect(screen.getByTestId('scene-tint')).toHaveStyle({ opacity: '0' })
+  it.each(['garage', 'vault'] as const)('renders the sketch backdrop instead of 3D in the %s', async (scene) => {
+    const loadStage = vi.fn(async () => fakeStage('ready'))
+    const prefetch = vi.fn(async () => {})
+    render(<SceneHost scene={scene} loadStage={loadStage} prefetch={prefetch} webgl2={yes} />)
+    await pause(30)
+    expect(screen.getByTestId('sketch-stage')).toBeInTheDocument()
+    expect(screen.queryByTestId('fake-stage')).toBeNull()
+    expect(document.querySelector('canvas')).toBeNull()
+    expect(loadStage).not.toHaveBeenCalled()
+    expect(prefetch).not.toHaveBeenCalled()
+    expect(getLoading()).toEqual({ kind: 'still', fraction: 1 })
   })
 })

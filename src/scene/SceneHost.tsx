@@ -7,6 +7,7 @@ import { onPrefetchProgress, prefetchStageAssets } from './prefetch'
 import { markSceneFailed, sceneFailed, sceneMode, supportsWebGL2 } from './mode'
 import { POSES } from './poses'
 import { SceneErrorBoundary } from './SceneErrorBoundary'
+import { SketchStage } from './SketchStage'
 import { Still } from './Still'
 import type { Scene, StageModule, StageProps } from './types'
 import { useAmbience } from './useAmbience'
@@ -29,7 +30,19 @@ interface SceneHostProps {
   webgl2?: () => boolean
 }
 
-export function SceneHost({ scene, loadStage = loadDefaultStage, prefetch = prefetchDefault, webgl2 = supportsWebGL2 }: SceneHostProps) {
+export function SceneHost(props: SceneHostProps) {
+  if (props.scene === 'garage' || props.scene === 'vault') return <SketchHost />
+  return <ThreeHost {...props} />
+}
+
+function SketchHost() {
+  useEffect(() => {
+    setLoading({ kind: 'still', fraction: 1 })
+  }, [])
+  return <SketchStage />
+}
+
+function ThreeHost({ scene, loadStage = loadDefaultStage, prefetch = prefetchDefault, webgl2 = supportsWebGL2 }: SceneHostProps) {
   const pose = POSES[scene]
   const ambience = useAmbience()
   const reducedMotion = usePrefersReducedMotion()

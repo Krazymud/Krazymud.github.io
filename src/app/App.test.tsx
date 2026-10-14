@@ -45,10 +45,9 @@ describe('app shell', () => {
     expect(await screen.findByText('保险库还是空的。', {}, { timeout: 5000 })).toBeInTheDocument()
   })
 
-  it('shows the garage still behind the page when WebGL 2 is unavailable', () => {
+  it('shows the sketch backdrop behind the garage page', () => {
     renderAt('/')
-    expect(screen.getByTestId('scene-still')).toBeInTheDocument()
-    expect(screen.getByTestId('scene-dim').style.opacity).toBe('0')
+    expect(screen.getByTestId('sketch-stage')).toBeInTheDocument()
   })
 
   it('redirects unknown paths to the garage', async () => {
