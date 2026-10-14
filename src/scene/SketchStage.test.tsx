@@ -16,7 +16,9 @@ describe('SketchStage', () => {
     media(true)
     render(<SketchStage />)
     expect(document.querySelector('video')).toBeNull()
-    expect(document.querySelector('img')!).toHaveAttribute('src', expect.stringContaining('fc-still'))
+    const img = document.querySelector('img')!
+    expect(img).toHaveAttribute('src', expect.stringContaining('fc-still'))
+    expect(img).toHaveClass('sketch-media')
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'still')
   })
 
@@ -25,11 +27,11 @@ describe('SketchStage', () => {
     render(<SketchStage />)
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'loop')
     const video = document.querySelector('video')!
+    expect(video).toHaveClass('sketch-media')
     expect(video).toHaveAttribute('autoplay')
     expect(video).toHaveAttribute('loop')
     expect(video.muted).toBe(true)
     expect(video).toHaveAttribute('playsinline')
-
     const sources = [...video.querySelectorAll('source')].map((s) => s.getAttribute('src'))
     expect(sources).toEqual([expect.stringContaining('fc-loop.webm'), expect.stringContaining('fc-loop.mp4')])
   })
