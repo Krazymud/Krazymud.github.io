@@ -16,6 +16,11 @@ export const copy = {
   },
   trial: {
     nav: '日课',
+    preparing: '正在准备日课…',
+    completeEyebrow: '日课完成',
+    activeTime: '用时',
+    combo: (n: number) => `连击 ×${n}`,
+    backHome: '回青庐',
   },
   settings: {
     title: '案头',

@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { copy } from '../../config/copy'
 import type { DaySession } from '../../progress/store'
 
 function formatLap(ms: number): string {
@@ -20,7 +21,7 @@ export function ResultPanel({ session, dueTomorrow, mastered }: ResultPanelProps
 
   const newCount = session.items.filter((item) => item.kind === 'new').length
   const stats = [
-    { label: '圈速', value: formatLap(session.activeMs ?? 0) },
+    { label: copy.trial.activeTime, value: formatLap(session.activeMs ?? 0) },
     { label: '正确率', value: `${Math.round((session.correct / total) * 100)}%` },
     { label: '最高连击', value: `×${session.bestCombo}` },
     { label: '新词 / 复习', value: `${newCount} / ${total - newCount}` },
@@ -30,7 +31,7 @@ export function ResultPanel({ session, dueTomorrow, mastered }: ResultPanelProps
 
   return (
     <section className="mt-6">
-      <p className="text-center font-display text-xs tracking-[0.35em] text-accent-hi">LAP COMPLETE</p>
+      <p className="text-center font-display text-xs tracking-[0.35em] text-accent-hi">{copy.trial.completeEyebrow}</p>
       <dl className="mt-6 grid grid-cols-2 gap-3">
         {stats.map((stat) => (
           <div key={stat.label} className="border border-line bg-panel/90 px-4 py-3">
@@ -40,7 +41,7 @@ export function ResultPanel({ session, dueTomorrow, mastered }: ResultPanelProps
         ))}
       </dl>
       <Link to="/" className="mt-6 block border border-accent-hi bg-accent/20 py-3 text-center">
-        回车库
+        {copy.trial.backHome}
       </Link>
     </section>
   )

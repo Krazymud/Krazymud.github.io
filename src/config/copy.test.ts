@@ -9,5 +9,7 @@ describe('copy', () => {
     expect(copy.home.hello('婉婉儿')).toBe('婉婉儿，安')
     expect(copy.home.together(3)).toBe('相伴第 3 天')
     expect(copy.vault.unseal).toBe('启封')
+    expect(copy.trial.activeTime).toBe('用时')
+    expect(copy.trial.completeEyebrow).toBe('日课完成')
   })
 })

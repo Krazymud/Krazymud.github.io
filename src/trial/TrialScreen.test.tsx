@@ -132,7 +132,7 @@ describe('TrialScreen', () => {
       fireEvent.click(options().find((b) => b.textContent?.includes(word.m.slice(3)))!)
       fireEvent.click(await screen.findByRole('button', { name: '会了' }))
     }
-    expect(await screen.findByText('圈速')).toBeInTheDocument()
+    expect(await screen.findByText('用时')).toBeInTheDocument()
     expect(screen.getByText('100%')).toBeInTheDocument()
     expect(saved().history).toHaveLength(1)
   })
@@ -199,7 +199,7 @@ describe('TrialScreen', () => {
       expect(vi.mocked(play)).toHaveBeenCalledTimes(index === 4 ? 1 : 0)
       fireEvent.click(good)
     }
-    await screen.findByText('圈速')
+    await screen.findByText('用时')
     expect(vi.mocked(play).mock.calls.map(([name]) => name)).toEqual(['confirm', 'confirm'])
   })
 
@@ -210,11 +210,11 @@ describe('TrialScreen', () => {
       fireEvent.click(options().find((b) => !b.textContent?.includes(word.m.slice(3)))!)
       fireEvent.click(await screen.findByRole('button', { name: '下一题' }))
     }
-    await screen.findByText('圈速')
+    await screen.findByText('用时')
     cleanup()
     vi.mocked(play).mockClear()
     renderTrial()
-    await screen.findByText('圈速')
+    await screen.findByText('用时')
     expect(play).not.toHaveBeenCalled()
   })
 
