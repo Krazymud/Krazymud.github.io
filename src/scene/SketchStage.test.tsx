@@ -15,16 +15,22 @@ describe('SketchStage', () => {
   it('shows a static frame when reduced motion is preferred', () => {
     media(true)
     render(<SketchStage />)
-    expect(document.querySelector('img')!).toHaveAttribute('src', expect.stringContaining('fc-still'))
+    const imgs = document.querySelectorAll('img')
+    expect(imgs).toHaveLength(1)
+    expect(imgs[0]).toHaveAttribute('src', expect.stringContaining('fc-still'))
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'still')
   })
 
-  it('plays the loop otherwise', () => {
+  it('crossfades headlights over a multi-second loop otherwise', () => {
     media(false)
     render(<SketchStage />)
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'loop')
-    expect(document.querySelector('img')!).toHaveAttribute('src', expect.stringContaining('fc-loop'))
-    expect(document.querySelector('img')).toHaveAttribute('aria-hidden', 'true')
+    const imgs = [...document.querySelectorAll('img')]
+    expect(imgs.map((img) => img.getAttribute('src'))).toEqual([
+      expect.stringContaining('fc-still'),
+      expect.stringContaining('fc-up'),
+    ])
+    expect(imgs[1]).toHaveClass('sketch-headlights')
+    expect(imgs.every((img) => img.getAttribute('aria-hidden') === 'true')).toBe(true)
   })
 })
-
