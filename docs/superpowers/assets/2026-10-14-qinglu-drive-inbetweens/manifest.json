@@ -1,0 +1,31 @@
+{
+  "fps": 24,
+  "holdFrames": 12,
+  "dissolveFrames": 2,
+  "outWidth": 1600,
+  "frames": [
+    "../2026-10-14-qinglu-bluepencil-drive/k01-straight.jpg",
+    "a01.jpg",
+    "a02.jpg",
+    "a03.jpg",
+    "../2026-10-14-qinglu-bluepencil-drive/k02-entry.jpg",
+    "b01.jpg",
+    "b02.jpg",
+    "b03.jpg",
+    "../2026-10-14-qinglu-bluepencil-drive/k03-drift.jpg",
+    "c01.jpg",
+    "c02.jpg",
+    "c03.jpg",
+    "c04.jpg",
+    "../2026-10-14-qinglu-bluepencil-drive/k03b-side.jpg",
+    "d01.jpg",
+    "d02.jpg",
+    "d03.jpg",
+    "d04.jpg",
+    "../2026-10-14-qinglu-bluepencil-drive/k04-exit.jpg",
+    "e01.jpg",
+    "e02.jpg",
+    "e03.jpg",
+    "../2026-10-14-qinglu-bluepencil-drive/k05-loop.jpg"
+  ]
+}
