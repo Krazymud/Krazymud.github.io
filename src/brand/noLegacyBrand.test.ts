@@ -9,9 +9,13 @@ const BANNED: { label: string; pattern: RegExp }[] = [
   { label: 'PRIVATE VAULT', pattern: /PRIVATE VAULT/ },
   { label: 'WELCOME BACK', pattern: /WELCOME BACK/ },
   { label: 'MIDNIGHT GARAGE', pattern: /MIDNIGHT GARAGE/ },
+  { label: 'HELLO,', pattern: /HELLO,/ },
+  { label: '一键启动', pattern: /一键启动/ },
+  { label: '3D 车库', pattern: /3D 车库/ },
+  { label: '车库仪表', pattern: /车库仪表/ },
 ]
 
-const SKIP_FILES = new Set(['config/copy.ts'])
+const SKIP_FILES = new Set<string>()
 
 function listSourceFiles(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {

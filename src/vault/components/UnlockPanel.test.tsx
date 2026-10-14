@@ -38,7 +38,7 @@ describe('UnlockPanel', () => {
   it('submits once when a second touch starts during a hold', () => {
     vi.useFakeTimers()
     const onUnlock = renderPanel()
-    const button = screen.getByRole('button', { name: '一键启动' })
+    const button = screen.getByRole('button', { name: '启封' })
     fireEvent.pointerDown(button)
     fireEvent.pointerDown(button)
     act(() => {
@@ -50,8 +50,8 @@ describe('UnlockPanel', () => {
   it('starts with a single click when motion is reduced', () => {
     motion.reduced = true
     const onUnlock = renderPanel()
-    expect(screen.getByText('点一下启动')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '一键启动' }))
+    expect(screen.getByText('点一下启封')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '启封' }))
     expect(onUnlock).toHaveBeenCalledWith('iceland aurora penguin goodnight', true)
   })
 })

@@ -15,7 +15,7 @@ describe('SketchStage', () => {
   it('shows a static frame when reduced motion is preferred', () => {
     media(true)
     render(<SketchStage />)
-    expect(screen.getByRole('img', { name: /青庐|素描|车库/ })).toHaveAttribute('src', expect.stringContaining('fc-still'))
+    expect(document.querySelector('img')!).toHaveAttribute('src', expect.stringContaining('fc-still'))
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'still')
   })
 
@@ -23,6 +23,6 @@ describe('SketchStage', () => {
     media(false)
     render(<SketchStage />)
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'loop')
-    expect(screen.getByRole('img', { name: /素描/ })).toBeInTheDocument()
+    expect(document.querySelector('img')).toHaveAttribute('aria-hidden', 'true')
   })
 })

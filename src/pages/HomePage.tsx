@@ -35,7 +35,7 @@ export function HomePage() {
         <Link
           to="/trial"
           onClick={() => {
-            if (!finished) void play('tap')
+            if (!finished) void play('confirm')
           }}
           className="glass-panel flex items-center justify-between rounded-lg border border-fg/25 px-5 py-4"
         >

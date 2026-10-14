@@ -35,5 +35,7 @@ export const copy = {
     broken: '锦匣暂时打不开',
     unseal: '启封',
     unsealing: '正在启封…',
+    holdHint: '按住启封',
+    tapHint: '点一下启封',
   },
 } as const

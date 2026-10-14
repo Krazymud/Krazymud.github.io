@@ -114,7 +114,7 @@ describe('VaultScreen', () => {
     const vault = await makeTestVault()
     renderVault(vault.fetchBytes, null)
     await type(TEST_PASSPHRASE)
-    fireEvent.pointerDown(screen.getByRole('button', { name: '一键启动' }))
+    fireEvent.pointerDown(screen.getByRole('button', { name: '启封' }))
     act(() => {
       vi.advanceTimersByTime(HOLD_MS)
     })
@@ -126,7 +126,7 @@ describe('VaultScreen', () => {
     const vault = await makeTestVault()
     renderVault(vault.fetchBytes, null)
     await type(TEST_PASSPHRASE)
-    const button = screen.getByRole('button', { name: '一键启动' })
+    const button = screen.getByRole('button', { name: '启封' })
     fireEvent.pointerDown(button)
     act(() => {
       vi.advanceTimersByTime(HOLD_MS / 2)

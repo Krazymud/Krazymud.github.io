@@ -49,7 +49,7 @@ describe('HomePage', () => {
   it('taps when she sets off', () => {
     renderHome()
     fireEvent.click(screen.getByRole('link', { name: /出发/ }))
-    expect(play).toHaveBeenCalledWith('tap')
+    expect(play).toHaveBeenCalledWith('confirm')
   })
 
   it('stays quiet when she only looks at a finished lap', async () => {
@@ -71,7 +71,7 @@ describe('HomePage', () => {
 
   it('shows the garage dashboard', () => {
     renderHome()
-    expect(screen.getByRole('group', { name: '车库仪表' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: '青庐仪表' })).toBeInTheDocument()
   })
 
   it('folds due reviews into the trial card', () => {

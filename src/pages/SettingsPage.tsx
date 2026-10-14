@@ -1,6 +1,5 @@
 import { useState, type ChangeEvent } from 'react'
 import { copy } from '../config/copy'
-import { setPrefs, usePrefs } from '../prefs/prefs'
 import { useProgress } from '../progress/ProgressProvider'
 import { parseProgress, serializeProgress, type ProgressData } from '../progress/store'
 import { studyDay } from '../trial/day'
@@ -53,37 +52,10 @@ export function SettingsPage() {
   }
 
   const learned = Object.keys(data.words).length
-  const { scene3d } = usePrefs()
 
   return (
     <section className="space-y-6">
       <h1 className="font-display text-2xl font-bold tracking-wide">{copy.settings.title}</h1>
-
-      <div className="glass-panel rounded-lg p-4">
-        <label className="flex items-center justify-between gap-4">
-          <span>
-            <span className="block text-sm font-bold">3D 车库</span>
-            <span className="mt-1 block text-xs text-muted">关闭后只显示静态画面，更省电。</span>
-          </span>
-          <span className="relative inline-flex shrink-0">
-            <input
-              type="checkbox"
-              role="switch"
-              checked={scene3d}
-              onChange={(event) => setPrefs({ scene3d: event.target.checked })}
-              className="peer sr-only"
-            />
-            <span
-              aria-hidden
-              className="h-6 w-11 border border-line bg-ink transition-colors peer-checked:border-accent-hi peer-checked:bg-accent/30 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent-hi motion-reduce:transition-none"
-            />
-            <span
-              aria-hidden
-              className="pointer-events-none absolute top-1 left-1 h-4 w-4 bg-muted transition-transform peer-checked:translate-x-5 peer-checked:bg-fg motion-reduce:transition-none"
-            />
-          </span>
-        </label>
-      </div>
 
       <div className="glass-panel rounded-lg p-4">
         <h2 className="text-sm font-bold">导出进度</h2>
@@ -153,28 +125,12 @@ export function SettingsPage() {
           （MIT 协议）。
         </p>
         <p>
-          音效来自 Freesound（CC0）：EwanPenman11「
-          <a href="https://freesound.org/people/EwanPenman11/sounds/659560/" target="_blank" rel="noreferrer" className="underline">
-            Ferrari start up and drive off
-          </a>
-          」、richwise「
-          <a href="https://freesound.org/people/richwise/sounds/478756/" target="_blank" rel="noreferrer" className="underline">
-            Supercar rev
-          </a>
-          」、hz37「
-          <a href="https://freesound.org/people/hz37/sounds/396448/" target="_blank" rel="noreferrer" className="underline">
-            Car Lock
-          </a>
-          」。
-        </p>
-        <p>
           材质来自 Poly Haven（CC0）：Jenelle van Heerden「
           <a href="https://polyhaven.com/a/garage_floor" target="_blank" rel="noreferrer" className="underline">Garage Floor</a>
           」、Amal Kumar「
           <a href="https://polyhaven.com/a/box_profile_metal_sheet" target="_blank" rel="noreferrer" className="underline">Box Profile Metal Sheet</a>
           」。
         </p>
-        <p>英文字体 Rajdhani，采用 SIL Open Font License 1.1。</p>
       </section>
     </section>
   )

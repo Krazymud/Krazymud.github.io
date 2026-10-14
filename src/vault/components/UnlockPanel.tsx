@@ -103,7 +103,6 @@ export function UnlockPanel({ canRemember, onUnlock }: UnlockPanelProps) {
 
       <button
         type="button"
-        aria-label="一键启动"
         disabled={busy}
         onPointerDown={startHold}
         onPointerUp={cancelHold}
@@ -129,7 +128,7 @@ export function UnlockPanel({ canRemember, onUnlock }: UnlockPanelProps) {
         </svg>
         <span className="font-display text-sm tracking-[0.2em]">{busy ? copy.vault.unsealing : copy.vault.unseal}</span>
       </button>
-      <p className="mt-3 text-xs text-muted">{reduced ? '点一下启动' : '按住启动'}</p>
+      <p className="mt-3 text-xs text-muted">{reduced ? copy.vault.tapHint : copy.vault.holdHint}</p>
 
       {message && (
         <p role="alert" className="mt-4 text-sm text-accent-hi">

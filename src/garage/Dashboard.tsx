@@ -47,7 +47,7 @@ export function Dashboard({ stats }: { stats: GarageStats }) {
   const masteredFill = stats.mastered === 0 ? 0 : stats.mastered % 100 === 0 ? 1 : (stats.mastered % 100) / 100
   const lit = stats.week.filter(Boolean).length
   return (
-    <div role="group" aria-label="车库仪表" className="flex items-center justify-between border border-line bg-panel/60 px-4 py-3">
+    <div role="group" aria-label="青庐仪表" className="flex items-center justify-between border border-line bg-panel/60 px-4 py-3">
       <Ring id="streak" fill={streakFill} value={stats.streak} max={ceilTo(stats.streak, 7)} caption="连续" label={`连续打卡 ${stats.streak} 天`} />
       <div className="flex flex-col items-center gap-2">
         <div role="img" aria-label={`最近 7 天打卡 ${lit} 天`} className="flex gap-2">
