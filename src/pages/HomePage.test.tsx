@@ -34,18 +34,22 @@ describe('HomePage', () => {
     resetLoading()
   })
 
-  it('puts brand-first hero above the dashboard', () => {
+  it('puts brand-first hero, then stage window, then dashboard', () => {
     renderHome()
     const hero = screen.getByTestId('home-hero')
+    const stage = screen.getByTestId('home-stage')
     const below = screen.getByTestId('home-below')
     expect(within(hero).getByRole('heading', { level: 1 })).toHaveTextContent(copy.siteName)
     expect(within(hero).getByText(copy.home.hello(site.nickname))).toBeInTheDocument()
     expect(within(hero).queryByText(copy.home.eyebrow)).toBeNull()
     expect(within(hero).getByRole('link', { name: /出发|看结算/ })).toBeInTheDocument()
     expect(within(hero).queryByRole('group', { name: '青庐仪表' })).toBeNull()
+    expect(stage).toHaveAttribute('data-home-stage')
+    expect(stage.className).toMatch(/aspect-video/)
     expect(within(below).getByRole('group', { name: '青庐仪表' })).toBeInTheDocument()
     expect(within(below).getByRole('link', { name: copy.home.vaultLink })).toBeInTheDocument()
-    expect(hero.compareDocumentPosition(below) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(hero.compareDocumentPosition(stage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(stage.compareDocumentPosition(below) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('taps when she sets off', () => {

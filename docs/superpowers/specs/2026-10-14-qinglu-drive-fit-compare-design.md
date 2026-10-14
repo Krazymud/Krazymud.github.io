@@ -19,6 +19,14 @@
 
 桌面 `sm+`：仅 sharp cover（与既有一致）；ambience / 噪点隐藏。
 
+## 窄屏首页结构
+
+竖屏首页改为三段竖排（桌面仍用满屏 bleed 叠字）：
+
+1. 上部：青庐标题 → 问候 →「今日日课」入口  
+2. 中部：`data-home-stage` 16:9 窗，SketchStage portal 驶入  
+3. 下部：仪表盘 + 锦匣（玻璃底）
+
 ## 非目标
 
 - 不再维护 `?sketchFit=c` 折中微裁。  

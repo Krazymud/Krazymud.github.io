@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { usePrefersReducedMotion } from './hooks'
 
 const base = import.meta.env.BASE_URL
@@ -7,15 +8,59 @@ export const DRIVE_STILL = `${base}sketch/fc-drive-still.webp`
 export const DRIVE_LOOP = `${base}sketch/fc-drive-loop.webm`
 const DRIVE_LOOP_MP4 = `${base}sketch/fc-drive-loop.mp4`
 
-const ambienceClass =
-  'sketch-ambience absolute inset-0 z-0 h-full w-full object-cover object-center sm:hidden'
+/** HomePage mounts this on narrow viewports as the drive-loop window. */
+export const HOME_STAGE_ATTR = 'data-home-stage'
+export const NARROW_MAX_WIDTH_MQ = '(max-width: 639px)'
 
-/** Sharp plate lives in a 16:9 wrap so edge masks hit the real content seam. */
-const sharpWrapClass =
+const ambienceClass =
+  'sketch-ambience absolute inset-0 z-0 h-full w-full object-cover object-center'
+
+/** Bleed (desktop / inner): 16:9 wrap centered in the viewport. */
+const sharpWrapBleedClass =
   'sketch-sharp-wrap absolute inset-x-0 top-1/2 z-[2] w-full -translate-y-1/2 sm:inset-0 sm:top-0 sm:h-full sm:translate-y-0'
+
+/** Dock (narrow home slot): fill the stage window. */
+const sharpWrapDockClass = 'sketch-sharp-wrap sketch-sharp-wrap-dock absolute inset-0 z-[2]'
 
 const sharpMediaClass =
   'absolute inset-0 h-full w-full object-cover object-center sm:object-[55%_60%]'
+
+function useNarrowViewport() {
+  const [narrow, setNarrow] = useState(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return true
+    return window.matchMedia(NARROW_MAX_WIDTH_MQ).matches
+  })
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return
+    const mq = window.matchMedia(NARROW_MAX_WIDTH_MQ)
+    const sync = () => setNarrow(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
+  return narrow
+}
+
+function useHomeStageSlot(enabled: boolean) {
+  const [slot, setSlot] = useState<Element | null>(null)
+
+  useEffect(() => {
+    if (!enabled) {
+      setSlot(null)
+      return
+    }
+
+    const sync = () => setSlot(document.querySelector(`[${HOME_STAGE_ATTR}]`))
+    sync()
+    const observer = new MutationObserver(sync)
+    observer.observe(document.body, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [enabled])
+
+  return slot
+}
 
 function restartLoop(video: HTMLVideoElement) {
   try {
@@ -29,7 +74,10 @@ function restartLoop(video: HTMLVideoElement) {
 
 export function SketchStage({ playLoop }: { playLoop: boolean }) {
   const reduced = usePrefersReducedMotion()
+  const narrow = useNarrowViewport()
   const wantLoop = playLoop && !reduced
+  const slot = useHomeStageSlot(narrow && playLoop)
+  const docked = Boolean(slot)
   const videoRef = useRef<HTMLVideoElement>(null)
   const fade = `opacity ${ROUTE_FADE_MS}ms ease-in-out`
 
@@ -39,10 +87,12 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
 
   useEffect(() => {
     document.documentElement.dataset.sketchFit = 'a'
+    document.documentElement.dataset.sketchPlacement = docked ? 'dock' : 'bleed'
     return () => {
       delete document.documentElement.dataset.sketchFit
+      delete document.documentElement.dataset.sketchPlacement
     }
-  }, [])
+  }, [docked])
 
   useEffect(() => {
     if (wantLoop) {
@@ -102,7 +152,7 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
       video.pause()
     }, ROUTE_FADE_MS)
     return () => clearTimeout(pauseTimer)
-  }, [wantLoop, videoMounted, loopDegraded])
+  }, [wantLoop, videoMounted, loopDegraded, docked])
 
   const loopVisible = wantLoop && loopFadedIn && !loopDegraded
   const stillOpacity = loopVisible ? 0 : 1
@@ -114,18 +164,31 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
     setLoopDegraded(true)
   }
 
-  return (
+  const stage = (
     <div
       data-testid="sketch-stage"
       data-motion={motion}
       data-route={playLoop ? 'home' : 'inner'}
       data-fit="a"
-      className="pointer-events-none fixed inset-0 h-[100dvh] min-h-[100dvh] w-full overflow-hidden bg-ink"
+      data-placement={docked ? 'dock' : 'bleed'}
+      className={
+        docked
+          ? 'pointer-events-none absolute inset-0 overflow-hidden bg-ink'
+          : 'pointer-events-none fixed inset-0 h-[100dvh] min-h-[100dvh] w-full overflow-hidden bg-ink'
+      }
     >
-      <div className="sketch-ambience-tint sm:hidden" aria-hidden />
-      <img src={DRIVE_STILL} alt="" aria-hidden className={ambienceClass} />
-      <div className="sketch-paper-noise sm:hidden" aria-hidden />
-      <div className={sharpWrapClass} data-testid="sketch-sharp-wrap">
+      {!docked ? <div className="sketch-ambience-tint sm:hidden" aria-hidden /> : null}
+      <img
+        src={DRIVE_STILL}
+        alt=""
+        aria-hidden
+        className={`${ambienceClass}${docked ? '' : ' sm:hidden'}`}
+      />
+      <div className={`sketch-paper-noise${docked ? '' : ' sm:hidden'}`} aria-hidden />
+      <div
+        className={docked ? sharpWrapDockClass : sharpWrapBleedClass}
+        data-testid="sketch-sharp-wrap"
+      >
         <img
           src={DRIVE_STILL}
           alt=""
@@ -153,4 +216,7 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
       </div>
     </div>
   )
+
+  if (docked && slot) return createPortal(stage, slot)
+  return stage
 }
