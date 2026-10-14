@@ -55,29 +55,14 @@ describe('app shell', () => {
     expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(copy.home.hello(site.nickname))
   })
 
-  it('shows the ignition intro on the first visit to the garage only', () => {
+  it('shows the garage greeting and sketch layer on a first visit', () => {
     renderAt('/')
-    expect(screen.getByRole('dialog', { name: '点火开场' })).toHaveAttribute('aria-modal', 'true')
-    expect(document.querySelector('header')).toHaveAttribute('inert')
-    expect(document.querySelector('main')).toHaveAttribute('inert')
-  })
-
-  it('skips the intro once it has been seen', () => {
-    localStorage.setItem(PREFS_KEY, JSON.stringify({ introSeen: true }))
-    renderAt('/')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(copy.home.hello(site.nickname))
+    expect(screen.getByTestId('sketch-stage')).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: '点火开场' })).toBeNull()
-  })
-
-  it('lets a returning visit straight in when there is no 3D garage to wait for', () => {
-    localStorage.setItem(PREFS_KEY, JSON.stringify({ introSeen: true }))
-    renderAt('/')
     expect(screen.queryByRole('status', { name: '引擎预热' })).toBeNull()
+    expect(document.querySelector('header')).not.toHaveAttribute('inert')
     expect(document.querySelector('main')).not.toHaveAttribute('inert')
-  })
-
-  it('skips the intro when a visit starts on another page', () => {
-    renderAt('/settings')
-    expect(screen.queryByRole('dialog', { name: '点火开场' })).toBeNull()
   })
 
   it('opens the dev stills page without a missing fallback warning', async () => {

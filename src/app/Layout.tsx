@@ -1,13 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { stopAll, unlockAudio } from '../audio/sound'
-import { Intro } from '../intro/Intro'
-import { Warmup } from '../intro/Warmup'
 import { perfEnabled } from '../perf/perf'
 import { PerfOverlay } from '../perf/PerfOverlay'
-import { getPrefs, setPrefs, usePrefs } from '../prefs/prefs'
+import { setPrefs, usePrefs } from '../prefs/prefs'
 import { useProgress } from '../progress/ProgressProvider'
-import { setIgnitionPending } from '../scene/events'
 import { copy } from '../config/copy'
 import { sceneFor } from '../scene/poses'
 import { SceneHost } from '../scene/SceneHost'
@@ -33,13 +30,6 @@ export function Layout() {
   const { saveFailed } = useProgress()
   const { muted } = usePrefs()
   const scene = sceneFor(pathname)
-  const [opening, setOpening] = useState<'ignition' | 'warmup' | null>(() => {
-    if (pathname !== '/') return null
-    if (getPrefs().introSeen) return 'warmup'
-    setIgnitionPending(true)
-    return 'ignition'
-  })
-  const closeOpening = useCallback(() => setOpening(null), [])
 
   useEffect(() => {
     const onVisibility = () => {
@@ -67,10 +57,7 @@ export function Layout() {
       }
     >
       <SceneHost scene={scene} />
-      <header
-        inert={opening !== null}
-        className="glass-panel relative z-10 mx-5 mt-4 flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-xs"
-      >
+      <header className="glass-panel relative z-10 mx-5 mt-4 flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-xs">
         <span className="font-display text-accent-hi">{copy.siteName}</span>
         <nav className="flex items-center gap-4">
           {NAV.map((item) => (
@@ -99,14 +86,9 @@ export function Layout() {
           {copy.layout.progressSaveFailed}
         </p>
       )}
-      <main
-        inert={opening !== null}
-        className="glass-panel relative z-10 mx-auto mt-4 flex w-full max-w-md flex-col rounded-lg px-5 pt-6 pb-10"
-      >
+      <main className="glass-panel relative z-10 mx-auto mt-4 flex w-full max-w-md flex-col rounded-lg px-5 pt-6 pb-10">
         <Outlet />
       </main>
-      {opening === 'ignition' && <Intro onDone={closeOpening} />}
-      {opening === 'warmup' && <Warmup onDone={closeOpening} />}
       {perfEnabled && <PerfOverlay />}
     </div>
   )
