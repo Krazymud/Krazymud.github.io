@@ -77,7 +77,7 @@ export function VaultContent({ session, file, fetchBytes, onLock, webStore, webF
   return (
     <section>
       <div className="flex items-center justify-between">
-        <p className="font-display text-xs tracking-[0.35em] text-fg">{copy.vault.title}</p>
+        <p className="font-display text-xs tracking-wide text-fg">{copy.vault.title}</p>
         <button type="button" onClick={onLock} className="border border-line px-3 py-1 text-xs text-muted hover:text-fg">
           锁上
         </button>
