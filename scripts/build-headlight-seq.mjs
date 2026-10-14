@@ -40,14 +40,14 @@ const NEAR = [
   [498, 438],
 ]
 /**
- * Far lid: foreshortened FC passenger pod on the hood,
- * between near lid and the wheel-arch (not on the fender).
+ * Far lid: the second drawn shut-line panel on the hood,
+ * immediately inboard of the near lid (not on the fender).
  */
 const FAR = [
-  [675, 402],
-  [738, 400],
-  [742, 418],
-  [682, 419],
+  [602, 400],
+  [662, 398],
+  [668, 420],
+  [608, 422],
 ]
 
 const MAX_ANG_NEAR = (50 * Math.PI) / 180
