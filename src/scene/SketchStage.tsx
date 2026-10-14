@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { usePrefersReducedMotion } from './hooks'
 
 const base = import.meta.env.BASE_URL
@@ -15,16 +15,43 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const fade = `opacity ${ROUTE_FADE_MS}ms ease-in-out`
 
+  const [videoMounted, setVideoMounted] = useState(wantLoop)
+  const [loopFadedIn, setLoopFadedIn] = useState(false)
+
+  useEffect(() => {
+    if (wantLoop) {
+      setVideoMounted(true)
+      setLoopFadedIn(false)
+      const frame = requestAnimationFrame(() => {
+        requestAnimationFrame(() => setLoopFadedIn(true))
+      })
+      return () => cancelAnimationFrame(frame)
+    }
+    setLoopFadedIn(false)
+    const unmountTimer = window.setTimeout(() => setVideoMounted(false), ROUTE_FADE_MS)
+    return () => clearTimeout(unmountTimer)
+  }, [wantLoop])
+
   useEffect(() => {
     const video = videoRef.current
-    if (!video) return
+    if (!video || !videoMounted) return
+
     if (wantLoop) {
-      const playPromise = video.play()
-      if (playPromise !== undefined) void playPromise.catch(() => {})
-    } else {
-      video.pause()
+      const playTimer = window.setTimeout(() => {
+        const playPromise = video.play()
+        if (playPromise !== undefined) void playPromise.catch(() => {})
+      }, ROUTE_FADE_MS)
+      return () => clearTimeout(playTimer)
     }
-  }, [wantLoop])
+
+    const pauseTimer = window.setTimeout(() => {
+      video.pause()
+    }, ROUTE_FADE_MS)
+    return () => clearTimeout(pauseTimer)
+  }, [wantLoop, videoMounted])
+
+  const stillOpacity = wantLoop && loopFadedIn ? 0 : 1
+  const videoOpacity = wantLoop && loopFadedIn ? 1 : 0
 
   return (
     <div
@@ -38,18 +65,17 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
         alt=""
         aria-hidden
         className={layerClass}
-        style={{ opacity: wantLoop ? 0 : 1, transition: fade }}
+        style={{ opacity: stillOpacity, transition: fade }}
       />
-      {wantLoop ? (
+      {videoMounted ? (
         <video
           ref={videoRef}
-          autoPlay
           muted
           loop
           playsInline
           aria-hidden
           className={layerClass}
-          style={{ opacity: 1, transition: fade }}
+          style={{ opacity: videoOpacity, transition: fade }}
         >
           <source src={DRIVE_LOOP} type="video/webm" />
           <source src={DRIVE_LOOP_MP4} type="video/mp4" />

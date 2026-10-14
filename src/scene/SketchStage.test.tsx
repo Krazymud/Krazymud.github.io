@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { SketchStage } from './SketchStage'
+import { ROUTE_FADE_MS, SketchStage } from './SketchStage'
 
 const media = (reduce: boolean) =>
   vi.stubGlobal('matchMedia', (query: string) => ({
@@ -30,6 +30,32 @@ describe('SketchStage', () => {
     expect(video!.getAttribute('src') || video!.querySelector('source')?.getAttribute('src')).toEqual(
       expect.stringContaining('fc-drive-loop'),
     )
+    expect(video!.muted).toBe(true)
+    expect(video!.loop).toBe(true)
+    expect(video!.playsInline).toBe(true)
+    expect(video).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('applies route fade transition on both layers during loop exit', () => {
+    media(false)
+    const { rerender } = render(<SketchStage playLoop />)
+    rerender(<SketchStage playLoop={false} />)
+    const img = document.querySelector('img')!
+    const video = document.querySelector('video')
+    expect(video).toBeTruthy()
+    expect(img.style.transition).toContain(`${ROUTE_FADE_MS}ms`)
+    expect(video!.style.transition).toContain(`${ROUTE_FADE_MS}ms`)
+  })
+
+  it('applies route fade transition on both layers when entering loop', () => {
+    media(false)
+    const { rerender } = render(<SketchStage playLoop={false} />)
+    rerender(<SketchStage playLoop />)
+    const img = document.querySelector('img')!
+    const video = document.querySelector('video')
+    expect(video).toBeTruthy()
+    expect(img.style.transition).toContain(`${ROUTE_FADE_MS}ms`)
+    expect(video!.style.transition).toContain(`${ROUTE_FADE_MS}ms`)
   })
 
   it('exposes a 300ms route fade constant', async () => {
