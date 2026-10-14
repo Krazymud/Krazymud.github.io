@@ -9,9 +9,10 @@ interface SceneHostProps {
   scene: Scene
 }
 
-export function SceneHost(_props: SceneHostProps) {
+export function SceneHost({ scene }: SceneHostProps) {
   useEffect(() => {
     setLoading({ kind: 'still', fraction: 1 })
   }, [])
-  return <SketchStage />
+  const playLoop = scene === 'garage'
+  return <SketchStage playLoop={playLoop} />
 }

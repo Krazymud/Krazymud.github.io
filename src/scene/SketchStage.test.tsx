@@ -12,26 +12,43 @@ const media = (reduce: boolean) =>
 describe('SketchStage', () => {
   afterEach(() => vi.unstubAllGlobals())
 
-  it('shows a static frame when reduced motion is preferred', () => {
-    media(true)
-    render(<SketchStage />)
-    expect(document.querySelector('img')!).toHaveAttribute('src', expect.stringContaining('fc-still'))
+  it('stays on still when not on home', () => {
+    media(false)
+    render(<SketchStage playLoop={false} />)
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'still')
+    expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-route', 'inner')
+    expect(document.querySelector('img')!).toHaveAttribute('src', expect.stringContaining('fc-drive-still'))
   })
 
-  it('plays the loop otherwise', () => {
+  it('requests the drive loop on home when motion is allowed', () => {
     media(false)
-    render(<SketchStage />)
+    render(<SketchStage playLoop />)
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'loop')
-    expect(document.querySelector('img')!).toHaveAttribute('src', expect.stringContaining('fc-loop'))
-    expect(document.querySelector('img')).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-route', 'home')
+    const video = document.querySelector('video')
+    expect(video).toBeTruthy()
+    expect(video!.getAttribute('src') || video!.querySelector('source')?.getAttribute('src')).toEqual(
+      expect.stringContaining('fc-drive-loop'),
+    )
+  })
+
+  it('exposes a 300ms route fade constant', async () => {
+    const mod = await import('./SketchStage')
+    expect(mod.ROUTE_FADE_MS).toBe(300)
+  })
+
+  it('shows a static frame when reduced motion is preferred even on home', () => {
+    media(true)
+    render(<SketchStage playLoop />)
+    expect(document.querySelector('img')!).toHaveAttribute('src', expect.stringContaining('fc-drive-still'))
+    expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'still')
+    expect(document.querySelector('video')).toBeNull()
   })
 
   it('anchors the crop toward the car nose', () => {
     media(false)
-    render(<SketchStage />)
+    render(<SketchStage playLoop={false} />)
     const img = document.querySelector('img')!
     expect(img.className).toMatch(/object-\[55%_60%\]|object-\[center_60%\]/)
   })
 })
-
