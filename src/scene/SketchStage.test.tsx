@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ROUTE_FADE_MS, SketchStage } from './SketchStage'
 
@@ -69,6 +69,16 @@ describe('SketchStage', () => {
     expect(document.querySelector('img')!).toHaveAttribute('src', expect.stringContaining('fc-drive-still'))
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'still')
     expect(document.querySelector('video')).toBeNull()
+  })
+
+  it('falls back to the still frame when the loop video fails to load', () => {
+    media(false)
+    render(<SketchStage playLoop />)
+    const video = document.querySelector('video')!
+    fireEvent.error(video)
+    expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'still')
+    expect(document.querySelector('img')!.style.opacity).toBe('1')
+    expect(video.style.opacity).toBe('0')
   })
 
   it('anchors the crop toward the car nose', () => {

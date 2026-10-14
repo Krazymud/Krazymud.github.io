@@ -8,4 +8,9 @@ describe('night skin tokens', () => {
     expect(css).toMatch(/--color-fg:\s*#1a2433/)
     expect(css).toMatch(/\.home-hero-fade[\s\S]*#eef1f5/)
   })
+
+  it('uses cool glass on the nav header override', () => {
+    expect(css).toMatch(/\.glass-panel-nav\s*\{[^}]*rgba\(245,\s*248,\s*252,\s*0\.42\)/)
+    expect(css).not.toMatch(/\.glass-panel-nav\s*\{[^}]*rgba\(255,\s*255,\s*255/)
+  })
 })

@@ -17,9 +17,11 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
 
   const [videoMounted, setVideoMounted] = useState(wantLoop)
   const [loopFadedIn, setLoopFadedIn] = useState(false)
+  const [loopDegraded, setLoopDegraded] = useState(false)
 
   useEffect(() => {
     if (wantLoop) {
+      setLoopDegraded(false)
       setVideoMounted(true)
       setLoopFadedIn(false)
       const frame = requestAnimationFrame(() => {
@@ -50,13 +52,20 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
     return () => clearTimeout(pauseTimer)
   }, [wantLoop, videoMounted])
 
-  const stillOpacity = wantLoop && loopFadedIn ? 0 : 1
-  const videoOpacity = wantLoop && loopFadedIn ? 1 : 0
+  const loopVisible = wantLoop && loopFadedIn && !loopDegraded
+  const stillOpacity = loopVisible ? 0 : 1
+  const videoOpacity = loopVisible ? 1 : 0
+  const motion = wantLoop && !loopDegraded ? 'loop' : 'still'
+
+  const handleVideoError = () => {
+    setLoopFadedIn(false)
+    setLoopDegraded(true)
+  }
 
   return (
     <div
       data-testid="sketch-stage"
-      data-motion={wantLoop ? 'loop' : 'still'}
+      data-motion={motion}
       data-route={playLoop ? 'home' : 'inner'}
       className="pointer-events-none fixed inset-0 overflow-hidden bg-ink"
     >
@@ -76,6 +85,7 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
           aria-hidden
           className={layerClass}
           style={{ opacity: videoOpacity, transition: fade }}
+          onError={handleVideoError}
         >
           <source src={DRIVE_LOOP} type="video/webm" />
           <source src={DRIVE_LOOP_MP4} type="video/mp4" />
