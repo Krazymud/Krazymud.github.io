@@ -1,7 +1,10 @@
 /**
- * Mechanical dual pop-up headlight loop: body locked to fc-still.webp.
- * Near + far lids open as rigid FC box pods about rear hinges.
- * Lid tops reuse still graphite texture so early frames don't "pop" gray.
+ * FC3S pop-up headlight loop — body locked to fc-still.webp.
+ *
+ * Mechanical model taken from real Mazda RX-7 FC3S footage
+ * (Bilibili BV1JM411x7yC — 转子引擎启动): both lids rise together
+ * about a rear hinge, front edge arcs up, lamps light near full open,
+ * then reverse. No dissolve / soft-appear pop.
  *
  * Usage: node scripts/build-headlight-seq.mjs
  */
@@ -16,42 +19,46 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const CLOSED = path.join(root, 'public/sketch/fc-still.webp')
 const OUT_PUBLIC = path.join(root, 'public/sketch')
 const ART = '/opt/cursor/artifacts'
-const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'hl-mech-'))
+const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'hl-fc3s-'))
 const SEQ = path.join(TMP, 'seq')
 fs.mkdirSync(SEQ)
 fs.mkdirSync(ART, { recursive: true })
 
 const FPS = 24
 const TOTAL = 8 * FPS
-const HOLD0 = Math.round(1.2 * FPS)
-const OPEN_N = Math.round(2.2 * FPS)
-const HOLD_UP = Math.round(1.6 * FPS)
-const CLOSE_N = Math.round(2.2 * FPS)
+const HOLD0 = Math.round(1.0 * FPS)
+const OPEN_N = Math.round(2.4 * FPS)
+const HOLD_UP = Math.round(1.8 * FPS)
+const CLOSE_N = Math.round(2.4 * FPS)
 const HOLD1 = TOTAL - HOLD0 - OPEN_N - HOLD_UP - CLOSE_N
 
 /**
- * Shut-lines on fc-still (1600×900).
+ * Shut-line footprints on fc-still (1600×900).
  * Order: rear-left, rear-right, front-right, front-left.
+ * Near = viewer-left lid (clear panel). Far = second lid inboard of
+ * the hood/fender gap — not the fender panel itself.
  */
 const NEAR = [
-  [520, 398],
-  [586, 397],
-  [568, 440],
-  [498, 438],
+  [518, 397],
+  [586, 396],
+  [568, 439],
+  [496, 437],
 ]
 /**
- * Far lid: the second drawn shut-line panel on the hood,
- * immediately inboard of the near lid (not on the fender).
+ * Far lid: across the hood center strip from near, before the hood/fender
+ * gap (~x630–650). Sized from FC3S 3/4 foreshortening in BV1JM411x7yC —
+ * smaller than near but deep enough that the open pod clearly reads.
  */
 const FAR = [
-  [602, 400],
-  [662, 398],
-  [668, 420],
-  [608, 422],
+  [608, 399],
+  [656, 397],
+  [662, 429],
+  [612, 431],
 ]
 
-const MAX_ANG_NEAR = (50 * Math.PI) / 180
-const MAX_ANG_FAR = (62 * Math.PI) / 180
+/** Real FC lids tilt ~35–40° at full open; far needs more image lift. */
+const MAX_ANG_NEAR = (38 * Math.PI) / 180
+const MAX_ANG_FAR = (48 * Math.PI) / 180
 
 function easeInOut(t) {
   return t * t * (3 - 2 * t)
@@ -110,9 +117,10 @@ async function makePod(corners, maxAng, name) {
   const hingeLen = len(sub(hingeR, hingeL))
   const front0 = mid(fl, fr)
   const forward = norm(sub(front0, hinge))
+  // Screen-up bias (matches FC: front edge lifts toward camera/sky)
   const planarUp0 = [-forward[1], forward[0]]
   const planarUp = planarUp0[1] > 0 ? mul(planarUp0, -1) : planarUp0
-  const lift = norm(add(mul([0, -1], 0.9), mul(planarUp, 0.1)))
+  const lift = norm(add(mul([0, -1], 0.92), mul(planarUp, 0.08)))
 
   function raise(p, ang) {
     const fromL = sub(p, hingeL)
@@ -126,30 +134,7 @@ async function makePod(corners, maxAng, name) {
     return add(anchor, add(mul(outDir, d * c), mul(lift, d * s)))
   }
 
-  // Lid texture patch from still (keeps graphite look — avoids gray pop)
-  const xs = corners.map((c) => c[0])
-  const ys = corners.map((c) => c[1])
-  const pad = 3
-  const box = {
-    x: Math.max(0, Math.floor(Math.min(...xs)) - pad),
-    y: Math.max(0, Math.floor(Math.min(...ys)) - pad),
-    w: Math.ceil(Math.max(...xs)) - Math.floor(Math.min(...xs)) + pad * 2,
-    h: Math.ceil(Math.max(...ys)) - Math.floor(Math.min(...ys)) + pad * 2,
-  }
-  const local = corners.map(([x, y]) => [x - box.x, y - box.y])
-  const lidMask = Buffer.from(
-    `<svg width="${box.w}" height="${box.h}" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="${pts(local)}" fill="white"/>
-    </svg>`,
-  )
-  const lidPatch = await sharp(CLOSED)
-    .extract({ left: box.x, top: box.y, width: box.w, height: box.h })
-    .ensureAlpha()
-    .composite([{ input: lidMask, blend: 'dest-in' }])
-    .png()
-    .toBuffer()
-
-  return { name, corners, rl, rr, fr, fl, hingeL, hingeR, hinge, raise, maxAng, box, lidPatch, lift }
+  return { name, corners, rl, rr, fr, fl, hingeL, hingeR, hinge, raise, maxAng, lift }
 }
 
 const meta = await sharp(CLOSED).metadata()
@@ -159,19 +144,10 @@ const base = await sharp(CLOSED).ensureAlpha().png().toBuffer()
 
 const nearPod = await makePod(NEAR, MAX_ANG_NEAR, 'near')
 const farPod = await makePod(FAR, MAX_ANG_FAR, 'far')
-const pods = [
-  { pod: nearPod, scale: 1 },
-  { pod: farPod, scale: 0.88 },
-]
 
-// Sample tone for well/face fills
+// Sample graphite tone from near lid interior (avoid shut-line pixels)
 const { data: sdata, info: sinfo } = await sharp(CLOSED)
-  .extract({
-    left: Math.floor(Math.min(...NEAR.map((p) => p[0]))),
-    top: Math.floor(Math.min(...NEAR.map((p) => p[1]))),
-    width: 40,
-    height: 30,
-  })
+  .extract({ left: 530, top: 410, width: 36, height: 20 })
   .resize(4, 4, { fit: 'fill' })
   .ensureAlpha()
   .raw()
@@ -188,153 +164,181 @@ for (let i = 0; i < sdata.length; i += sinfo.channels) {
 }
 const color = { r: Math.round(sr / sn), g: Math.round(sg / sn), b: Math.round(sb / sn) }
 
+/**
+ * Draw one FC box pod. open in [0,1] after easing.
+ * At open≈0 geometry is coplanar with the footprint (no soft-appear gate),
+ * so the first moving frames cannot "pop" a gray shard onto the still.
+ */
 function podSvgParts(pod, open, scale = 1) {
-  if (open < 0.015) return []
+  if (open < 0.0005) return []
 
   const ang = open * pod.maxAng
   const { rl, rr, fr, fl, hingeL, hingeR, raise, corners } = pod
 
   const fl2 = raise(fl, ang)
   const fr2 = raise(fr, ang)
-  const lidTop = [hingeL, hingeR, fr2, fl2]
+  // Slight rear-edge settle so the hinge reads as planted
+  const rl2 = raise(rl, ang * 0.04)
+  const rr2 = raise(rr, ang * 0.04)
+  const lidTop = [rl2, rr2, fr2, fl2]
   const frontFace = [fl2, fr2, fr, fl]
-  const sideL = [hingeL, fl, fl2]
-  const sideR = [hingeR, fr, fr2]
+  const sideL = [rl2, fl, fl2]
+  const sideR = [rr2, fr, fr2]
 
   const cx = (rl[0] + rr[0] + fr[0] + fl[0]) / 4
   const cy = (rl[1] + rr[1] + fr[1] + fl[1]) / 4
 
-  // Gentle appear — geometry still grows with angle; this only softens the first crack
-  const appear = smoothstep(0.015, 0.28, open)
+  // Continuous reveal with angle — no hard opacity cliff
+  const rise = smoothstep(0, 0.12, open)
+  const wellA = rise * smoothstep(0.02, 0.35, open)
+  const bodyA = Math.min(1, 0.15 + rise * 0.85)
 
-  const lidStroke = cssRgb(color, -105, appear)
-  // Opaque well early so closed shut-lines don't ghost under the rising pod
-  const wellFill = cssRgb(color, -140, appear * smoothstep(0.02, 0.2, open))
-  const wellFloor = cssRgb(color, -95)
-  const faceFill = cssRgb(color, -52, appear)
-  const sideFillL = cssRgb(color, -72, appear)
-  const sideFillR = cssRgb(color, -58, appear)
-  // Lid fill is mostly the textured patch; SVG fill is a fallback under the patch
-  const lidFill = cssRgb(color, 4, appear * 0.35)
+  const lidStroke = cssRgb(color, -118, bodyA)
+  const wellFill = cssRgb(color, -155, wellA)
+  const wellFloor = cssRgb(color, -110)
+  const faceFill = cssRgb(color, -48, bodyA)
+  const sideFillL = cssRgb(color, -78, bodyA)
+  const sideFillR = cssRgb(color, -62, bodyA)
+  // Lid top stays close to graphite body tone (no gray CGI pop)
+  const lidFill = cssRgb(color, 6, bodyA * 0.92)
 
   const faceC = [(fl2[0] + fr2[0] + fr[0] + fl[0]) / 4, (fl2[1] + fr2[1] + fr[1] + fl[1]) / 4]
   const faceW = len(sub(fr2, fl2)) * scale
-  const faceHt = Math.max(len(sub(fl2, fl)), 2) * scale
-  const lampSize = Math.min(faceW * 0.66, faceHt * 0.7) * (0.88 + open * 0.12)
-  const lampReveal = appear * smoothstep(0.28, 0.9, open)
+  const faceHt = Math.max(len(sub(fl2, fl)), 0.5) * scale
+  const lampSize = Math.min(faceW * 0.62, faceHt * 0.72) * (0.9 + open * 0.1)
+  // Real FC: lamps come on near full open
+  const lampReveal = smoothstep(0.72, 0.95, open) * bodyA
 
+  const sw = (1.05 * scale).toFixed(2)
+  const swThin = (0.7 * scale).toFixed(2)
   const parts = []
+
+  // Well under rising pod (covers closed shut-lines as lid leaves)
   parts.push(`<polygon points="${pts(corners)}" fill="${wellFill}"/>`)
-  if (open > 0.1) {
+  if (open > 0.08) {
+    const inset = corners.map((p) => [lerp(p[0], cx, 0.2), lerp(p[1], cy, 0.2)])
     parts.push(
-      `<polygon points="${pts(corners.map((p) => [lerp(p[0], cx, 0.22), lerp(p[1], cy, 0.22)]))}" fill="${wellFloor}" opacity="${(appear * (0.18 + open * 0.38)).toFixed(3)}"/>`,
+      `<polygon points="${pts(inset)}" fill="${wellFloor}" opacity="${(wellA * (0.2 + open * 0.45)).toFixed(3)}"/>`,
     )
   }
+
   parts.push(
-    `<polygon points="${pts(sideL)}" fill="${sideFillL}" stroke="${lidStroke}" stroke-width="${(0.65 * scale).toFixed(2)}"/>`,
+    `<polygon points="${pts(sideL)}" fill="${sideFillL}" stroke="${lidStroke}" stroke-width="${swThin}"/>`,
   )
   parts.push(
-    `<polygon points="${pts(sideR)}" fill="${sideFillR}" stroke="${lidStroke}" stroke-width="${(0.65 * scale).toFixed(2)}"/>`,
+    `<polygon points="${pts(sideR)}" fill="${sideFillR}" stroke="${lidStroke}" stroke-width="${swThin}"/>`,
   )
   parts.push(
-    `<polygon points="${pts(frontFace)}" fill="${faceFill}" stroke="${lidStroke}" stroke-width="${(1.0 * scale).toFixed(2)}"/>`,
+    `<polygon points="${pts(frontFace)}" fill="${faceFill}" stroke="${lidStroke}" stroke-width="${sw}"/>`,
   )
-  if (lampReveal > 0.02 && faceHt > 4.5) {
-    const half = Math.max(2.0, lampSize * 0.5)
-    const rx = Math.max(0.6, half * 0.16)
+
+  if (lampReveal > 0.02 && faceHt > 3.5) {
+    const half = Math.max(1.8, lampSize * 0.5)
+    const rx = Math.max(0.5, half * 0.18)
     parts.push(
-      `<rect x="${(faceC[0] - half).toFixed(2)}" y="${(faceC[1] - half).toFixed(2)}" width="${(half * 2).toFixed(2)}" height="${(half * 2).toFixed(2)}" rx="${rx.toFixed(2)}" fill="#ebe5d6" stroke="${lidStroke}" stroke-width="${(0.9 * scale).toFixed(2)}" opacity="${lampReveal.toFixed(3)}"/>`,
-      `<rect x="${(faceC[0] - half * 0.45).toFixed(2)}" y="${(faceC[1] - half * 0.45).toFixed(2)}" width="${(half * 0.9).toFixed(2)}" height="${(half * 0.9).toFixed(2)}" rx="${(rx * 0.45).toFixed(2)}" fill="#ffffff" opacity="${(lampReveal * 0.4).toFixed(3)}"/>`,
+      `<rect x="${(faceC[0] - half).toFixed(2)}" y="${(faceC[1] - half).toFixed(2)}" width="${(half * 2).toFixed(2)}" height="${(half * 2).toFixed(2)}" rx="${rx.toFixed(2)}" fill="#f0e6c8" stroke="${lidStroke}" stroke-width="${(0.85 * scale).toFixed(2)}" opacity="${lampReveal.toFixed(3)}"/>`,
+      `<rect x="${(faceC[0] - half * 0.42).toFixed(2)}" y="${(faceC[1] - half * 0.42).toFixed(2)}" width="${(half * 0.84).toFixed(2)}" height="${(half * 0.84).toFixed(2)}" rx="${(rx * 0.4).toFixed(2)}" fill="#fffaf0" opacity="${(lampReveal * 0.55).toFixed(3)}"/>`,
     )
   }
+
   parts.push(
-    `<polygon points="${pts(lidTop)}" fill="${lidFill}" stroke="${lidStroke}" stroke-width="${(1.2 * scale).toFixed(2)}"/>`,
+    `<polygon points="${pts(lidTop)}" fill="${lidFill}" stroke="${lidStroke}" stroke-width="${(1.15 * scale).toFixed(2)}"/>`,
   )
+  // Hinge crease
   parts.push(
-    `<line x1="${hingeL[0]}" y1="${hingeL[1]}" x2="${hingeR[0]}" y2="${hingeR[1]}" stroke="#2a2a2c" stroke-width="${(1.2 * scale).toFixed(2)}" opacity="${(appear * (0.3 + open * 0.35)).toFixed(3)}"/>`,
+    `<line x1="${hingeL[0]}" y1="${hingeL[1]}" x2="${hingeR[0]}" y2="${hingeR[1]}" stroke="#2a2a2c" stroke-width="${(1.1 * scale).toFixed(2)}" opacity="${(bodyA * (0.25 + open * 0.4)).toFixed(3)}"/>`,
   )
   return parts
 }
 
 function overlaySvg(openNear, openFar) {
   const parts = []
-  parts.push(...podSvgParts(pods[1].pod, openFar, pods[1].scale))
-  parts.push(...podSvgParts(pods[0].pod, openNear, pods[0].scale))
+  // Far first so near draws on top where they meet
+  parts.push(...podSvgParts(farPod, openFar, 1))
+  parts.push(...podSvgParts(nearPod, openNear, 1))
   return Buffer.from(
     `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">${parts.join('')}</svg>`,
   )
 }
 
-/** Foreshortened graphite lid texture about the hinge (continuous, no pop). */
-async function lidTextureLayer(pod, open) {
-  if (open < 0.02 || open > 0.95) return null
-  const cos = Math.cos(open * pod.maxAng)
-  // Keep most of the panel early; compress toward hinge as it opens
-  const newH = Math.max(2, Math.round(pod.box.h * (0.18 + 0.82 * cos)))
-  const texOp = (1 - smoothstep(0.55, 0.92, open)) * smoothstep(0.02, 0.2, open)
-  if (texOp < 0.03) return null
-  const warped = await sharp(pod.lidPatch)
-    .resize(pod.box.w, newH, { fit: 'fill' })
-    .ensureAlpha()
-    .composite([
-      {
-        input: Buffer.from(
-          `<svg width="${pod.box.w}" height="${newH}" xmlns="http://www.w3.org/2000/svg">
-            <rect width="100%" height="100%" fill="white" opacity="${texOp.toFixed(3)}"/>
-          </svg>`,
-        ),
-        blend: 'dest-in',
-      },
-    ])
-    .png()
-    .toBuffer()
-  const top = Math.max(0, Math.round(Math.min(pod.hingeL[1], pod.hingeR[1]) - 1))
-  return { input: warped, left: pod.box.x, top }
-}
-
 async function writeFrame(file, tNear, tFar = tNear) {
-  if (tNear <= 0.001 && tFar <= 0.001) {
+  if (tNear <= 0.0005 && tFar <= 0.0005) {
     await sharp(base).toFile(file)
     return
   }
   const openNear = easeInOut(Math.max(0, Math.min(1, tNear)))
   const openFar = easeInOut(Math.max(0, Math.min(1, tFar)))
-  const layers = [{ input: overlaySvg(openNear, openFar), top: 0, left: 0 }]
-  // Texture after SVG so graphite sits on the lids
-  const farTex = await lidTextureLayer(farPod, openFar)
-  const nearTex = await lidTextureLayer(nearPod, openNear)
-  if (farTex) layers.push(farTex)
-  if (nearTex) layers.push(nearTex)
-  await sharp(base).composite(layers).png().toFile(file)
+  await sharp(base)
+    .composite([{ input: overlaySvg(openNear, openFar), top: 0, left: 0 }])
+    .png()
+    .toFile(file)
 }
 
-const FAR_LAG = 0.05
-function farT(t) {
-  return Math.max(0, Math.min(1, (t - FAR_LAG) / (1 - FAR_LAG)))
+/** Both lids track the same phase — real FC opens in sync. */
+function phaseT(t) {
+  return Math.max(0, Math.min(1, t))
 }
 
 let n = 0
 for (let i = 0; i < HOLD0; i++, n++) await writeFrame(path.join(SEQ, `f${String(n).padStart(4, '0')}.png`), 0, 0)
 for (let i = 0; i < OPEN_N; i++, n++) {
-  const t = (i + 1) / OPEN_N
-  await writeFrame(path.join(SEQ, `f${String(n).padStart(4, '0')}.png`), t, farT(t))
+  const t = phaseT((i + 1) / OPEN_N)
+  await writeFrame(path.join(SEQ, `f${String(n).padStart(4, '0')}.png`), t, t)
 }
 for (let i = 0; i < HOLD_UP; i++, n++) await writeFrame(path.join(SEQ, `f${String(n).padStart(4, '0')}.png`), 1, 1)
 for (let i = 0; i < CLOSE_N; i++, n++) {
-  const t = 1 - (i + 1) / CLOSE_N
-  await writeFrame(path.join(SEQ, `f${String(n).padStart(4, '0')}.png`), t, farT(t))
+  const t = phaseT(1 - (i + 1) / CLOSE_N)
+  await writeFrame(path.join(SEQ, `f${String(n).padStart(4, '0')}.png`), t, t)
 }
 for (let i = 0; i < HOLD1; i++, n++) await writeFrame(path.join(SEQ, `f${String(n).padStart(4, '0')}.png`), 0, 0)
 
 const pattern = path.join(SEQ, 'f%04d.png')
 execFileSync(
   'ffmpeg',
-  ['-y', '-framerate', String(FPS), '-i', pattern, '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '38', '-row-mt', '1', '-an', '-t', '8', path.join(OUT_PUBLIC, 'fc-loop.webm')],
+  [
+    '-y',
+    '-framerate',
+    String(FPS),
+    '-i',
+    pattern,
+    '-c:v',
+    'libvpx-vp9',
+    '-b:v',
+    '0',
+    '-crf',
+    '38',
+    '-row-mt',
+    '1',
+    '-an',
+    '-t',
+    '8',
+    path.join(OUT_PUBLIC, 'fc-loop.webm'),
+  ],
   { stdio: 'inherit' },
 )
 execFileSync(
   'ffmpeg',
-  ['-y', '-framerate', String(FPS), '-i', pattern, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-profile:v', 'main', '-crf', '24', '-movflags', '+faststart', '-an', '-t', '8', path.join(OUT_PUBLIC, 'fc-loop.mp4')],
+  [
+    '-y',
+    '-framerate',
+    String(FPS),
+    '-i',
+    pattern,
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-profile:v',
+    'main',
+    '-crf',
+    '24',
+    '-movflags',
+    '+faststart',
+    '-an',
+    '-t',
+    '8',
+    path.join(OUT_PUBLIC, 'fc-loop.mp4'),
+  ],
   { stdio: 'inherit' },
 )
 
@@ -347,20 +351,25 @@ execFileSync(
   await sharp(base).composite([{ input: foot, top: 0, left: 0 }]).png().toFile(footFull)
   await sharp(footFull).jpeg({ quality: 90 }).toFile(path.join(ART, 'hl-footprint.jpg'))
   await sharp(footFull)
-    .extract({ left: 480, top: 370, width: 340, height: 90 })
-    .resize(1360, 360, { kernel: 'nearest' })
+    .extract({ left: 480, top: 370, width: 220, height: 90 })
+    .resize(1100, 450, { kernel: 'nearest' })
     .jpeg({ quality: 94 })
     .toFile(path.join(ART, 'hl-footprint-zoom.jpg'))
+  await sharp(footFull)
+    .extract({ left: 480, top: 370, width: 220, height: 90 })
+    .resize(1100, 450, { kernel: 'nearest' })
+    .jpeg({ quality: 94 })
+    .toFile(path.join(ART, 'headlight-footprint-zoom.jpg'))
 }
 
 for (const [name, t] of [
   ['hl-mech-closed', 0],
-  ['hl-mech-q1', 0.22],
-  ['hl-mech-mid', 0.55],
+  ['hl-mech-q1', 0.18],
+  ['hl-mech-mid', 0.5],
   ['hl-mech-open', 1],
 ]) {
   const tmp = path.join(TMP, `${name}.png`)
-  await writeFrame(tmp, t, farT(t))
+  await writeFrame(tmp, t, t)
   fs.copyFileSync(tmp, path.join(ART, `${name}.png`))
   await sharp(tmp)
     .extract({ left: 470, top: 300, width: 360, height: 200 })
@@ -373,15 +382,52 @@ execFileSync(
   'ffmpeg',
   [
     '-y',
-    '-loop', '1', '-t', '0.9', '-i', path.join(ART, 'hl-mech-closed-zoom.jpg'),
-    '-loop', '1', '-t', '0.85', '-i', path.join(ART, 'hl-mech-q1-zoom.jpg'),
-    '-loop', '1', '-t', '0.85', '-i', path.join(ART, 'hl-mech-mid-zoom.jpg'),
-    '-loop', '1', '-t', '1.3', '-i', path.join(ART, 'hl-mech-open-zoom.jpg'),
-    '-loop', '1', '-t', '0.85', '-i', path.join(ART, 'hl-mech-mid-zoom.jpg'),
-    '-loop', '1', '-t', '0.85', '-i', path.join(ART, 'hl-mech-q1-zoom.jpg'),
-    '-loop', '1', '-t', '0.9', '-i', path.join(ART, 'hl-mech-closed-zoom.jpg'),
-    '-filter_complex', '[0][1][2][3][4][5][6]concat=n=7:v=1:a=0,format=yuv420p',
-    '-movflags', '+faststart',
+    '-loop',
+    '1',
+    '-t',
+    '0.85',
+    '-i',
+    path.join(ART, 'hl-mech-closed-zoom.jpg'),
+    '-loop',
+    '1',
+    '-t',
+    '0.8',
+    '-i',
+    path.join(ART, 'hl-mech-q1-zoom.jpg'),
+    '-loop',
+    '1',
+    '-t',
+    '0.8',
+    '-i',
+    path.join(ART, 'hl-mech-mid-zoom.jpg'),
+    '-loop',
+    '1',
+    '-t',
+    '1.4',
+    '-i',
+    path.join(ART, 'hl-mech-open-zoom.jpg'),
+    '-loop',
+    '1',
+    '-t',
+    '0.8',
+    '-i',
+    path.join(ART, 'hl-mech-mid-zoom.jpg'),
+    '-loop',
+    '1',
+    '-t',
+    '0.8',
+    '-i',
+    path.join(ART, 'hl-mech-q1-zoom.jpg'),
+    '-loop',
+    '1',
+    '-t',
+    '0.85',
+    '-i',
+    path.join(ART, 'hl-mech-closed-zoom.jpg'),
+    '-filter_complex',
+    '[0][1][2][3][4][5][6]concat=n=7:v=1:a=0,format=yuv420p',
+    '-movflags',
+    '+faststart',
     path.join(ART, 'hl-mech-hinge-demo.mp4'),
   ],
   { stdio: 'inherit' },
@@ -396,7 +442,7 @@ execFileSync(
   const xs = all.map((p) => p[0])
   const ys = all.map((p) => p[1])
   const x0 = Math.max(0, Math.min(...xs) - 12)
-  const y0 = Math.max(0, Math.min(...ys) - 80)
+  const y0 = Math.max(0, Math.min(...ys) - 90)
   const x1 = Math.min(width - 1, Math.max(...xs) + 12)
   const y1 = Math.min(height - 1, Math.max(...ys) + 12)
   let seOut = 0,
@@ -423,7 +469,31 @@ fs.copyFileSync(path.join(ART, 'hl-mech-open-zoom.jpg'), path.join(ART, 'headlig
 fs.copyFileSync(path.join(ART, 'hl-mech-mid-zoom.jpg'), path.join(ART, 'headlight-mid-zoom.jpg'))
 fs.copyFileSync(path.join(ART, 'hl-mech-q1-zoom.jpg'), path.join(ART, 'headlight-q1-zoom.jpg'))
 
+// Preview loop for artifacts
+execFileSync(
+  'ffmpeg',
+  [
+    '-y',
+    '-i',
+    path.join(OUT_PUBLIC, 'fc-loop.mp4'),
+    '-vf',
+    'scale=1080:-2',
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-crf',
+    '22',
+    '-movflags',
+    '+faststart',
+    '-an',
+    path.join(ART, 'headlight-loop-preview.mp4'),
+  ],
+  { stdio: 'inherit' },
+)
+
 fs.rmSync(TMP, { recursive: true, force: true })
 console.log(`wrote ${n} frames → public/sketch/fc-loop.{webm,mp4}`)
 console.log('NEAR', JSON.stringify(NEAR))
 console.log('FAR', JSON.stringify(FAR))
+console.log('ref: Bilibili BV1JM411x7yC FC3S dual sync rear-hinge')
