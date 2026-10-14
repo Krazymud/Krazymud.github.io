@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { play } from '../audio/sound'
@@ -34,16 +34,18 @@ describe('HomePage', () => {
     resetLoading()
   })
 
-  it('greets in qinglu copy without garage mods entry', () => {
+  it('puts brand-first hero above the dashboard', () => {
     renderHome()
-    expect(screen.getByText(copy.home.eyebrow)).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(copy.home.hello(site.nickname))
-    expect(screen.getByRole('link', { name: copy.home.vaultLink })).toBeInTheDocument()
-    expect(screen.getByText(copy.home.trialToday)).toBeInTheDocument()
-    expect(screen.queryByText('WELCOME BACK')).toBeNull()
-    expect(screen.queryByText(/HELLO/)).toBeNull()
-    expect(screen.queryByText('今日试炼')).toBeNull()
-    expect(screen.queryByRole('button', { name: '改装' })).not.toBeInTheDocument()
+    const hero = screen.getByTestId('home-hero')
+    const below = screen.getByTestId('home-below')
+    expect(within(hero).getByRole('heading', { level: 1 })).toHaveTextContent(copy.siteName)
+    expect(within(hero).getByText(copy.home.hello(site.nickname))).toBeInTheDocument()
+    expect(within(hero).queryByText(copy.home.eyebrow)).toBeNull()
+    expect(within(hero).getByRole('link', { name: /出发|看结算/ })).toBeInTheDocument()
+    expect(within(hero).queryByRole('group', { name: '青庐仪表' })).toBeNull()
+    expect(within(below).getByRole('group', { name: '青庐仪表' })).toBeInTheDocument()
+    expect(within(below).getByRole('link', { name: copy.home.vaultLink })).toBeInTheDocument()
+    expect(hero.compareDocumentPosition(below) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('taps when she sets off', () => {

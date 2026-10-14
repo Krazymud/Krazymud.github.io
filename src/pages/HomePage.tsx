@@ -20,40 +20,36 @@ export function HomePage() {
   const stats = garageStats(data, today)
 
   return (
-    <section className="flex min-h-[72dvh] flex-col justify-between">
-      <div>
-        <p className="font-display text-sm text-muted">{copy.home.eyebrow}</p>
-        <h1 className="mt-2 font-display text-4xl font-bold tracking-wide text-fg">
-          {copy.home.hello(site.nickname)}
-        </h1>
-        {together !== null && (
-          <p className="mt-3 text-sm text-muted">{copy.home.together(together)}</p>
-        )}
-      </div>
-      <div className="space-y-3">
-        <Dashboard stats={stats} />
-        <Link
-          to="/trial"
-          onClick={() => {
-            if (!finished) void play('confirm')
-          }}
-          className="glass-panel flex items-center justify-between rounded-lg border border-fg/25 px-5 py-4"
-        >
-          <span>
-            <span className="block text-xs text-muted">
+    <section className="relative">
+      <div data-testid="home-hero" className="relative flex min-h-[70dvh] flex-col justify-end pb-8">
+        <div className="pointer-events-none absolute inset-0 -mx-5 home-hero-fade" aria-hidden />
+        <div className="relative">
+          <h1 className="font-display text-5xl font-bold tracking-[0.18em] text-fg">{copy.siteName}</h1>
+          <p className="mt-3 text-lg text-fg">{copy.home.hello(site.nickname)}</p>
+          {together !== null && (
+            <p className="mt-2 text-sm text-muted">{copy.home.together(together)}</p>
+          )}
+          <Link
+            to="/trial"
+            onClick={() => {
+              if (!finished) void play('confirm')
+            }}
+            className="glass-panel mt-6 inline-flex items-center gap-3 rounded-lg border border-fg/25 px-5 py-3"
+          >
+            <span className="text-sm">
               {stats.due > 0 ? copy.home.trialTodayDue(stats.due) : copy.home.trialToday}
+              {' · '}
+              {finished ? '看结算' : '出发'}
             </span>
-            <span className="font-display text-2xl font-bold">
-              {done} / {total}
-            </span>
-          </span>
-          <span className="text-sm">{finished ? '已完成 · 看结算' : '出发'}</span>
-        </Link>
-        <div className="flex gap-3">
-          <Link to="/vault" className="block flex-1 border border-line px-5 py-3 text-sm text-muted hover:text-fg">
-            {copy.home.vaultLink}
+            <span className="font-display text-lg font-bold tabular-nums">{done} / {total}</span>
           </Link>
         </div>
+      </div>
+      <div data-testid="home-below" className="space-y-3 pt-2">
+        <Dashboard stats={stats} />
+        <Link to="/vault" className="block border border-line px-5 py-3 text-sm text-muted hover:text-fg">
+          {copy.home.vaultLink}
+        </Link>
       </div>
     </section>
   )
