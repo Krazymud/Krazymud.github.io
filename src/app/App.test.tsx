@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetSound, setAudioContextFactory } from '../audio/sound'
@@ -61,6 +61,17 @@ describe('app shell', () => {
     expect(screen.queryByRole('status', { name: '引擎预热' })).toBeNull()
     expect(document.querySelector('header')).not.toHaveAttribute('inert')
     expect(document.querySelector('main')).not.toHaveAttribute('inert')
+  })
+
+  it('uses an open shell on home and a solid main on inner routes', () => {
+    renderAt('/')
+    expect(document.querySelector('[data-shell="home"]')).toBeTruthy()
+    expect(document.querySelector('main')?.className ?? '').not.toMatch(/glass-panel-solid/)
+
+    cleanup()
+    renderAt('/settings')
+    expect(document.querySelector('[data-shell="inner"]')).toBeTruthy()
+    expect(document.querySelector('main')).toHaveClass('glass-panel-solid')
   })
 
   it('mutes and unmutes from the top bar', () => {

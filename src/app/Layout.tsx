@@ -30,6 +30,7 @@ export function Layout() {
   const { saveFailed } = useProgress()
   const { muted } = usePrefs()
   const scene = sceneFor(pathname)
+  const isHome = pathname === '/'
 
   useEffect(() => {
     const onVisibility = () => {
@@ -47,6 +48,7 @@ export function Layout() {
 
   return (
     <div
+      data-shell={isHome ? 'home' : 'inner'}
       onPointerDownCapture={unlockAudio}
       onClickCapture={unlockAudio}
       onKeyDownCapture={unlockAudio}
@@ -57,7 +59,7 @@ export function Layout() {
       }
     >
       <SceneHost scene={scene} />
-      <header className="glass-panel relative z-10 mx-5 mt-4 flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-xs">
+      <header className="glass-panel glass-panel-nav relative z-10 mx-5 mt-4 flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-xs">
         <span className="font-display text-accent-hi">{copy.siteName}</span>
         <nav className="flex items-center gap-4">
           {NAV.map((item) => (
@@ -87,9 +89,15 @@ export function Layout() {
           {copy.layout.progressSaveFailed}
         </p>
       )}
-      <main className="glass-panel glass-panel-solid relative z-10 mx-auto mt-4 flex w-full max-w-md flex-col rounded-lg px-5 pt-6 pb-10">
-        <Outlet />
-      </main>
+      {isHome ? (
+        <main className="relative z-10 mx-auto w-full max-w-md px-5 pt-6 pb-10">
+          <Outlet />
+        </main>
+      ) : (
+        <main className="glass-panel glass-panel-solid relative z-10 mx-auto mt-4 flex w-full max-w-md flex-col rounded-lg px-5 pt-6 pb-10">
+          <Outlet />
+        </main>
+      )}
       {perfEnabled && <PerfOverlay />}
     </div>
   )
