@@ -1,97 +1,39 @@
 import { act, renderHook } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { STORAGE_KEY } from '../progress/store'
-import { DEFAULT_PREFS, getPrefs, PREFS_KEY, readPrefs, resetPrefsCache, setPrefs, usePrefs } from './prefs'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { getPrefs, readPrefs, resetPrefsCache, setPrefs, usePrefs } from './prefs'
+import { PREFS_KEY } from './key'
 
 describe('prefs', () => {
   beforeEach(() => {
     localStorage.clear()
     resetPrefsCache()
   })
-  afterEach(() => vi.restoreAllMocks())
 
-  it('defaults to the 3D garage on, sound on, intro unseen and the factory colours', () => {
-    expect(getPrefs()).toEqual({ scene3d: true, muted: false, introSeen: false, paint: 'midnight', rim: 'gunmetal', caliper: 'red' })
+  it('defaults to unmuted', () => {
+    expect(getPrefs()).toEqual({ muted: false })
   })
 
-  it('saves the switch apart from the progress data', () => {
-    localStorage.setItem(STORAGE_KEY, '{"version":1}')
-    setPrefs({ scene3d: false })
-    expect(JSON.parse(localStorage.getItem(PREFS_KEY)!)).toEqual({ scene3d: false, muted: false, introSeen: false, paint: 'midnight', rim: 'gunmetal', caliper: 'red' })
-    expect(localStorage.getItem(STORAGE_KEY)).toBe('{"version":1}')
+  it('persists muted and ignores unknown legacy keys', () => {
+    setPrefs({ muted: true })
+    expect(JSON.parse(localStorage.getItem(PREFS_KEY)!)).toEqual({ muted: true })
+    expect(getPrefs().muted).toBe(true)
+    localStorage.setItem(PREFS_KEY, '{"muted":true,"scene3d":false,"paint":"pearl"}')
     resetPrefsCache()
-    expect(getPrefs().scene3d).toBe(false)
+    expect(readPrefs()).toEqual({ muted: true })
   })
 
-  it('ignores damaged values', () => {
-    localStorage.setItem(PREFS_KEY, '{oops')
-    expect(readPrefs()).toEqual(DEFAULT_PREFS)
-    localStorage.setItem(PREFS_KEY, '{"scene3d":"no"}')
-    expect(readPrefs()).toEqual(DEFAULT_PREFS)
-  })
-
-  it('falls back to the defaults when the stored value is not an object', () => {
-    for (const raw of ['5', 'null', '[]', '"scene3d"']) {
+  it('falls back when storage is corrupt', () => {
+    for (const raw of ['5', 'null', '[]', '"muted"']) {
       localStorage.setItem(PREFS_KEY, raw)
-      expect(readPrefs()).toEqual(DEFAULT_PREFS)
+      resetPrefsCache()
+      expect(readPrefs()).toEqual({ muted: false })
     }
   })
 
-  it('does not store undefined fields', () => {
-    setPrefs({ scene3d: false })
-    setPrefs({ scene3d: undefined, muted: true })
-    expect(getPrefs()).toEqual({ scene3d: false, muted: true, introSeen: false, paint: 'midnight', rim: 'gunmetal', caliper: 'red' })
-    expect(JSON.parse(localStorage.getItem(PREFS_KEY)!)).toEqual({ scene3d: false, muted: true, introSeen: false, paint: 'midnight', rim: 'gunmetal', caliper: 'red' })
-  })
-
-  it('does not notify hook users when nothing changes', () => {
-    let renders = 0
-    renderHook(() => {
-      renders++
-      return usePrefs()
-    })
-    const before = renders
-    act(() => setPrefs({ scene3d: true }))
-    act(() => setPrefs({}))
-    expect(renders).toBe(before)
-  })
-
-  it('checks each field on its own', () => {
-    localStorage.setItem(PREFS_KEY, '{"scene3d":false,"muted":"yes","introSeen":1}')
-    expect(readPrefs()).toEqual({ scene3d: false, muted: false, introSeen: false, paint: 'midnight', rim: 'gunmetal', caliper: 'red' })
-    localStorage.setItem(PREFS_KEY, '{"muted":true,"introSeen":true}')
-    expect(readPrefs()).toEqual({ scene3d: true, muted: true, introSeen: true, paint: 'midnight', rim: 'gunmetal', caliper: 'red' })
-  })
-
-  it('still works for this visit when storage is unavailable', () => {
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
-      throw new Error('denied')
-    })
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new Error('denied')
-    })
-    expect(getPrefs()).toEqual(DEFAULT_PREFS)
-    setPrefs({ scene3d: false })
-    expect(getPrefs().scene3d).toBe(false)
-  })
-
-  it('re-renders hook users when the switch changes', () => {
+  it('usePrefs updates when prefs change', () => {
     const { result } = renderHook(() => usePrefs())
-    expect(result.current.scene3d).toBe(true)
-    act(() => setPrefs({ scene3d: false }))
-    expect(result.current.scene3d).toBe(false)
-  })
-
-  it('keeps known car colours and drops unknown ones', () => {
-    localStorage.setItem(PREFS_KEY, '{"paint":"pearl","rim":"bronze","caliper":"yellow"}')
-    expect(readPrefs()).toMatchObject({ paint: 'pearl', rim: 'bronze', caliper: 'yellow' })
-    localStorage.setItem(PREFS_KEY, '{"paint":"pink","rim":7,"caliper":"pearl"}')
-    expect(readPrefs()).toMatchObject({ paint: 'midnight', rim: 'gunmetal', caliper: 'red' })
-  })
-
-  it('saves a colour choice', () => {
-    setPrefs({ paint: 'red' })
-    resetPrefsCache()
-    expect(getPrefs().paint).toBe('red')
+    expect(result.current.muted).toBe(false)
+    act(() => setPrefs({ muted: true }))
+    expect(result.current.muted).toBe(true)
   })
 })

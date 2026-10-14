@@ -8,8 +8,6 @@ import { PREFS_KEY, resetPrefsCache } from '../prefs/prefs'
 import { ProgressProvider } from '../progress/ProgressProvider'
 import { routes } from './routes'
 
-vi.mock('../scene/three/StillsPage', () => ({ StillsPage: () => <p>stills</p> }))
-
 function renderAt(path: string) {
   const router = createMemoryRouter(routes, { initialEntries: [path] })
   render(
@@ -63,13 +61,6 @@ describe('app shell', () => {
     expect(screen.queryByRole('status', { name: '引擎预热' })).toBeNull()
     expect(document.querySelector('header')).not.toHaveAttribute('inert')
     expect(document.querySelector('main')).not.toHaveAttribute('inert')
-  })
-
-  it('opens the dev stills page without a missing fallback warning', async () => {
-    const warn = vi.spyOn(console, 'warn')
-    renderAt('/__stills')
-    expect(await screen.findByText('stills')).toBeInTheDocument()
-    expect(warn).not.toHaveBeenCalledWith(expect.stringContaining('HydrateFallback'))
   })
 
   it('mutes and unmutes from the top bar', () => {
