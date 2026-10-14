@@ -7,9 +7,10 @@ export const DRIVE_STILL = `${base}sketch/fc-drive-still.webp`
 export const DRIVE_LOOP = `${base}sketch/fc-drive-loop.webm`
 const DRIVE_LOOP_MP4 = `${base}sketch/fc-drive-loop.mp4`
 
-// Cover the viewport even when iOS percentage-height / object-fit on <video> misbehaves.
+// Phone portrait: contain so the full RX-7 stays in frame (cover crops it on tall viewports).
+// sm+: cover the stage; keep a nose-biased crop for desktop.
 const layerClass =
-  'absolute top-1/2 left-1/2 min-h-full min-w-full h-auto w-auto max-w-none -translate-x-1/2 -translate-y-1/2 object-cover object-[55%_45%] sm:object-[55%_60%]'
+  'absolute inset-0 h-full w-full object-contain object-center sm:object-cover sm:object-[55%_60%]'
 
 function restartLoop(video: HTMLVideoElement) {
   try {

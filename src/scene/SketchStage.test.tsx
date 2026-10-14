@@ -94,14 +94,14 @@ describe('SketchStage', () => {
     expect(video.style.opacity).toBe('0')
   })
 
-  it('covers the viewport with a mobile-safe media crop', () => {
+  it('shows the full car on narrow viewports and covers on larger ones', () => {
     media(false)
     render(<SketchStage playLoop={false} />)
     const stage = screen.getByTestId('sketch-stage')
     expect(stage.className).toMatch(/min-h-\[100dvh\]|min-h-dvh|h-\[100dvh\]/)
     const img = document.querySelector('img')!
-    expect(img.className).toMatch(/min-h-full/)
-    expect(img.className).toMatch(/min-w-full/)
-    expect(img.className).toMatch(/object-cover/)
+    expect(img.className).toMatch(/object-contain/)
+    expect(img.className).toMatch(/sm:object-cover/)
+    expect(img.className).toMatch(/object-center/)
   })
 })
