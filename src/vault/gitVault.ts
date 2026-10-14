@@ -68,8 +68,15 @@ export async function readWebFileText(fetchImpl: typeof fetch, token: string): P
   return (await readRemote(fetchImpl, token)).text
 }
 
-export function readBlobFile(fetchImpl: typeof fetch, token: string, blobName: string): Promise<Uint8Array> {
-  return readRawFile(fetchImpl, token, `public/vault/blobs/${blobName}.bin`, GITHUB_WEB.branch)
+export function readBlobFile(
+  fetchImpl: typeof fetch,
+  token: string,
+  blobName: string,
+  ref: string = GITHUB_WEB.branch,
+): Promise<Uint8Array> {
+  // Prefer the commit SHA the vault.json was read from so Contents matches the manifest
+  // even when the branch tip or CDN has not caught up yet.
+  return readRawFile(fetchImpl, token, `public/vault/blobs/${blobName}.bin`, ref)
 }
 
 async function createBlob(fetchImpl: typeof fetch, token: string, bytes: Uint8Array): Promise<string> {

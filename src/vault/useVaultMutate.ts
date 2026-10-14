@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { decryptBytes, decryptJson, type VaultKey } from './crypto'
-import { GitHubWriteError, SYNC_PENDING, TOKEN_DENIED } from './github'
+import { GITHUB_WEB, GitHubWriteError, SYNC_PENDING, TOKEN_DENIED } from './github'
 import { commitVaultUpdate, GitHubRefNotFastForwardError, readBlobFile, readVaultFile, readWebFileText } from './gitVault'
 import type { FetchBytes } from './repo'
 import type { VaultFile, VaultManifest } from './types'
@@ -70,6 +70,14 @@ function referencedBlobs(working: WorkingVault): Record<string, Uint8Array> {
   return out
 }
 
+function makeReadyGate() {
+  let resolve!: () => void
+  const promise = new Promise<void>((r) => {
+    resolve = r
+  })
+  return { promise, resolve }
+}
+
 export function useVaultMutate(options: {
   dek: VaultKey
   file: VaultFile
@@ -101,6 +109,7 @@ export function useVaultMutate(options: {
   const tail = useRef(Promise.resolve())
   const alive = useRef(true)
   const generation = useRef(0)
+  const readyGate = useRef(makeReadyGate())
   const dekRef = useRef(dek)
   const storeRef = useRef(store)
   const fetchRef = useRef(apiFetch)
@@ -111,6 +120,15 @@ export function useVaultMutate(options: {
   fetchRef.current = apiFetch
   bytesRef.current = fetchBytes
   clockRef.current = clock
+
+  async function awaitReady() {
+    for (;;) {
+      if (phaseRef.current === 'ready') return
+      const gate = readyGate.current
+      await gate.promise
+      if (phaseRef.current === 'ready') return
+    }
+  }
 
   function markUnsynced(value: boolean) {
     unsyncedRef.current = value
@@ -243,7 +261,12 @@ export function useVaultMutate(options: {
     const saved = tokenRef.current
     if (bytes === null && saved) {
       try {
-        bytes = await readBlobFile(fetchRef.current, saved, entry.blob)
+        bytes = await readBlobFile(
+          fetchRef.current,
+          saved,
+          entry.blob,
+          baseShaRef.current ?? GITHUB_WEB.branch,
+        )
       } catch (error) {
         if (error instanceof GitHubWriteError) throw error
         throw new WorkingBlobError()
@@ -286,6 +309,11 @@ export function useVaultMutate(options: {
 
   useEffect(() => {
     const id = ++generation.current
+    if (phaseRef.current === 'ready') {
+      readyGate.current = makeReadyGate()
+      phaseRef.current = 'loading'
+      if (alive.current) setPhase('loading')
+    }
     void (async () => {
       const current = store
       let savedToken: string | null = null
@@ -346,9 +374,10 @@ export function useVaultMutate(options: {
             if (old) webDoc = webDoc ? mergeWebDocs(webDoc, old) : old
           }
           if (webDoc !== null) {
+            const blobRef = baseSha ?? GITHUB_WEB.branch
             next = await absorbWebDoc(next, webDoc, dek, clockRef.current, async (name) => {
               try {
-                return await readBlobFile(fetchRef.current, savedToken, name)
+                return await readBlobFile(fetchRef.current, savedToken, name, blobRef)
               } catch {
                 return null
               }
@@ -372,6 +401,7 @@ export function useVaultMutate(options: {
       setToken(savedToken)
       setTokenError(denied ? TOKEN_DENIED : null)
       setPhase('ready')
+      readyGate.current.resolve()
       if (pending !== null || migrated) markUnsynced(true)
       if (migrated) await persist(next)
       if ((pending !== null || migrated) && savedToken !== null) await exclusive(syncPending)
@@ -385,7 +415,9 @@ export function useVaultMutate(options: {
 
   // Prefer in-memory dirty blobs (kept after a successful push). Fall back to the static
   // site, then GitHub Contents when a token is saved (Pages deploy lag / cold reload).
+  // Wait for boot so a card that mounts before IndexedDB yields the token does not permanently fail.
   const readBlob = useCallback(async (name: string): Promise<Uint8Array<ArrayBuffer>> => {
+    await awaitReady()
     const local = workingRef.current.dirtyBlobs[name]
     if (local) return decryptBytes(dekRef.current, local)
     let bytes: Uint8Array | null = null
@@ -396,7 +428,14 @@ export function useVaultMutate(options: {
       failure = error
     }
     const saved = tokenRef.current
-    if (bytes === null && saved) bytes = await readBlobFile(fetchRef.current, saved, name)
+    if (bytes === null && saved) {
+      bytes = await readBlobFile(
+        fetchRef.current,
+        saved,
+        name,
+        baseShaRef.current ?? GITHUB_WEB.branch,
+      )
+    }
     if (bytes === null) throw failure ?? new Error(`missing blob ${name}`)
     return decryptBytes(dekRef.current, bytes)
   }, [])
