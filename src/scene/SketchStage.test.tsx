@@ -4,7 +4,7 @@ import { HOME_STAGE_ATTR, NARROW_MAX_WIDTH_MQ, ROUTE_FADE_MS, SketchStage } from
 
 type MediaOpts = { reduce?: boolean; narrow?: boolean }
 
-const media = ({ reduce = false, narrow = true }: MediaOpts = {}) =>
+const media = ({ reduce = false, narrow = false }: MediaOpts = {}) =>
   vi.stubGlobal('matchMedia', (query: string) => ({
     matches:
       (reduce && query.includes('reduce')) ||
@@ -12,6 +12,14 @@ const media = ({ reduce = false, narrow = true }: MediaOpts = {}) =>
     addEventListener: () => {},
     removeEventListener: () => {},
   }))
+
+function mountHomeStageSlot() {
+  const slot = document.createElement('div')
+  slot.setAttribute(HOME_STAGE_ATTR, '')
+  slot.setAttribute('data-testid', 'home-stage')
+  document.body.appendChild(slot)
+  return slot
+}
 
 describe('SketchStage', () => {
   afterEach(() => {
@@ -30,8 +38,8 @@ describe('SketchStage', () => {
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-placement', 'bleed')
   })
 
-  it('requests the drive loop on home when motion is allowed', () => {
-    media()
+  it('requests the drive loop on desktop home when motion is allowed', () => {
+    media({ narrow: false })
     render(<SketchStage playLoop />)
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'loop')
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-route', 'home')
@@ -44,11 +52,24 @@ describe('SketchStage', () => {
     expect(video!.playsInline).toBe(true)
     expect(video).toHaveAttribute('playsinline')
     expect(video).toHaveAttribute('webkit-playsinline')
+    expect(video).toHaveAttribute('x5-playsinline', 'true')
     expect(video).toHaveAttribute('aria-hidden', 'true')
   })
 
+  it('keeps the still until the video reports playing', () => {
+    media({ narrow: false })
+    render(<SketchStage playLoop />)
+    const video = document.querySelector('video')!
+    const img = [...document.querySelectorAll('img')].at(-1) as HTMLImageElement
+    expect(img.style.opacity).toBe('1')
+    expect(video.style.opacity).toBe('0')
+    fireEvent(video, new Event('playing'))
+    expect(img.style.opacity).toBe('0')
+    expect(video.style.opacity).toBe('1')
+  })
+
   it('restarts playback at end so iOS Safari keeps looping', () => {
-    media()
+    media({ narrow: false })
     render(<SketchStage playLoop />)
     const video = document.querySelector('video') as HTMLVideoElement
     const play = vi.spyOn(video, 'play').mockResolvedValue(undefined)
@@ -58,9 +79,21 @@ describe('SketchStage', () => {
     expect(play).toHaveBeenCalled()
   })
 
+  it('retries play on a user gesture when autoplay was blocked', () => {
+    media({ narrow: false })
+    render(<SketchStage playLoop />)
+    const video = document.querySelector('video') as HTMLVideoElement
+    const play = vi.spyOn(video, 'play').mockResolvedValue(undefined)
+    Object.defineProperty(video, 'paused', { configurable: true, get: () => true })
+    play.mockClear()
+    fireEvent(document, new Event('touchstart', { bubbles: true }))
+    expect(play).toHaveBeenCalled()
+  })
+
   it('applies route fade transition on both layers during loop exit', () => {
-    media()
+    media({ narrow: false })
     const { rerender } = render(<SketchStage playLoop />)
+    fireEvent(document.querySelector('video')!, new Event('playing'))
     rerender(<SketchStage playLoop={false} />)
     const imgs = document.querySelectorAll('img')
     const video = document.querySelector('video')
@@ -71,7 +104,7 @@ describe('SketchStage', () => {
   })
 
   it('applies route fade transition on both layers when entering loop', () => {
-    media()
+    media({ narrow: false })
     const { rerender } = render(<SketchStage playLoop={false} />)
     rerender(<SketchStage playLoop />)
     const imgs = document.querySelectorAll('img')
@@ -96,9 +129,10 @@ describe('SketchStage', () => {
   })
 
   it('falls back to the still frame when the loop video fails to load', () => {
-    media()
+    media({ narrow: false })
     render(<SketchStage playLoop />)
     const video = document.querySelector('video')!
+    fireEvent(video, new Event('playing'))
     fireEvent.error(video)
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'still')
     const sharp = [...document.querySelectorAll('img')].at(-1) as HTMLImageElement
@@ -107,7 +141,7 @@ describe('SketchStage', () => {
   })
 
   it('uses a 16:9 sharp wrap plus blurred ambience fill in bleed mode', () => {
-    media()
+    media({ narrow: false })
     render(<SketchStage playLoop={false} />)
     const stage = screen.getByTestId('sketch-stage')
     expect(stage).toHaveAttribute('data-fit', 'a')
@@ -122,13 +156,16 @@ describe('SketchStage', () => {
     expect(document.documentElement.dataset.sketchFit).toBe('a')
   })
 
-  it('docks into the home stage slot with the verified A blend stack', async () => {
+  it('waits for the home stage slot before mounting video on narrow home', () => {
     media({ narrow: true })
-    const slot = document.createElement('div')
-    slot.setAttribute(HOME_STAGE_ATTR, '')
-    slot.setAttribute('data-testid', 'home-stage')
-    document.body.appendChild(slot)
+    render(<SketchStage playLoop />)
+    expect(document.querySelector('video')).toBeNull()
+    expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-video-ready', '0')
+  })
 
+  it('docks into the home stage slot with video once the slot exists', async () => {
+    media({ narrow: true })
+    const slot = mountHomeStageSlot()
     render(<SketchStage playLoop />)
 
     await vi.waitFor(() => {
@@ -136,6 +173,7 @@ describe('SketchStage', () => {
     })
     const stage = slot.querySelector('[data-testid="sketch-stage"]')!
     expect(stage).toHaveAttribute('data-placement', 'dock')
+    expect(stage).toHaveAttribute('data-video-ready', '1')
     expect(stage.className).toMatch(/absolute/)
     expect(stage.className).not.toMatch(/fixed/)
     expect(stage.querySelector('[data-testid="sketch-a-blend"]')).toBeTruthy()
@@ -143,6 +181,7 @@ describe('SketchStage', () => {
     expect(stage.querySelector('.sketch-ambience')).toBeTruthy()
     expect(stage.querySelector('.sketch-paper-noise')).toBeTruthy()
     expect(stage.querySelector('.sketch-sharp-wrap-dock')).toBeTruthy()
+    expect(stage.querySelector('video')).toBeTruthy()
     expect(document.documentElement.dataset.sketchPlacement).toBe('dock')
   })
 })

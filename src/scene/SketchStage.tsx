@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { usePrefersReducedMotion } from './hooks'
 
@@ -46,7 +46,7 @@ function useNarrowViewport() {
 function useHomeStageSlot(enabled: boolean) {
   const [slot, setSlot] = useState<Element | null>(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!enabled) {
       setSlot(null)
       return
@@ -62,26 +62,48 @@ function useHomeStageSlot(enabled: boolean) {
   return slot
 }
 
+function prepareInlineVideo(video: HTMLVideoElement) {
+  // iOS Safari + WeChat WKWebView: muted inline before any play() call.
+  video.muted = true
+  video.defaultMuted = true
+  video.playsInline = true
+  video.setAttribute('playsinline', '')
+  video.setAttribute('webkit-playsinline', '')
+  // WeChat X5 / Android WebView helpers (ignored elsewhere).
+  video.setAttribute('x5-playsinline', 'true')
+  video.setAttribute('x5-video-player-type', 'h5')
+  video.setAttribute('x5-video-player-fullscreen', 'false')
+}
+
+function tryPlay(video: HTMLVideoElement) {
+  prepareInlineVideo(video)
+  const playPromise = video.play()
+  if (playPromise !== undefined) void playPromise.catch(() => {})
+}
+
 function restartLoop(video: HTMLVideoElement) {
   try {
     video.currentTime = 0
   } catch {
     // Ignore seek errors while metadata is not ready.
   }
-  const playPromise = video.play()
-  if (playPromise !== undefined) void playPromise.catch(() => {})
+  tryPlay(video)
 }
 
 export function SketchStage({ playLoop }: { playLoop: boolean }) {
   const reduced = usePrefersReducedMotion()
   const narrow = useNarrowViewport()
   const wantLoop = playLoop && !reduced
-  const slot = useHomeStageSlot(narrow && playLoop)
+  // Narrow home always docks into HomePage's stage window (SceneHost mounts before Outlet).
+  const needsDock = narrow && playLoop
+  const slot = useHomeStageSlot(needsDock)
   const docked = Boolean(slot)
+  // Avoid bleed→dock remount: WeChat often blocks the second autoplay without a gesture.
+  const readyForVideo = wantLoop && (!needsDock || docked)
   const videoRef = useRef<HTMLVideoElement>(null)
   const fade = `opacity ${ROUTE_FADE_MS}ms ease-in-out`
 
-  const [videoMounted, setVideoMounted] = useState(wantLoop)
+  const [videoMounted, setVideoMounted] = useState(false)
   const [loopFadedIn, setLoopFadedIn] = useState(false)
   const [loopDegraded, setLoopDegraded] = useState(false)
 
@@ -95,38 +117,31 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
   }, [docked])
 
   useEffect(() => {
-    if (wantLoop) {
+    if (readyForVideo) {
       setLoopDegraded(false)
       setVideoMounted(true)
+      // Keep the still until the video is actually playing (WeChat may reject autoplay).
       setLoopFadedIn(false)
-      const frame = requestAnimationFrame(() => {
-        requestAnimationFrame(() => setLoopFadedIn(true))
-      })
-      return () => cancelAnimationFrame(frame)
+      return
+    }
+    if (wantLoop && needsDock && !docked) {
+      setVideoMounted(false)
+      setLoopFadedIn(false)
+      return
     }
     setLoopFadedIn(false)
     const unmountTimer = window.setTimeout(() => setVideoMounted(false), ROUTE_FADE_MS)
     return () => clearTimeout(unmountTimer)
-  }, [wantLoop])
+  }, [readyForVideo, wantLoop, needsDock, docked])
 
   useEffect(() => {
     const video = videoRef.current
     if (!video || !videoMounted) return
 
-    // iOS Safari: keep muted + inline before any play() call.
-    video.muted = true
-    video.defaultMuted = true
-    video.playsInline = true
-    video.setAttribute('playsinline', '')
-    video.setAttribute('webkit-playsinline', '')
+    prepareInlineVideo(video)
 
     if (wantLoop) {
-      const playTimer = window.setTimeout(() => {
-        const playPromise = video.play()
-        if (playPromise !== undefined) void playPromise.catch(() => {})
-      }, ROUTE_FADE_MS)
-
-      // Native `loop` is unreliable on iOS (often stops after 1–2 cycles on large files).
+      const onPlaying = () => setLoopFadedIn(true)
       const onEnded = () => restartLoop(video)
       const onPause = () => {
         if (!wantLoop || document.hidden || loopDegraded) return
@@ -137,14 +152,34 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
             video.currentTime >= video.duration - 0.05)
         if (atEnd) restartLoop(video)
       }
+      // WeChat / iOS: first autoplay may fail; retry on the next user gesture.
+      const onGesture = () => {
+        if (wantLoop && !loopDegraded && video.paused) tryPlay(video)
+      }
+      const onVisible = () => {
+        if (document.visibilityState === 'visible' && wantLoop && !loopDegraded && video.paused) {
+          tryPlay(video)
+        }
+      }
 
+      video.addEventListener('playing', onPlaying)
       video.addEventListener('ended', onEnded)
       video.addEventListener('pause', onPause)
+      document.addEventListener('touchstart', onGesture, { passive: true, capture: true })
+      document.addEventListener('pointerdown', onGesture, { capture: true })
+      document.addEventListener('visibilitychange', onVisible)
+
+      tryPlay(video)
+      const playTimer = window.setTimeout(() => tryPlay(video), ROUTE_FADE_MS)
 
       return () => {
         clearTimeout(playTimer)
+        video.removeEventListener('playing', onPlaying)
         video.removeEventListener('ended', onEnded)
         video.removeEventListener('pause', onPause)
+        document.removeEventListener('touchstart', onGesture, true)
+        document.removeEventListener('pointerdown', onGesture, true)
+        document.removeEventListener('visibilitychange', onVisible)
       }
     }
 
@@ -187,7 +222,12 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
             muted
             autoPlay
             playsInline
-            {...{ 'webkit-playsinline': '' }}
+            {...{
+              'webkit-playsinline': '',
+              'x5-playsinline': 'true',
+              'x5-video-player-type': 'h5',
+              'x5-video-player-fullscreen': 'false',
+            }}
             preload="auto"
             aria-hidden
             className={sharpMediaClass}
@@ -209,6 +249,7 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
       data-route={playLoop ? 'home' : 'inner'}
       data-fit="a"
       data-placement={docked ? 'dock' : 'bleed'}
+      data-video-ready={readyForVideo ? '1' : '0'}
       className={
         docked
           ? 'pointer-events-none absolute inset-0 overflow-hidden'
@@ -226,5 +267,7 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
   )
 
   if (docked && slot) return createPortal(stage, slot)
+  // While waiting for the home stage slot, keep a bleed still (no video) so WeChat
+  // does not autoplay once in bleed and then lose it on portal remount.
   return stage
 }
