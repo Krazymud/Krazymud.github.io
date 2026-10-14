@@ -4,13 +4,33 @@ import { usePrefersReducedMotion } from './hooks'
 const base = import.meta.env.BASE_URL
 export const ROUTE_FADE_MS = 300
 export const DRIVE_STILL = `${base}sketch/fc-drive-still.webp`
+export const DRIVE_STILL_PORTRAIT = `${base}sketch/fc-drive-still-portrait.webp`
 export const DRIVE_LOOP = `${base}sketch/fc-drive-loop.webm`
+export const DRIVE_LOOP_PORTRAIT = `${base}sketch/fc-drive-loop-portrait.webm`
 const DRIVE_LOOP_MP4 = `${base}sketch/fc-drive-loop.mp4`
+const DRIVE_LOOP_PORTRAIT_MP4 = `${base}sketch/fc-drive-loop-portrait.mp4`
 
-// Phone portrait: contain so the full RX-7 stays in frame (cover crops it on tall viewports).
-// sm+: cover the stage; keep a nose-biased crop for desktop.
+/** Tailwind `sm` breakpoint — below this we use the 9:16 plate. */
+export const NARROW_MAX_WIDTH_MQ = '(max-width: 639px)'
+
 const layerClass =
-  'absolute inset-0 h-full w-full object-contain object-center sm:object-cover sm:object-[55%_60%]'
+  'absolute inset-0 h-full w-full object-cover object-center sm:object-[55%_60%]'
+
+function useNarrowViewport() {
+  const [narrow, setNarrow] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(NARROW_MAX_WIDTH_MQ).matches : true,
+  )
+
+  useEffect(() => {
+    const mq = window.matchMedia(NARROW_MAX_WIDTH_MQ)
+    const sync = () => setNarrow(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
+  return narrow
+}
 
 function restartLoop(video: HTMLVideoElement) {
   try {
@@ -24,6 +44,7 @@ function restartLoop(video: HTMLVideoElement) {
 
 export function SketchStage({ playLoop }: { playLoop: boolean }) {
   const reduced = usePrefersReducedMotion()
+  const narrow = useNarrowViewport()
   const wantLoop = playLoop && !reduced
   const videoRef = useRef<HTMLVideoElement>(null)
   const fade = `opacity ${ROUTE_FADE_MS}ms ease-in-out`
@@ -31,6 +52,10 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
   const [videoMounted, setVideoMounted] = useState(wantLoop)
   const [loopFadedIn, setLoopFadedIn] = useState(false)
   const [loopDegraded, setLoopDegraded] = useState(false)
+
+  const stillSrc = narrow ? DRIVE_STILL_PORTRAIT : DRIVE_STILL
+  const loopMp4 = narrow ? DRIVE_LOOP_PORTRAIT_MP4 : DRIVE_LOOP_MP4
+  const loopWebm = narrow ? DRIVE_LOOP_PORTRAIT : DRIVE_LOOP
 
   useEffect(() => {
     if (wantLoop) {
@@ -65,8 +90,6 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
       }, ROUTE_FADE_MS)
 
       // Native `loop` is unreliable on iOS (often stops after 1–2 cycles on large files).
-      // Omit `loop` so `ended` fires, then manually seek + play. Also recover if Safari
-      // pauses at EOF without emitting `ended`.
       const onEnded = () => restartLoop(video)
       const onPause = () => {
         if (!wantLoop || document.hidden || loopDegraded) return
@@ -92,7 +115,7 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
       video.pause()
     }, ROUTE_FADE_MS)
     return () => clearTimeout(pauseTimer)
-  }, [wantLoop, videoMounted, loopDegraded])
+  }, [wantLoop, videoMounted, loopDegraded, narrow])
 
   const loopVisible = wantLoop && loopFadedIn && !loopDegraded
   const stillOpacity = loopVisible ? 0 : 1
@@ -109,10 +132,11 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
       data-testid="sketch-stage"
       data-motion={motion}
       data-route={playLoop ? 'home' : 'inner'}
+      data-plate={narrow ? 'portrait' : 'landscape'}
       className="pointer-events-none fixed inset-0 h-[100dvh] min-h-[100dvh] w-full overflow-hidden bg-ink"
     >
       <img
-        src={DRIVE_STILL}
+        src={stillSrc}
         alt=""
         aria-hidden
         className={layerClass}
@@ -120,11 +144,11 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
       />
       {videoMounted ? (
         <video
+          key={narrow ? 'portrait' : 'landscape'}
           ref={videoRef}
           muted
           autoPlay
           playsInline
-          // Keep attribute for older WebKit; React's playsInline maps to playsinline.
           {...{ 'webkit-playsinline': '' }}
           preload="auto"
           aria-hidden
@@ -132,9 +156,8 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
           style={{ opacity: videoOpacity, transition: fade }}
           onError={handleVideoError}
         >
-          {/* mp4 first: iOS cannot play webm; listing it first can stall source selection. */}
-          <source src={DRIVE_LOOP_MP4} type="video/mp4" />
-          <source src={DRIVE_LOOP} type="video/webm" />
+          <source src={loopMp4} type="video/mp4" />
+          <source src={loopWebm} type="video/webm" />
         </video>
       ) : null}
     </div>
