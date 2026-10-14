@@ -5,10 +5,11 @@
  *   trimmed from Bilibili BV1JM411x7yC @ t≥55s (car fills frame, night street)
  *
  * Pipeline:
- *   1) Cut open-hold / close-snap / closed-hold from the drive clip
- *   2) Optical-flow slow-mo the dual close snap; reverse = open
- *   3) Manga cel-color redraw (bold line + cool night grade — not muddy sepia)
- *   4) Compose 8s @ 24fps loop → public/sketch/fc-still.webp + fc-loop.{webm,mp4}
+ *   1) Zoom-crop car hero (cuts left sidewalk pedestrians)
+ *   2) Cut full dual-close snap (open → flush); optical-flow slow-mo; reverse = open
+ *   3) Clean manga grade (denoise + bilateral flatten + ink lines — no RGB posterize blotches)
+ *   4) Darken left strip to hide residual walkers
+ *   5) Compose 8s @ 24fps loop with long closed bookends → public/sketch/*
  *
  * Usage: node scripts/build-headlight-seq.mjs
  */
@@ -45,36 +46,49 @@ const TOTAL = 8 * FPS
 
 /**
  * In fc3s-ref-drive.mp4 (original t=55…66s):
- *   0–5.2s  headlights up + lit, car centered
- *   ~5.4s   dual close snap
- *   6s+     lids flush
+ *   ~0–5.4s  headlights up + lit
+ *   ~5.5–6.1s dual close (open → flush)
+ *   ~6.2s+    lids closed
  */
-const OPEN_PLATE_T = 2.0
-const CLOSED_PLATE_T = 7.5
-const SNAP_START = 5.15
-const SNAP_DUR = 0.55
+const OPEN_PLATE_T = 5.05
+const CLOSED_PLATE_T = 7.8
+const SNAP_START = 5.48
+const SNAP_DUR = 0.72
 const SLOW = 5
 
-const HOLD0 = Math.round(1.0 * FPS)
-const OPEN_N = Math.round(2.4 * FPS)
-const HOLD_UP = Math.round(1.8 * FPS)
-const CLOSE_N = Math.round(2.4 * FPS)
-const HOLD1 = TOTAL - HOLD0 - OPEN_N - HOLD_UP - CLOSE_N
+/** Balanced loop: long closed bookends so open→close reads and seams cleanly. */
+const HOLD0 = Math.round(1.2 * FPS) // closed
+const OPEN_N = Math.round(1.6 * FPS)
+const HOLD_UP = Math.round(1.2 * FPS) // open
+const CLOSE_N = Math.round(2.0 * FPS)
+const HOLD1 = TOTAL - HOLD0 - OPEN_N - HOLD_UP - CLOSE_N // ~2.0s closed
+if (HOLD1 < Math.round(1.2 * FPS)) {
+  console.error('HOLD1 too short:', HOLD1)
+  process.exit(1)
+}
 
-/** Prefer lower-rightish crop so the driving car fills the frame as hero. */
-const scaleCrop = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H}:(iw-ow)*0.58:(ih-oh)*0.78`
+/**
+ * Zoom into the car and bias crop right/low so the left sidewalk (walkers) is out.
+ * Source is ~16:9 — without extra zoom, crop X has almost no room.
+ */
+const ZOOM_W = Math.round(W * 1.5)
+const ZOOM_H = Math.round(H * 1.5)
+const scaleCrop =
+  `scale=${ZOOM_W}:${ZOOM_H}:force_original_aspect_ratio=increase,` +
+  `crop=${W}:${H}:(iw-ow)*0.94:(ih-oh)*0.74`
 
 function grabPlate(t, out) {
+  // Accurate seek: -ss after -i
   execFileSync(
     'ffmpeg',
     [
       '-y',
       '-err_detect',
       'ignore_err',
-      '-ss',
-      String(t),
       '-i',
       REF,
+      '-ss',
+      String(t),
       '-frames:v',
       '1',
       '-vf',
@@ -93,17 +107,17 @@ console.log('grabbing open/closed plates from drive segment…')
 grabPlate(OPEN_PLATE_T, OPEN_PLATE)
 grabPlate(CLOSED_PLATE_T, CLOSED_PLATE)
 
-console.log('cutting dual close snap…')
+console.log('cutting full dual-close snap (open → flush)…')
 execFileSync(
   'ffmpeg',
   [
     '-y',
     '-err_detect',
     'ignore_err',
-    '-ss',
-    String(SNAP_START),
     '-i',
     REF,
+    '-ss',
+    String(SNAP_START),
     '-t',
     String(SNAP_DUR),
     '-vf',
@@ -147,29 +161,22 @@ if (closeFiles.length < 8) {
 console.log(`close-arc frames: ${closeFiles.length}`)
 
 /**
- * Initial D–style manga cel color:
- * clean white body, cool night blues, warm lamp glow, thick ink lines,
- * hard 4-band cel shading (not muddy sepia / neon washout).
+ * Clean Initial D–adjacent manga grade:
+ * heavy denoise + bilateral flatten + cool night + bold ink.
+ * Avoids per-channel lutrgb posterize (rainbow 色块色斑).
  */
 function mangaFilterComplex() {
   return [
-    // Kill grain → flatter regions for cel cuts
-    '[0:v]gblur=sigma=1.6,eq=contrast=1.38:saturation=1.48:brightness=0.1:gamma=0.92[col]',
-    // Cool night bias; keep highlight whites near-neutral
-    '[col]colorchannelmixer=rr=1.06:gg=1.02:bb=1.12:rb=-0.02:gr=-0.02,' +
-      'colorbalance=bs=0.14:bm=0.06:rs=-0.06:rm=-0.03:rh=0.02[grade]',
-    // Hard cel bands (neutral highs, cool mids/shadows)
-    `[grade]lutrgb=` +
-      `r='if(lt(val,32),10,if(lt(val,80),55,if(lt(val,140),115,if(lt(val,195),175,248))))':` +
-      `g='if(lt(val,32),12,if(lt(val,80),58,if(lt(val,140),118,if(lt(val,195),178,248))))':` +
-      `b='if(lt(val,32),26,if(lt(val,80),78,if(lt(val,140),135,if(lt(val,195),188,250))))'[cel]`,
-    // Thick ink outlines
-    '[cel]split[b][e]',
-    '[e]format=gray,edgedetect=mode=colormix:low=0.025:high=0.085,negate,' +
-      'eq=contrast=4.2:brightness=-0.22,dilation,gblur=sigma=0.45[lines]',
-    '[b][lines]blend=all_mode=multiply:all_opacity=0.68,' +
-      `curves=r='0/0 0.4/0.36 0.75/0.78 1/1':g='0/0 0.4/0.38 0.75/0.8 1/1':b='0/0.05 0.4/0.45 0.75/0.85 1/1',` +
-      'eq=saturation=1.18:contrast=1.16,unsharp=5:5:1.4:3:3:0.5',
+    // Denoise + mild flatten (keep body readable; avoid crushing to mud)
+    '[0:v]hqdn3d=8:6:10:8,bilateral=sigmaS=3.5:sigmaR=0.06,' +
+      'eq=contrast=1.42:saturation=1.35:brightness=0.14:gamma=0.9[col]',
+    '[col]colorbalance=bs=0.1:bm=0.04:rs=-0.04:rm=-0.02,' +
+      `curves=all='0/0 0.28/0.26 0.6/0.68 1/1'[grade]`,
+    '[grade]split[b][e]',
+    '[e]format=gray,edgedetect=mode=colormix:low=0.04:high=0.12,negate,' +
+      'eq=contrast=3.1:brightness=-0.12,dilation,gblur=sigma=0.35[lines]',
+    '[b][lines]blend=all_mode=multiply:all_opacity=0.5,' +
+      'eq=saturation=1.2:contrast=1.14,unsharp=5:5:1.3',
   ].join(';')
 }
 
@@ -211,30 +218,77 @@ function stylizeOne(input, out) {
   )
 }
 
+/**
+ * Soft vignette: darken left edge + upper sky/fence so walkers fade out
+ * without hard composite bands.
+ */
+async function scrubWalkers(input, out) {
+  const meta = await sharp(input).metadata()
+  const width = meta.width || W
+  const height = meta.height || H
+  const overlay = Buffer.from(
+    `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="top" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#02050c" stop-opacity="0.72"/>
+          <stop offset="32%" stop-color="#02050c" stop-opacity="0.28"/>
+          <stop offset="48%" stop-color="#02050c" stop-opacity="0"/>
+        </linearGradient>
+        <linearGradient id="left" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#02050c" stop-opacity="0.55"/>
+          <stop offset="10%" stop-color="#02050c" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#top)"/>
+      <rect width="100%" height="100%" fill="url(#left)"/>
+    </svg>`,
+  )
+  await sharp(input)
+    .composite([{ input: overlay, top: 0, left: 0 }])
+    .jpeg({ quality: 92 })
+    .toFile(out)
+}
+
 console.log('manga cel-color redraw…')
+const openRaw = path.join(TMP, 'open-raw.jpg')
+const closedRaw = path.join(TMP, 'closed-raw.jpg')
+stylizeOne(OPEN_PLATE, openRaw)
+stylizeOne(CLOSED_PLATE, closedRaw)
+stylize(path.join(RAW, 'c%03d.jpg'), path.join(SKETCH, 'c%03d.jpg'))
+
 const openManga = path.join(TMP, 'open-manga.jpg')
 const closedManga = path.join(TMP, 'closed-manga.jpg')
-stylizeOne(OPEN_PLATE, openManga)
-stylizeOne(CLOSED_PLATE, closedManga)
-stylize(path.join(RAW, 'c%03d.jpg'), path.join(SKETCH, 'c%03d.jpg'))
+await scrubWalkers(openRaw, openManga)
+await scrubWalkers(closedRaw, closedManga)
 
 const sketchClose = fs
   .readdirSync(SKETCH)
   .filter((f) => f.startsWith('c') && f.endsWith('.jpg'))
   .sort()
-const arcN = sketchClose.length
+const scrubDir = path.join(TMP, 'scrub')
+fs.mkdirSync(scrubDir, { recursive: true })
+for (const f of sketchClose) {
+  await scrubWalkers(path.join(SKETCH, f), path.join(scrubDir, f))
+}
+const scrubClose = fs
+  .readdirSync(scrubDir)
+  .filter((f) => f.startsWith('c') && f.endsWith('.jpg'))
+  .sort()
+const arcN = scrubClose.length
 
 /** t=0 open … t=1 closed along the real close arc */
 function sampleClose(t) {
   const idx = Math.min(arcN - 1, Math.max(0, Math.round(t * (arcN - 1))))
-  return path.join(SKETCH, sketchClose[idx])
+  return path.join(scrubDir, scrubClose[idx])
 }
 
 function easeInOut(t) {
   return t * t * (3 - 2 * t)
 }
 
-console.log('composing 8s loop…')
+console.log(
+  `composing 8s loop… hold0=${HOLD0} open=${OPEN_N} holdUp=${HOLD_UP} close=${CLOSE_N} hold1=${HOLD1}`,
+)
 await sharp(closedManga).webp({ quality: 88 }).toFile(path.join(OUT_PUBLIC, 'fc-still.webp'))
 await sharp(closedManga).jpeg({ quality: 92 }).toFile(path.join(ART, 'fc3s-manga-still.jpg'))
 await sharp(openManga).jpeg({ quality: 92 }).toFile(path.join(ART, 'fc3s-manga-open.jpg'))
@@ -258,7 +312,7 @@ for (let i = 0; i < CLOSE_N; i++, n++) {
   const t = easeInOut((i + 1) / CLOSE_N)
   copyFrame(i === CLOSE_N - 1 ? closedManga : sampleClose(t), n)
 }
-// closed hold
+// closed hold (must be long enough for a readable loop seam)
 for (let i = 0; i < HOLD1; i++, n++) copyFrame(closedManga, n)
 
 const pattern = path.join(SEQ, 'f%04d.jpg')
@@ -317,11 +371,11 @@ execFileSync(
 for (const [name, src] of [
   ['closed', closedManga],
   ['open', openManga],
-  ['q1', sampleClose(0.75)], // early open (near closed end of close-arc reversed)
+  ['q1', sampleClose(0.75)],
   ['mid', sampleClose(0.45)],
 ]) {
   await sharp(src)
-    .extract({ left: 300, top: 220, width: 1000, height: 560 })
+    .extract({ left: 280, top: 180, width: 1040, height: 580 })
     .resize(1080, 600)
     .jpeg({ quality: 92 })
     .toFile(path.join(ART, `hl-mech-${name}-zoom.jpg`))
@@ -409,12 +463,31 @@ fs.copyFileSync(path.join(ART, 'hl-mech-mid-zoom.jpg'), path.join(ART, 'headligh
 fs.copyFileSync(path.join(ART, 'hl-mech-q1-zoom.jpg'), path.join(ART, 'headlight-q1-zoom.jpg'))
 fs.copyFileSync(path.join(ART, 'hl-mech-closed-zoom.jpg'), path.join(ART, 'headlight-closed-zoom.jpg'))
 
+// Loop key strip for QA: closed → open → open-hold → mid-close → closed
 execFileSync(
   'ffmpeg',
   [
     '-y',
     '-i',
-    path.join(SKETCH, 'c%03d.jpg'),
+    path.join(OUT_PUBLIC, 'fc-loop.mp4'),
+    '-vf',
+    `select='eq(n\\,0)+eq(n\\,${HOLD0 + Math.round(OPEN_N / 2)})+eq(n\\,${HOLD0 + OPEN_N + 2})+eq(n\\,${HOLD0 + OPEN_N + HOLD_UP + Math.round(CLOSE_N / 2)})+eq(n\\,${TOTAL - 3})',` +
+      'scale=360:-2,tile=5x1',
+    '-frames:v',
+    '1',
+    '-update',
+    '1',
+    path.join(ART, 'manga-loop-key-strip.jpg'),
+  ],
+  { stdio: 'inherit' },
+)
+
+execFileSync(
+  'ffmpeg',
+  [
+    '-y',
+    '-i',
+    path.join(scrubDir, 'c%03d.jpg'),
     '-vf',
     'scale=180:-1,tile=10x5',
     '-update',
@@ -429,4 +502,7 @@ execFileSync(
 fs.rmSync(TMP, { recursive: true, force: true })
 console.log(`wrote ${n} frames → public/sketch/fc-still.webp + fc-loop.{webm,mp4}`)
 console.log('source: BV1JM411x7yC @t≥55s → sketch-src/hl/fc3s-ref-drive.mp4')
-console.log('style: Initial D manga cel-color (cool night, bold line)')
+console.log('style: clean manga grade (bilateral+ink); loop closed→open→close→closed')
+console.log(
+  `timing: closed ${HOLD0 / FPS}s | open ${OPEN_N / FPS}s | hold ${HOLD_UP / FPS}s | close ${CLOSE_N / FPS}s | closed ${HOLD1 / FPS}s`,
+)
