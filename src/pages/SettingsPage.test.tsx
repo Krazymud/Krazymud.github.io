@@ -58,11 +58,11 @@ describe('SettingsPage', () => {
     expect(screen.queryByRole('button', { name: '确认导入' })).not.toBeInTheDocument()
   })
 
-  it('credits ECDICT and notes sketch placeholders', () => {
+  it('credits ECDICT and notes drive night sketch stage', () => {
     renderSettings()
     const credits = within(screen.getByRole('region', { name: '鸣谢' }))
     expect(credits.getByRole('link', { name: 'ECDICT' })).toBeInTheDocument()
-    expect(credits.getByText(/素描舞台为青庐石墨稿/)).toBeInTheDocument()
+    expect(credits.getByText(/素描舞台为青庐蓝铅笔夜稿/)).toBeInTheDocument()
     expect(credits.queryByRole('link', { name: 'Fictional supercar - V12 Goblin' })).not.toBeInTheDocument()
     expect(credits.queryByRole('link', { name: 'Garage Floor' })).not.toBeInTheDocument()
   })
