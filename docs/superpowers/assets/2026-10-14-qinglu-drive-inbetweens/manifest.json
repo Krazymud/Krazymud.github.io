@@ -1,7 +1,7 @@
 {
   "fps": 24,
-  "holdFrames": 12,
-  "dissolveFrames": 2,
+  "holdFrames": 36,
+  "dissolveFrames": 28,
   "outWidth": 1600,
   "frames": [
     "../2026-10-14-qinglu-bluepencil-drive/k01-straight.jpg",
