@@ -20,7 +20,7 @@ describe('SketchStage', () => {
     render(<SketchStage playLoop={false} />)
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'still')
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-route', 'inner')
-    expect(document.querySelector('img')!).toHaveAttribute('src', expect.stringContaining('fc-drive-still'))
+    expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-fit', 'a')
   })
 
   it('requests the drive loop on home when motion is allowed', () => {
@@ -56,10 +56,12 @@ describe('SketchStage', () => {
     media(false)
     const { rerender } = render(<SketchStage playLoop />)
     rerender(<SketchStage playLoop={false} />)
-    const img = document.querySelector('img')!
+    const imgs = document.querySelectorAll('img')
     const video = document.querySelector('video')
     expect(video).toBeTruthy()
-    expect(img.style.transition).toContain(`${ROUTE_FADE_MS}ms`)
+    // Last img is the sharp still layer (ambience img has no opacity transition).
+    const sharp = imgs[imgs.length - 1] as HTMLImageElement
+    expect(sharp.style.transition).toContain(`${ROUTE_FADE_MS}ms`)
     expect(video!.style.transition).toContain(`${ROUTE_FADE_MS}ms`)
   })
 
@@ -67,10 +69,11 @@ describe('SketchStage', () => {
     media(false)
     const { rerender } = render(<SketchStage playLoop={false} />)
     rerender(<SketchStage playLoop />)
-    const img = document.querySelector('img')!
+    const imgs = document.querySelectorAll('img')
     const video = document.querySelector('video')
     expect(video).toBeTruthy()
-    expect(img.style.transition).toContain(`${ROUTE_FADE_MS}ms`)
+    const sharp = imgs[imgs.length - 1] as HTMLImageElement
+    expect(sharp.style.transition).toContain(`${ROUTE_FADE_MS}ms`)
     expect(video!.style.transition).toContain(`${ROUTE_FADE_MS}ms`)
   })
 
@@ -82,9 +85,9 @@ describe('SketchStage', () => {
   it('shows a static frame when reduced motion is preferred even on home', () => {
     media(true)
     render(<SketchStage playLoop />)
-    expect(document.querySelector('img')!).toHaveAttribute('src', expect.stringContaining('fc-drive-still'))
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'still')
     expect(document.querySelector('video')).toBeNull()
+    expect(document.querySelectorAll('img').length).toBeGreaterThanOrEqual(2)
   })
 
   it('falls back to the still frame when the loop video fails to load', () => {
@@ -93,33 +96,25 @@ describe('SketchStage', () => {
     const video = document.querySelector('video')!
     fireEvent.error(video)
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'still')
-    expect(document.querySelector('img')!.style.opacity).toBe('1')
+    const sharp = [...document.querySelectorAll('img')].at(-1) as HTMLImageElement
+    expect(sharp.style.opacity).toBe('1')
     expect(video.style.opacity).toBe('0')
   })
 
-  it('A 融边 keeps contain + paper noise on narrow viewports', () => {
+  it('uses a 16:9 sharp wrap plus blurred ambience fill on narrow A fit', () => {
     media(false)
-    render(<SketchStage playLoop={false} fit="a" />)
+    render(<SketchStage playLoop={false} />)
     const stage = screen.getByTestId('sketch-stage')
     expect(stage).toHaveAttribute('data-fit', 'a')
     expect(stage.className).toMatch(/min-h-\[100dvh\]|min-h-dvh|h-\[100dvh\]/)
-    const img = document.querySelector('img')!
-    expect(img.className).toMatch(/object-contain/)
-    expect(img.className).toMatch(/sketch-fit-a-media/)
-    expect(img.className).toMatch(/sm:object-cover/)
+    expect(stage.querySelector('.sketch-ambience-tint')).toBeTruthy()
+    expect(stage.querySelector('.sketch-ambience')).toBeTruthy()
     expect(stage.querySelector('.sketch-paper-noise')).toBeTruthy()
+    const wrap = screen.getByTestId('sketch-sharp-wrap')
+    expect(wrap.className).toMatch(/sketch-sharp-wrap/)
+    const sharp = wrap.querySelector('img')
+    expect(sharp).toBeTruthy()
+    expect(sharp!.className).toMatch(/object-cover/)
     expect(document.documentElement.dataset.sketchFit).toBe('a')
-  })
-
-  it('C 折中微裁 scales cover so the plate can soft-crop the car', () => {
-    media(false)
-    render(<SketchStage playLoop={false} fit="c" />)
-    const stage = screen.getByTestId('sketch-stage')
-    expect(stage).toHaveAttribute('data-fit', 'c')
-    const img = document.querySelector('img')!
-    expect(img.className).toMatch(/object-cover/)
-    expect(img.className).toMatch(/scale-\[1\.1\]/)
-    expect(stage.querySelector('.sketch-paper-noise')).toBeNull()
-    expect(document.documentElement.dataset.sketchFit).toBe('c')
   })
 })

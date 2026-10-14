@@ -7,43 +7,15 @@ export const DRIVE_STILL = `${base}sketch/fc-drive-still.webp`
 export const DRIVE_LOOP = `${base}sketch/fc-drive-loop.webm`
 const DRIVE_LOOP_MP4 = `${base}sketch/fc-drive-loop.mp4`
 
-/** Narrow-viewport fusion preview: A 融边 / C 折中微裁. Desktop always covers. */
-export type SketchFit = 'a' | 'c'
+const ambienceClass =
+  'sketch-ambience absolute inset-0 z-0 h-full w-full object-cover object-center sm:hidden'
 
-const baseLayer =
-  'absolute inset-0 h-full w-full object-center sm:object-cover sm:object-[55%_60%] sm:scale-100'
+/** Sharp plate lives in a 16:9 wrap so edge masks hit the real content seam. */
+const sharpWrapClass =
+  'sketch-sharp-wrap absolute inset-x-0 top-1/2 z-[2] w-full -translate-y-1/2 sm:inset-0 sm:top-0 sm:h-full sm:translate-y-0'
 
-function layerClassFor(fit: SketchFit) {
-  if (fit === 'c') {
-    // Soft enlarge + car-biased cover: wheels/tail may clip slightly for a full-bleed fill.
-    return `${baseLayer} object-cover object-[55%_48%] scale-[1.1] sm:object-[55%_60%]`
-  }
-  // A: contain full car; edge feather / paper fill handled via CSS classes.
-  return `${baseLayer} object-contain sketch-fit-a-media`
-}
-
-function readSketchFit(): SketchFit {
-  if (typeof window === 'undefined') return 'a'
-  const value = new URLSearchParams(window.location.search).get('sketchFit')
-  return value === 'c' ? 'c' : 'a'
-}
-
-function useSketchFit(forced?: SketchFit) {
-  const [fit, setFit] = useState<SketchFit>(() => forced ?? readSketchFit())
-
-  useEffect(() => {
-    if (forced) {
-      setFit(forced)
-      return
-    }
-    const sync = () => setFit(readSketchFit())
-    sync()
-    window.addEventListener('popstate', sync)
-    return () => window.removeEventListener('popstate', sync)
-  }, [forced])
-
-  return fit
-}
+const sharpMediaClass =
+  'absolute inset-0 h-full w-full object-cover object-center sm:object-[55%_60%]'
 
 function restartLoop(video: HTMLVideoElement) {
   try {
@@ -55,31 +27,22 @@ function restartLoop(video: HTMLVideoElement) {
   if (playPromise !== undefined) void playPromise.catch(() => {})
 }
 
-export function SketchStage({
-  playLoop,
-  fit: fitProp,
-}: {
-  playLoop: boolean
-  /** Optional override for tests / previews; otherwise `?sketchFit=a|c`. */
-  fit?: SketchFit
-}) {
+export function SketchStage({ playLoop }: { playLoop: boolean }) {
   const reduced = usePrefersReducedMotion()
-  const fit = useSketchFit(fitProp)
   const wantLoop = playLoop && !reduced
   const videoRef = useRef<HTMLVideoElement>(null)
   const fade = `opacity ${ROUTE_FADE_MS}ms ease-in-out`
-  const layerClass = layerClassFor(fit)
 
   const [videoMounted, setVideoMounted] = useState(wantLoop)
   const [loopFadedIn, setLoopFadedIn] = useState(false)
   const [loopDegraded, setLoopDegraded] = useState(false)
 
   useEffect(() => {
-    document.documentElement.dataset.sketchFit = fit
+    document.documentElement.dataset.sketchFit = 'a'
     return () => {
       delete document.documentElement.dataset.sketchFit
     }
-  }, [fit])
+  }, [])
 
   useEffect(() => {
     if (wantLoop) {
@@ -156,34 +119,38 @@ export function SketchStage({
       data-testid="sketch-stage"
       data-motion={motion}
       data-route={playLoop ? 'home' : 'inner'}
-      data-fit={fit}
+      data-fit="a"
       className="pointer-events-none fixed inset-0 h-[100dvh] min-h-[100dvh] w-full overflow-hidden bg-ink"
     >
-      {fit === 'a' ? <div className="sketch-paper-noise" aria-hidden /> : null}
-      <img
-        src={DRIVE_STILL}
-        alt=""
-        aria-hidden
-        className={layerClass}
-        style={{ opacity: stillOpacity, transition: fade }}
-      />
-      {videoMounted ? (
-        <video
-          ref={videoRef}
-          muted
-          autoPlay
-          playsInline
-          {...{ 'webkit-playsinline': '' }}
-          preload="auto"
+      <div className="sketch-ambience-tint sm:hidden" aria-hidden />
+      <img src={DRIVE_STILL} alt="" aria-hidden className={ambienceClass} />
+      <div className="sketch-paper-noise sm:hidden" aria-hidden />
+      <div className={sharpWrapClass} data-testid="sketch-sharp-wrap">
+        <img
+          src={DRIVE_STILL}
+          alt=""
           aria-hidden
-          className={layerClass}
-          style={{ opacity: videoOpacity, transition: fade }}
-          onError={handleVideoError}
-        >
-          <source src={DRIVE_LOOP_MP4} type="video/mp4" />
-          <source src={DRIVE_LOOP} type="video/webm" />
-        </video>
-      ) : null}
+          className={sharpMediaClass}
+          style={{ opacity: stillOpacity, transition: fade }}
+        />
+        {videoMounted ? (
+          <video
+            ref={videoRef}
+            muted
+            autoPlay
+            playsInline
+            {...{ 'webkit-playsinline': '' }}
+            preload="auto"
+            aria-hidden
+            className={sharpMediaClass}
+            style={{ opacity: videoOpacity, transition: fade }}
+            onError={handleVideoError}
+          >
+            <source src={DRIVE_LOOP_MP4} type="video/mp4" />
+            <source src={DRIVE_LOOP} type="video/webm" />
+          </video>
+        ) : null}
+      </div>
     </div>
   )
 }

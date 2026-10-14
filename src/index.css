@@ -137,39 +137,68 @@ body {
   );
 }
 
-/* A 融边: letterbox reads as cool paper; media edges feather into the stage. */
-.sketch-paper-noise {
-  pointer-events: none;
+/* A 融边: ink bed + paper-tinted blur + eased dissolve on the 16:9 plate. */
+.sketch-ambience-tint {
   position: absolute;
   inset: 0;
-  z-index: 1;
-  opacity: 0.045;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
-  mix-blend-mode: multiply;
+  z-index: 0;
+  background: #eef1f5;
 }
 
-.sketch-fit-a-media {
+.sketch-ambience {
+  transform: scale(1.4);
+  filter: blur(80px) saturate(0.65) brightness(1.1);
+  opacity: 0.55;
+  will-change: filter, transform;
+}
+
+.sketch-sharp-wrap {
+  aspect-ratio: 16 / 9;
+  /* Multi-stop ease so the plate lip never reads as a bar. */
   -webkit-mask-image: linear-gradient(
     to bottom,
     transparent 0%,
-    #000 7%,
-    #000 93%,
+    rgb(0 0 0 / 0.12) 10%,
+    rgb(0 0 0 / 0.45) 20%,
+    rgb(0 0 0 / 0.85) 32%,
+    #000 42%,
+    #000 58%,
+    rgb(0 0 0 / 0.85) 68%,
+    rgb(0 0 0 / 0.45) 80%,
+    rgb(0 0 0 / 0.12) 90%,
     transparent 100%
   );
   mask-image: linear-gradient(
     to bottom,
     transparent 0%,
-    #000 7%,
-    #000 93%,
+    rgb(0 0 0 / 0.12) 10%,
+    rgb(0 0 0 / 0.45) 20%,
+    rgb(0 0 0 / 0.85) 32%,
+    #000 42%,
+    #000 58%,
+    rgb(0 0 0 / 0.85) 68%,
+    rgb(0 0 0 / 0.45) 80%,
+    rgb(0 0 0 / 0.12) 90%,
     transparent 100%
   );
 }
 
 @media (min-width: 640px) {
-  .sketch-fit-a-media {
+  .sketch-sharp-wrap {
+    aspect-ratio: auto;
     -webkit-mask-image: none;
     mask-image: none;
   }
+}
+
+.sketch-paper-noise {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.028;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
 }
 
 html[data-sketch-fit='a'] .glass-panel {
