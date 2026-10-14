@@ -123,3 +123,32 @@ body {
 .glass-panel-solid {
   background: rgba(247, 244, 236, 0.88);
 }
+
+/* 翻灯：闭→开→闭，约 8s 一圈，缓入缓出交叉淡化 */
+@keyframes sketch-headlights {
+  0%,
+  12% {
+    opacity: 0;
+  }
+  28%,
+  52% {
+    opacity: 1;
+  }
+  68%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.sketch-headlights {
+  opacity: 0;
+  animation: sketch-headlights 8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sketch-headlights {
+    animation: none;
+    opacity: 0;
+  }
+}
+

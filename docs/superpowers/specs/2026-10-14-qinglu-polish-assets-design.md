@@ -7,16 +7,15 @@ Replace line-SVG/sine placeholders with graphite-style RX-7 FC still + headlight
 ## Assets
 
 - `public/sketch/fc-still.webp` — graphite still, headlights down, warm paper `#f1ebdd`
-- `public/sketch/fc-loop.webp` — short loop (or dual-frame animated webp) of pop-up headlights up/down
-- Keep `fc-still.svg` only if needed for fallback; primary paths are webp
+- `public/sketch/fc-up.webp` — matched pose, headlights up
+- Loop via CSS crossfade (`sketch-headlights`, ~8s ease-in-out), not hard-cut animated webp
 - `public/audio/{tap,confirm,unseal}.mp3` — soft wood/paper taps, no engine character
 
 ## SketchStage
 
-- `SKETCH_STILL` → `fc-still.webp`
-- `SKETCH_LOOP` → `fc-loop.webp`
-- reduced-motion → still only
-- Drop CSS breathe once real loop exists (or keep as last-resort fallback if loop fails)
+- Base layer `fc-still.webp`; overlay `fc-up.webp` with opacity cycle
+- reduced-motion → still only (no overlay animation)
+
 
 ## Cleanup
 
