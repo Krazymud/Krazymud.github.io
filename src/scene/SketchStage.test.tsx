@@ -90,6 +90,20 @@ describe('SketchStage', () => {
     expect(play).toHaveBeenCalled()
   })
 
+  it('retries play when WeChat pauses after showing the first frame', () => {
+    media({ narrow: false })
+    render(<SketchStage playLoop />)
+    const video = document.querySelector('video') as HTMLVideoElement
+    const play = vi.spyOn(video, 'play').mockResolvedValue(undefined)
+    Object.defineProperty(video, 'paused', { configurable: true, get: () => true })
+    Object.defineProperty(video, 'currentTime', { configurable: true, value: 0.01 })
+    Object.defineProperty(video, 'duration', { configurable: true, value: 10 })
+    play.mockClear()
+    fireEvent(video, new Event('playing'))
+    fireEvent(video, new Event('pause'))
+    expect(play).toHaveBeenCalled()
+  })
+
   it('applies route fade transition on both layers during loop exit', () => {
     media({ narrow: false })
     const { rerender } = render(<SketchStage playLoop />)
