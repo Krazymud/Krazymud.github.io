@@ -52,7 +52,7 @@ describe('VaultScreen', () => {
 
   it('shows an empty vault when vault.json is missing', async () => {
     renderVault(async () => null, null)
-    expect(await screen.findByText('保险库还是空的。')).toBeInTheDocument()
+    expect(await screen.findByText('锦匣还是空的。')).toBeInTheDocument()
   })
 
   it('offers a retry when vault.json cannot be loaded', async () => {
@@ -62,7 +62,7 @@ describe('VaultScreen', () => {
       if (offline) throw new Error('offline')
       return vault.fetchBytes(path)
     }, null)
-    expect(await screen.findByText('保险库暂时打不开')).toBeInTheDocument()
+    expect(await screen.findByText('锦匣暂时打不开')).toBeInTheDocument()
     offline = false
     fireEvent.click(screen.getByRole('button', { name: '重试' }))
     expect(await screen.findByLabelText('口令')).toBeInTheDocument()
@@ -74,7 +74,7 @@ describe('VaultScreen', () => {
     renderVault(vault.fetchBytes, null)
     await enter(TEST_PASSPHRASE)
     await screen.findByRole('tab', { name: '照片' })
-    expect(vi.mocked(play).mock.calls.map(([name]) => name)).toEqual(['ignition', 'unlock'])
+    expect(vi.mocked(play).mock.calls.map(([name]) => name)).toEqual(['unseal'])
   })
 
   it('does not play the unlock sound for a wrong passphrase', async () => {
@@ -83,7 +83,7 @@ describe('VaultScreen', () => {
     renderVault(vault.fetchBytes, null)
     await enter('iceland aurora penguin goodbye')
     await screen.findByRole('alert')
-    expect(vi.mocked(play).mock.calls.map(([name]) => name)).toEqual(['ignition'])
+    expect(vi.mocked(play).mock.calls.map(([name]) => name)).toEqual([])
   })
 
   it('says 口令不对 for a wrong passphrase', async () => {
@@ -114,7 +114,7 @@ describe('VaultScreen', () => {
     const vault = await makeTestVault()
     renderVault(vault.fetchBytes, null)
     await type(TEST_PASSPHRASE)
-    fireEvent.pointerDown(screen.getByRole('button', { name: '一键启动' }))
+    fireEvent.pointerDown(screen.getByRole('button', { name: '启封' }))
     act(() => {
       vi.advanceTimersByTime(HOLD_MS)
     })
@@ -126,7 +126,7 @@ describe('VaultScreen', () => {
     const vault = await makeTestVault()
     renderVault(vault.fetchBytes, null)
     await type(TEST_PASSPHRASE)
-    const button = screen.getByRole('button', { name: '一键启动' })
+    const button = screen.getByRole('button', { name: '启封' })
     fireEvent.pointerDown(button)
     act(() => {
       vi.advanceTimersByTime(HOLD_MS / 2)
@@ -238,7 +238,7 @@ describe('VaultScreen', () => {
     await screen.findByRole('tab', { name: '照片' })
     expect(screen.queryByTestId('vault-door')).not.toBeInTheDocument()
     expect(localStorage.getItem(DOOR_DAY_KEY)).toBeNull()
-    expect(sounds()).toEqual(['ignition', 'unlock'])
+    expect(sounds()).toEqual(['unseal'])
   })
 
   it('opens a remembered vault with the door and its sound', async () => {
@@ -249,7 +249,7 @@ describe('VaultScreen', () => {
     renderVault(vault.fetchBytes, store)
     await screen.findByRole('tab', { name: '照片' })
     expect(screen.getByTestId('vault-door')).toBeInTheDocument()
-    expect(sounds()).toEqual(['unlock'])
+    expect(sounds()).toEqual(['unseal'])
   })
 
   it('still plays the unlock sound once for a manual unlock after the door', async () => {
@@ -260,7 +260,7 @@ describe('VaultScreen', () => {
     await enter(TEST_PASSPHRASE)
     await screen.findByRole('tab', { name: '照片' })
     expect(screen.queryByTestId('vault-door')).not.toBeInTheDocument()
-    expect(sounds()).toEqual(['ignition', 'unlock'])
+    expect(sounds()).toEqual(['unseal'])
   })
 
   it('stays quiet when a remembered vault opens after the door', async () => {

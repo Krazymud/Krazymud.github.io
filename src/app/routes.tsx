@@ -1,13 +1,14 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, type RouteObject } from 'react-router'
 import { HomePage } from '../pages/HomePage'
+import { copy } from '../config/copy'
 import { SettingsPage } from '../pages/SettingsPage'
 import { TrialPage } from '../pages/TrialPage'
 import { Layout } from './Layout'
 
 const VaultPage = lazy(() => import('../pages/VaultPage').then((m) => ({ default: m.VaultPage })))
 
-const vaultFallback = <p className="mt-10 text-center text-sm text-muted">正在打开保险库…</p>
+const vaultFallback = <p className="mt-10 text-center text-sm text-muted">{copy.vault.opening}</p>
 
 const devRoutes: RouteObject[] = import.meta.env.DEV
   ? [

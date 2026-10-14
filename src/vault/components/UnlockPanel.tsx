@@ -1,7 +1,6 @@
 import { motion, useReducedMotion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
-import { play } from '../../audio/sound'
-
+import { copy } from '../../config/copy'
 export const HOLD_MS = 1000
 
 interface UnlockPanelProps {
@@ -32,7 +31,6 @@ export function UnlockPanel({ canRemember, onUnlock }: UnlockPanelProps) {
       setMessage('先输入口令')
       return
     }
-    void play('ignition')
     setBusy(true)
     setMessage(null)
     let ok: boolean
@@ -73,12 +71,9 @@ export function UnlockPanel({ canRemember, onUnlock }: UnlockPanelProps) {
         void submit()
       }}
       onAnimationEnd={() => setShaking(false)}
-      className={`mt-6 border border-accent/60 bg-panel/80 px-5 py-8 text-center ${shaking ? 'motion-safe:animate-vault-shake' : ''}`}
+      className={`glass-panel mt-6 rounded-lg px-5 py-8 text-center ${shaking ? 'motion-safe:animate-vault-shake' : ''}`}
     >
-      <p className="font-display text-xs tracking-[0.35em] text-accent-hi">PRIVATE VAULT</p>
-      <p className="mt-4 font-serif text-2xl italic">
-        Only <span className="text-accent-hi">us</span>.
-      </p>
+      <p className="font-display text-xs tracking-[0.35em] text-fg">{copy.vault.title}</p>
 
       <label className="mt-8 block text-left text-xs text-muted">
         口令
@@ -108,7 +103,6 @@ export function UnlockPanel({ canRemember, onUnlock }: UnlockPanelProps) {
 
       <button
         type="button"
-        aria-label="一键启动"
         disabled={busy}
         onPointerDown={startHold}
         onPointerUp={cancelHold}
@@ -132,9 +126,9 @@ export function UnlockPanel({ canRemember, onUnlock }: UnlockPanelProps) {
             transition={{ duration: holding ? HOLD_MS / 1000 : 0.2, ease: 'linear' }}
           />
         </svg>
-        <span className="font-display text-sm tracking-[0.2em]">{busy ? '点火中…' : 'START'}</span>
+        <span className="font-display text-sm tracking-[0.2em]">{busy ? copy.vault.unsealing : copy.vault.unseal}</span>
       </button>
-      <p className="mt-3 text-xs text-muted">{reduced ? '点一下启动' : '按住启动'}</p>
+      <p className="mt-3 text-xs text-muted">{reduced ? copy.vault.tapHint : copy.vault.holdHint}</p>
 
       {message && (
         <p role="alert" className="mt-4 text-sm text-accent-hi">

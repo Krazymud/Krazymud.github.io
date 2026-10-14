@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { copy } from '../../config/copy'
 import { HOLD_MS, UnlockPanel } from './UnlockPanel'
 
 const motion = vi.hoisted(() => ({ reduced: false }))
@@ -22,6 +23,13 @@ describe('UnlockPanel', () => {
     motion.reduced = false
   })
 
+  it('shows vault copy without legacy English labels', () => {
+    render(<UnlockPanel canRemember onUnlock={vi.fn(async () => true)} />)
+    expect(screen.getByText(copy.vault.title)).toBeInTheDocument()
+    expect(screen.queryByText('PRIVATE VAULT')).not.toBeInTheDocument()
+    expect(screen.getByText(copy.vault.unseal)).toBeInTheDocument()
+  })
+
   it('does not offer to save the passphrase', () => {
     renderPanel()
     expect(screen.getByLabelText('口令')).toHaveAttribute('autocomplete', 'off')
@@ -30,7 +38,7 @@ describe('UnlockPanel', () => {
   it('submits once when a second touch starts during a hold', () => {
     vi.useFakeTimers()
     const onUnlock = renderPanel()
-    const button = screen.getByRole('button', { name: '一键启动' })
+    const button = screen.getByRole('button', { name: '启封' })
     fireEvent.pointerDown(button)
     fireEvent.pointerDown(button)
     act(() => {
@@ -42,8 +50,8 @@ describe('UnlockPanel', () => {
   it('starts with a single click when motion is reduced', () => {
     motion.reduced = true
     const onUnlock = renderPanel()
-    expect(screen.getByText('点一下启动')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '一键启动' }))
+    expect(screen.getByText('点一下启封')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '启封' }))
     expect(onUnlock).toHaveBeenCalledWith('iceland aurora penguin goodnight', true)
   })
 })

@@ -1,21 +1,19 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { stopAll, unlockAudio } from '../audio/sound'
-import { Intro } from '../intro/Intro'
-import { Warmup } from '../intro/Warmup'
 import { perfEnabled } from '../perf/perf'
 import { PerfOverlay } from '../perf/PerfOverlay'
-import { getPrefs, setPrefs, usePrefs } from '../prefs/prefs'
+import { setPrefs, usePrefs } from '../prefs/prefs'
 import { useProgress } from '../progress/ProgressProvider'
-import { setIgnitionPending } from '../scene/events'
+import { copy } from '../config/copy'
 import { sceneFor } from '../scene/poses'
 import { SceneHost } from '../scene/SceneHost'
 
 const NAV = [
-  { to: '/', label: '车库', end: true },
-  { to: '/trial', label: '赛道试炼', end: false },
-  { to: '/vault', label: '保险库', end: false },
-  { to: '/settings', label: '设置', end: false },
+  { to: '/', label: copy.nav.home, end: true },
+  { to: '/trial', label: copy.nav.trial, end: false },
+  { to: '/vault', label: copy.nav.vault, end: false },
+  { to: '/settings', label: copy.nav.settings, end: false },
 ]
 
 function SpeakerIcon({ muted }: { muted: boolean }) {
@@ -32,13 +30,6 @@ export function Layout() {
   const { saveFailed } = useProgress()
   const { muted } = usePrefs()
   const scene = sceneFor(pathname)
-  const [opening, setOpening] = useState<'ignition' | 'warmup' | null>(() => {
-    if (pathname !== '/') return null
-    if (getPrefs().introSeen) return 'warmup'
-    setIgnitionPending(true)
-    return 'ignition'
-  })
-  const closeOpening = useCallback(() => setOpening(null), [])
 
   useEffect(() => {
     const onVisibility = () => {
@@ -56,7 +47,6 @@ export function Layout() {
 
   return (
     <div
-      data-theme={scene === 'vault' ? 'vault' : undefined}
       onPointerDownCapture={unlockAudio}
       onClickCapture={unlockAudio}
       onKeyDownCapture={unlockAudio}
@@ -67,8 +57,8 @@ export function Layout() {
       }
     >
       <SceneHost scene={scene} />
-      <header inert={opening !== null} className="relative z-10 flex items-center justify-between gap-3 px-5 pt-4 text-xs">
-        <span className="font-display tracking-[0.35em] text-accent-hi">MIDNIGHT GARAGE</span>
+      <header className="glass-panel relative z-10 mx-5 mt-4 flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-xs">
+        <span className="font-display text-accent-hi">{copy.siteName}</span>
         <nav className="flex items-center gap-4">
           {NAV.map((item) => (
             <NavLink
@@ -92,15 +82,13 @@ export function Layout() {
         </nav>
       </header>
       {saveFailed && (
-        <p role="alert" className="relative z-10 mx-5 mt-3 border border-accent px-3 py-2 text-xs">
-          进度暂时无法保存到这台设备，建议去「设置」导出进度。
+        <p role="alert" className="glass-panel relative z-10 mx-5 mt-3 rounded-lg px-3 py-2 text-xs">
+          {copy.layout.progressSaveFailed}
         </p>
       )}
-      <main inert={opening !== null} className="relative z-10 mx-auto flex w-full max-w-md flex-col px-5 pt-6 pb-10">
+      <main className="glass-panel relative z-10 mx-auto mt-4 flex w-full max-w-md flex-col rounded-lg px-5 pt-6 pb-10">
         <Outlet />
       </main>
-      {opening === 'ignition' && <Intro onDone={closeOpening} />}
-      {opening === 'warmup' && <Warmup onDone={closeOpening} />}
       {perfEnabled && <PerfOverlay />}
     </div>
   )

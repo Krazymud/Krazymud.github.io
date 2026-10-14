@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
+import { copy } from '../../config/copy'
 import { studyDay } from '../../trial/day'
 import { todaysMemory } from '../memory'
 import type { FetchBytes, VaultSession } from '../repo'
@@ -79,7 +80,7 @@ export function VaultContent({ session, file, fetchBytes, sweep, onLock, webStor
     <section>
       {sweep && <GoldSweep />}
       <div className="flex items-center justify-between">
-        <p className="font-display text-xs tracking-[0.35em] text-accent-hi">PRIVATE VAULT</p>
+        <p className="font-display text-xs tracking-[0.35em] text-fg">{copy.vault.title}</p>
         <button type="button" onClick={onLock} className="border border-line px-3 py-1 text-xs text-muted hover:text-fg">
           锁上
         </button>

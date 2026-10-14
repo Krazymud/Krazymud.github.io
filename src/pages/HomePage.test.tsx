@@ -1,10 +1,12 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { play } from '../audio/sound'
+import { copy } from '../config/copy'
+import { site } from '../config/site'
 import { ProgressProvider } from '../progress/ProgressProvider'
 import { emptyProgress, serializeProgress, STORAGE_KEY } from '../progress/store'
-import { resetLoading, setLoading } from '../scene/loading'
+import { resetLoading } from '../scene/loading'
 import { studyDay } from '../trial/day'
 import { HomePage } from './HomePage'
 
@@ -14,7 +16,7 @@ function renderHome() {
   const router = createMemoryRouter(
     [
       { path: '/', element: <HomePage /> },
-      { path: '/trial', element: <p>赛道</p> },
+      { path: '/trial', element: <p>日课</p> },
     ],
     { initialEntries: ['/'] },
   )
@@ -32,10 +34,22 @@ describe('HomePage', () => {
     resetLoading()
   })
 
-  it('blips the throttle when she sets off', () => {
+  it('greets in qinglu copy without garage mods entry', () => {
+    renderHome()
+    expect(screen.getByText(copy.home.eyebrow)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(copy.home.hello(site.nickname))
+    expect(screen.getByRole('link', { name: copy.home.vaultLink })).toBeInTheDocument()
+    expect(screen.getByText(copy.home.trialToday)).toBeInTheDocument()
+    expect(screen.queryByText('WELCOME BACK')).toBeNull()
+    expect(screen.queryByText(/HELLO/)).toBeNull()
+    expect(screen.queryByText('今日试炼')).toBeNull()
+    expect(screen.queryByRole('button', { name: '改装' })).not.toBeInTheDocument()
+  })
+
+  it('taps when she sets off', () => {
     renderHome()
     fireEvent.click(screen.getByRole('link', { name: /出发/ }))
-    expect(play).toHaveBeenCalledWith('blip')
+    expect(play).toHaveBeenCalledWith('confirm')
   })
 
   it('stays quiet when she only looks at a finished lap', async () => {
@@ -51,13 +65,13 @@ describe('HomePage', () => {
     localStorage.setItem(STORAGE_KEY, serializeProgress({ ...emptyProgress(), session }))
     renderHome()
     fireEvent.click(screen.getByRole('link', { name: /看结算/ }))
-    expect(await screen.findByText('赛道')).toBeInTheDocument()
+    expect(await screen.findByText('日课')).toBeInTheDocument()
     expect(play).not.toHaveBeenCalled()
   })
 
   it('shows the garage dashboard', () => {
     renderHome()
-    expect(screen.getByRole('group', { name: '车库仪表' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: '青庐仪表' })).toBeInTheDocument()
   })
 
   it('folds due reviews into the trial card', () => {
@@ -67,35 +81,7 @@ describe('HomePage', () => {
       serializeProgress({ ...emptyProgress(), words: { alpha: { interval: 1, due: today, lastResult: 'ok', seenCount: 1 } } }),
     )
     renderHome()
-    expect(screen.getByRole('link', { name: /今日试炼 · 到期 1/ })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /今日日课 · 到期 1/ })).toBeInTheDocument()
     expect(screen.queryByText(/到期复习/)).toBeNull()
-  })
-
-  it('offers mods once the 3D garage is up', () => {
-    renderHome()
-    expect(screen.queryByRole('button', { name: '改装' })).not.toBeInTheDocument()
-    act(() => setLoading({ kind: '3d', fraction: 1 }))
-    const button = screen.getByRole('button', { name: '改装' })
-    fireEvent.click(button)
-    expect(screen.getByRole('dialog', { name: '改装' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '关闭' }))
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(button).toHaveFocus()
-  })
-
-  it('drops the mods panel if the garage falls back to the still', () => {
-    renderHome()
-    act(() => setLoading({ kind: '3d', fraction: 1 }))
-    fireEvent.click(screen.getByRole('button', { name: '改装' }))
-    act(() => setLoading({ kind: 'still', fraction: 1 }))
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    act(() => setLoading({ kind: '3d', fraction: 1 }))
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  })
-
-  it('hides mods when only the still is shown', () => {
-    setLoading({ kind: 'still', fraction: 1 })
-    renderHome()
-    expect(screen.queryByRole('button', { name: '改装' })).not.toBeInTheDocument()
   })
 })

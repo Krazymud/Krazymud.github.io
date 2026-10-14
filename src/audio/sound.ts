@@ -1,8 +1,8 @@
 import { getPrefs } from '../prefs/prefs'
 
-export type SoundName = 'ignition' | 'rev' | 'blip' | 'unlock'
+export type SoundName = 'tap' | 'confirm' | 'unseal'
 
-const SOUND_NAMES: readonly SoundName[] = ['ignition', 'rev', 'blip', 'unlock']
+const SOUND_NAMES: readonly SoundName[] = ['tap', 'confirm', 'unseal']
 export const READY_TIMEOUT_MS = 1500
 
 type ContextFactory = () => AudioContext

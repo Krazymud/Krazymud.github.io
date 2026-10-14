@@ -46,7 +46,7 @@ describe('sound', () => {
 
   it('stays silent before the first tap', async () => {
     const { factory, sources } = fakeAudio()
-    await play('rev')
+    await play('tap')
     expect(factory).not.toHaveBeenCalled()
     expect(fetch).not.toHaveBeenCalled()
     expect(sources).toHaveLength(0)
@@ -59,18 +59,17 @@ describe('sound', () => {
     expect(factory).toHaveBeenCalledTimes(1)
     expect(context.resume).toHaveBeenCalled()
     expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual([
-      '/audio/ignition.mp3',
-      '/audio/rev.mp3',
-      '/audio/blip.mp3',
-      '/audio/unlock.mp3',
+      '/audio/tap.mp3',
+      '/audio/confirm.mp3',
+      '/audio/unseal.mp3',
     ])
-    expect(soundUrl('rev')).toBe('/audio/rev.mp3')
+    expect(soundUrl('confirm')).toBe('/audio/confirm.mp3')
   })
 
   it('plays a clip after the first tap', async () => {
     const { sources } = fakeAudio()
     unlockAudio()
-    await play('rev')
+    await play('tap')
     expect(sources).toHaveLength(1)
     expect(sources[0].start).toHaveBeenCalled()
     expect(sources[0].buffer).not.toBeNull()
@@ -81,7 +80,7 @@ describe('sound', () => {
     const { sources } = fakeAudio()
     setPrefs({ muted: true })
     unlockAudio()
-    await play('rev')
+    await play('tap')
     expect(sources).toHaveLength(0)
   })
 
@@ -96,7 +95,7 @@ describe('sound', () => {
     unlockAudio()
     unlockAudio()
     expect(factory).toHaveBeenCalledTimes(1)
-    expect(fetch).toHaveBeenCalledTimes(4)
+    expect(fetch).toHaveBeenCalledTimes(3)
   })
 
   it('swallows a clip the server refuses', async () => {
@@ -104,10 +103,10 @@ describe('sound', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 404 })))
     const { context, sources } = fakeAudio()
     unlockAudio()
-    await expect(play('rev')).resolves.toBeUndefined()
+    await expect(play('tap')).resolves.toBeUndefined()
     expect(context.decodeAudioData).not.toHaveBeenCalled()
     expect(sources).toHaveLength(0)
-    expect(warn).toHaveBeenCalledWith('[sound]', new Error('rev: HTTP 404'))
+    expect(warn).toHaveBeenCalledWith('[sound]', new Error('tap: HTTP 404'))
   })
 
   it('swallows a clip that cannot be decoded', async () => {
@@ -116,7 +115,7 @@ describe('sound', () => {
       throw new Error('bad mp3')
     })
     unlockAudio()
-    await expect(play('unlock')).resolves.toBeUndefined()
+    await expect(play('unseal')).resolves.toBeUndefined()
     expect(sources).toHaveLength(0)
     expect(warn).toHaveBeenCalled()
   })
@@ -125,7 +124,7 @@ describe('sound', () => {
     vi.useFakeTimers()
     const { sources } = fakeAudio(() => new Promise(() => {}))
     unlockAudio()
-    const playing = play('ignition')
+    const playing = play('confirm')
     await vi.advanceTimersByTimeAsync(READY_TIMEOUT_MS)
     await playing
     expect(sources).toHaveLength(0)
@@ -134,8 +133,8 @@ describe('sound', () => {
   it('restarts a clip instead of layering it', async () => {
     const { sources } = fakeAudio()
     unlockAudio()
-    await play('rev')
-    await play('rev')
+    await play('tap')
+    await play('tap')
     expect(sources).toHaveLength(2)
     expect(sources[0].stop).toHaveBeenCalled()
     expect(sources[1].stop).not.toHaveBeenCalled()
@@ -144,8 +143,8 @@ describe('sound', () => {
   it('stops everything at once', async () => {
     const { sources } = fakeAudio()
     unlockAudio()
-    await play('rev')
-    await play('unlock')
+    await play('tap')
+    await play('unseal')
     stopAll()
     expect(sources.every((source) => source.stop.mock.calls.length === 1)).toBe(true)
     stopAll()
@@ -158,7 +157,7 @@ describe('sound', () => {
     resetSound()
     expect(context.close).toHaveBeenCalledTimes(1)
     unlockAudio()
-    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(8)
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(6)
   })
 
   it('resets a context that cannot be closed', () => {

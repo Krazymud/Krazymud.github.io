@@ -22,7 +22,7 @@ function drawSign(): CanvasTexture {
     context.lineWidth = 6
     context.strokeStyle = '#ffffff'
     context.letterSpacing = '18px'
-    context.strokeText('MIDNIGHT GARAGE', 512, 84, canvas.width - MARGIN * 2)
+    context.strokeText('青庐', 512, 84, canvas.width - MARGIN * 2)
   }
   const texture = new CanvasTexture(canvas)
   texture.colorSpace = SRGBColorSpace

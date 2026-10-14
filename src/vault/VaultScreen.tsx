@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { play } from '../audio/sound'
+import { copy } from '../config/copy'
 import { prefersReducedMotion } from '../scene/hooks'
 import { studyDay } from '../trial/day'
 import { DecryptError } from './crypto'
@@ -29,14 +30,14 @@ function opened(file: VaultFile, session: VaultSession, manual: boolean): VaultS
   const today = studyDay(new Date())
   const door = !prefersReducedMotion() && !doorPlayedOn(today)
   if (door) markDoorPlayed(today)
-  if (door || manual) void play('unlock')
+  if (door || manual) void play('unseal')
   return { status: 'open', file, session, door }
 }
 
 function Notice({ children }: { children: ReactNode }) {
   return (
-    <section className="mt-10 border border-accent/60 bg-panel/80 px-5 py-8 text-center">
-      <p className="font-display text-xs tracking-[0.35em] text-accent-hi">PRIVATE VAULT</p>
+    <section className="glass-panel mt-10 rounded-lg px-5 py-8 text-center">
+      <p className="font-display text-xs tracking-[0.35em] text-fg">{copy.vault.title}</p>
       <div className="mt-4 text-sm text-muted">{children}</div>
     </section>
   )
@@ -101,13 +102,13 @@ export function VaultScreen({ fetchBytes = fetchVaultBytes, keyStore }: VaultScr
 
   switch (state.status) {
     case 'loading':
-      return <p className="mt-10 text-center text-sm text-muted">正在打开保险库…</p>
+      return <p className="mt-10 text-center text-sm text-muted">{copy.vault.opening}</p>
     case 'empty':
-      return <Notice>保险库还是空的。</Notice>
+      return <Notice>{copy.vault.empty}</Notice>
     case 'error':
       return (
         <Notice>
-          <p>保险库暂时打不开</p>
+          <p>{copy.vault.broken}</p>
           <button
             type="button"
             onClick={() => {

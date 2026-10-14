@@ -28,7 +28,7 @@ export function NitroFlash() {
     <motion.div
       aria-hidden
       className="pointer-events-none fixed inset-0"
-      style={{ background: 'radial-gradient(ellipse at 50% 60%, rgba(193, 39, 45, 0.45), transparent 60%)' }}
+      style={{ background: 'radial-gradient(ellipse at 50% 60%, rgba(26, 24, 22, 0.28), transparent 60%)' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: [0, 1, 0] }}
       transition={{ duration: 0.9 }}

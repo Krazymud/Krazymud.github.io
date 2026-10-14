@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { PREFS_KEY, resetPrefsCache } from '../prefs/prefs'
+import { resetPrefsCache } from '../prefs/prefs'
 import { ProgressProvider } from '../progress/ProgressProvider'
 import { emptyProgress, STORAGE_KEY } from '../progress/store'
+import { copy } from '../config/copy'
 import { SettingsPage } from './SettingsPage'
 
 function renderSettings() {
@@ -22,6 +23,11 @@ describe('SettingsPage', () => {
   beforeEach(() => {
     localStorage.clear()
     resetPrefsCache()
+  })
+
+  it('uses the rebranded page title', () => {
+    renderSettings()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(copy.settings.title)
   })
 
   it('explains why an invalid file is rejected', async () => {
@@ -52,36 +58,12 @@ describe('SettingsPage', () => {
     expect(screen.queryByRole('button', { name: '确认导入' })).not.toBeInTheDocument()
   })
 
-  it('turns the 3D garage off and on', () => {
-    renderSettings()
-    const toggle = screen.getByRole('switch', { name: /3D 车库/ })
-    expect(toggle).toBeChecked()
-    fireEvent.click(toggle)
-    expect(toggle).not.toBeChecked()
-    expect(JSON.parse(localStorage.getItem(PREFS_KEY)!)).toEqual({ scene3d: false, muted: false, introSeen: false, paint: 'midnight', rim: 'gunmetal', caliper: 'red' })
-    fireEvent.click(toggle)
-    expect(toggle).toBeChecked()
-  })
-
-  it('credits the car model and other third-party assets', () => {
+  it('credits ECDICT and notes sketch placeholders', () => {
     renderSettings()
     const credits = within(screen.getByRole('region', { name: '鸣谢' }))
-    expect(credits.getByRole('link', { name: 'Fictional supercar - V12 Goblin' })).toHaveAttribute(
-      'href',
-      'https://sketchfab.com/3d-models/fictional-supercar-v12-goblin-0a20e49ad5774d778567cb5c3f345786',
-    )
-    expect(credits.getByText(/ollitei/)).toBeInTheDocument()
-    expect(credits.getByRole('link', { name: 'CC BY 4.0' })).toHaveAttribute('href', 'https://creativecommons.org/licenses/by/4.0/')
-    expect(credits.getByText(/已修改：材质、配色和压缩/)).toBeInTheDocument()
     expect(credits.getByRole('link', { name: 'ECDICT' })).toBeInTheDocument()
-    expect(credits.getByText(/Rajdhani/)).toBeInTheDocument()
-    expect(credits.getByRole('link', { name: 'Ferrari start up and drive off' })).toHaveAttribute(
-      'href',
-      'https://freesound.org/people/EwanPenman11/sounds/659560/',
-    )
-    expect(credits.getByRole('link', { name: 'Supercar rev' })).toHaveAttribute('href', 'https://freesound.org/people/richwise/sounds/478756/')
-    expect(credits.getByRole('link', { name: 'Car Lock' })).toHaveAttribute('href', 'https://freesound.org/people/hz37/sounds/396448/')
-    expect(credits.getByRole('link', { name: 'Garage Floor' })).toHaveAttribute('href', 'https://polyhaven.com/a/garage_floor')
-    expect(credits.getByRole('link', { name: 'Box Profile Metal Sheet' })).toHaveAttribute('href', 'https://polyhaven.com/a/box_profile_metal_sheet')
+    expect(credits.getByText(/素描舞台为青庐占位稿/)).toBeInTheDocument()
+    expect(credits.queryByRole('link', { name: 'Fictional supercar - V12 Goblin' })).not.toBeInTheDocument()
+    expect(credits.queryByRole('link', { name: 'Garage Floor' })).not.toBeInTheDocument()
   })
 })

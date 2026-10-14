@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { play } from '../audio/sound'
+import { copy } from '../config/copy'
 import { useProgress } from '../progress/ProgressProvider'
 import { emitNitro } from '../scene/events'
 import { addDays, studyDay } from './day'
@@ -110,7 +111,7 @@ export function TrialScreen({ source, now = () => new Date() }: TrialScreenProps
   useEffect(() => {
     if (!nitro) return
     emitNitro()
-    void play('rev')
+    void play('confirm')
   }, [nitro, cursor])
 
   const finished = session !== undefined && isFinished(session)
@@ -123,7 +124,7 @@ export function TrialScreen({ source, now = () => new Date() }: TrialScreenProps
     }
     if (finished && !finishedOnOpen.current) {
       finishedOnOpen.current = true
-      void play('rev')
+      void play('confirm')
     }
   }, [session, finished])
 
@@ -137,7 +138,7 @@ export function TrialScreen({ source, now = () => new Date() }: TrialScreenProps
       />
     )
   }
-  if (!session) return <p className="text-center text-sm text-muted">正在进站…</p>
+  if (!session) return <p className="text-center text-sm text-muted">{copy.trial.preparing}</p>
   if (finished) {
     return (
       <ResultPanel session={session} dueTomorrow={dueOn(data.words, addDays(today, 1))} mastered={masteredCount(data.words)} />
