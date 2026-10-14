@@ -58,18 +58,12 @@ describe('SettingsPage', () => {
     expect(screen.queryByRole('button', { name: '确认导入' })).not.toBeInTheDocument()
   })
 
-  it('credits the car model and other third-party assets', () => {
+  it('credits ECDICT and notes sketch placeholders', () => {
     renderSettings()
     const credits = within(screen.getByRole('region', { name: '鸣谢' }))
-    expect(credits.getByRole('link', { name: 'Fictional supercar - V12 Goblin' })).toHaveAttribute(
-      'href',
-      'https://sketchfab.com/3d-models/fictional-supercar-v12-goblin-0a20e49ad5774d778567cb5c3f345786',
-    )
-    expect(credits.getByText(/ollitei/)).toBeInTheDocument()
-    expect(credits.getByRole('link', { name: 'CC BY 4.0' })).toHaveAttribute('href', 'https://creativecommons.org/licenses/by/4.0/')
-    expect(credits.getByText(/已修改：材质、配色和压缩/)).toBeInTheDocument()
     expect(credits.getByRole('link', { name: 'ECDICT' })).toBeInTheDocument()
-    expect(credits.getByRole('link', { name: 'Garage Floor' })).toHaveAttribute('href', 'https://polyhaven.com/a/garage_floor')
-    expect(credits.getByRole('link', { name: 'Box Profile Metal Sheet' })).toHaveAttribute('href', 'https://polyhaven.com/a/box_profile_metal_sheet')
+    expect(credits.getByText(/素描舞台为青庐占位稿/)).toBeInTheDocument()
+    expect(credits.queryByRole('link', { name: 'Fictional supercar - V12 Goblin' })).not.toBeInTheDocument()
+    expect(credits.queryByRole('link', { name: 'Garage Floor' })).not.toBeInTheDocument()
   })
 })

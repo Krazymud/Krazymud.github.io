@@ -92,27 +92,6 @@ export function SettingsPage() {
           鸣谢
         </h2>
         <p>
-          车模型「
-          <a
-            href="https://sketchfab.com/3d-models/fictional-supercar-v12-goblin-0a20e49ad5774d778567cb5c3f345786"
-            target="_blank"
-            rel="noreferrer"
-            className="underline"
-          >
-            Fictional supercar - V12 Goblin
-          </a>
-          」，作者 ollitei，采用{' '}
-          <a
-            href="https://creativecommons.org/licenses/by/4.0/"
-            target="_blank"
-            rel="noreferrer"
-            className="underline"
-          >
-            CC BY 4.0
-          </a>{' '}
-          授权。已修改：材质、配色和压缩。
-        </p>
-        <p>
           词库来自{' '}
           <a
             href="https://github.com/skywind3000/ECDICT"
@@ -124,13 +103,7 @@ export function SettingsPage() {
           </a>
           （MIT 协议）。
         </p>
-        <p>
-          材质来自 Poly Haven（CC0）：Jenelle van Heerden「
-          <a href="https://polyhaven.com/a/garage_floor" target="_blank" rel="noreferrer" className="underline">Garage Floor</a>
-          」、Amal Kumar「
-          <a href="https://polyhaven.com/a/box_profile_metal_sheet" target="_blank" rel="noreferrer" className="underline">Box Profile Metal Sheet</a>
-          」。
-        </p>
+        <p>素描舞台为青庐占位稿，成片石墨循环与音效待替换。</p>
       </section>
     </section>
   )
