@@ -1,15 +1,14 @@
 /**
- * FC3S headlight loop — full redraw from real video (no still SVG overlays).
+ * FC3S headlight loop — Initial D manga cel-color redraw from drive footage.
  *
- * Source: sketch-src/hl/fc3s-ref-open.mp4
- *   trimmed from Bilibili BV1JM411x7yC (马自达RX-7 FC3S 转子引擎启动)
+ * Source: sketch-src/hl/fc3s-ref-drive.mp4
+ *   trimmed from Bilibili BV1JM411x7yC @ t≥55s (car fills frame, night street)
  *
  * Pipeline:
- *   1) Cut the real dual-sync open snap from the clip
- *   2) Optical-flow slow-mo so the mechanical arc is readable
- *   3) Graphite redraw onto site paper tone
- *   4) Compose closed → open → hold → close → closed (8s @ 24fps)
- *   5) Write public/sketch/fc-still.webp + fc-loop.{webm,mp4}
+ *   1) Cut open-hold / close-snap / closed-hold from the drive clip
+ *   2) Optical-flow slow-mo the dual close snap; reverse = open
+ *   3) Manga cel-color redraw (bold line + cool night grade — not muddy sepia)
+ *   4) Compose 8s @ 24fps loop → public/sketch/fc-still.webp + fc-loop.{webm,mp4}
  *
  * Usage: node scripts/build-headlight-seq.mjs
  */
@@ -21,18 +20,21 @@ import { fileURLToPath } from 'node:url'
 import sharp from 'sharp'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const REF = path.join(root, 'sketch-src/hl/fc3s-ref-open.mp4')
+const REF = path.join(root, 'sketch-src/hl/fc3s-ref-drive.mp4')
 const OUT_PUBLIC = path.join(root, 'public/sketch')
 const ART = '/opt/cursor/artifacts'
-const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'fc3s-redraw-'))
+const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'fc3s-manga-'))
 const SNAP = path.join(TMP, 'snap.mp4')
 const RAW = path.join(TMP, 'raw')
 const SKETCH = path.join(TMP, 'sketch')
 const SEQ = path.join(TMP, 'seq')
+const OPEN_PLATE = path.join(TMP, 'open-plate.jpg')
+const CLOSED_PLATE = path.join(TMP, 'closed-plate.jpg')
 for (const d of [RAW, SKETCH, SEQ, ART, OUT_PUBLIC]) fs.mkdirSync(d, { recursive: true })
 
 if (!fs.existsSync(REF)) {
   console.error('Missing reference clip:', REF)
+  console.error('Expect BV1JM411x7yC segment from t≥55s at sketch-src/hl/fc3s-ref-drive.mp4')
   process.exit(1)
 }
 
@@ -42,12 +44,16 @@ const FPS = 24
 const TOTAL = 8 * FPS
 
 /**
- * In fc3s-ref-open.mp4 (original video t=20…30s):
- * lids flush ~4.4–4.85s, dual snap open ~4.90s, lit hold after.
+ * In fc3s-ref-drive.mp4 (original t=55…66s):
+ *   0–5.2s  headlights up + lit, car centered
+ *   ~5.4s   dual close snap
+ *   6s+     lids flush
  */
-const CUT_START = 4.4
-const CUT_DUR = 1.05
-const SLOW = 4.5
+const OPEN_PLATE_T = 2.0
+const CLOSED_PLATE_T = 7.5
+const SNAP_START = 5.15
+const SNAP_DUR = 0.55
+const SLOW = 5
 
 const HOLD0 = Math.round(1.0 * FPS)
 const OPEN_N = Math.round(2.4 * FPS)
@@ -55,9 +61,39 @@ const HOLD_UP = Math.round(1.8 * FPS)
 const CLOSE_N = Math.round(2.4 * FPS)
 const HOLD1 = TOTAL - HOLD0 - OPEN_N - HOLD_UP - CLOSE_N
 
-const scaleCrop = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H}`
+/** Prefer lower-rightish crop so the driving car fills the frame as hero. */
+const scaleCrop = `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H}:(iw-ow)*0.58:(ih-oh)*0.78`
 
-console.log('cutting FC3S open snap from reference…')
+function grabPlate(t, out) {
+  execFileSync(
+    'ffmpeg',
+    [
+      '-y',
+      '-err_detect',
+      'ignore_err',
+      '-ss',
+      String(t),
+      '-i',
+      REF,
+      '-frames:v',
+      '1',
+      '-vf',
+      scaleCrop,
+      '-q:v',
+      '2',
+      '-update',
+      '1',
+      out,
+    ],
+    { stdio: 'inherit' },
+  )
+}
+
+console.log('grabbing open/closed plates from drive segment…')
+grabPlate(OPEN_PLATE_T, OPEN_PLATE)
+grabPlate(CLOSED_PLATE_T, CLOSED_PLATE)
+
+console.log('cutting dual close snap…')
 execFileSync(
   'ffmpeg',
   [
@@ -65,11 +101,11 @@ execFileSync(
     '-err_detect',
     'ignore_err',
     '-ss',
-    String(CUT_START),
+    String(SNAP_START),
     '-i',
     REF,
     '-t',
-    String(CUT_DUR),
+    String(SNAP_DUR),
     '-vf',
     scaleCrop,
     '-c:v',
@@ -84,7 +120,7 @@ execFileSync(
   { stdio: 'inherit' },
 )
 
-console.log(`optical-flow slow-mo ×${SLOW}…`)
+console.log(`optical-flow slow-mo ×${SLOW} (close arc)…`)
 execFileSync(
   'ffmpeg',
   [
@@ -95,59 +131,103 @@ execFileSync(
     `setpts=${SLOW}*PTS,minterpolate=fps=${FPS}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1`,
     '-q:v',
     '2',
-    path.join(RAW, 'a%03d.jpg'),
+    path.join(RAW, 'c%03d.jpg'),
   ],
   { stdio: 'inherit' },
 )
 
-const rawFiles = fs
+const closeFiles = fs
   .readdirSync(RAW)
-  .filter((f) => f.endsWith('.jpg'))
+  .filter((f) => f.startsWith('c') && f.endsWith('.jpg'))
   .sort()
-if (rawFiles.length < 12) {
-  console.error('Too few slow-mo frames:', rawFiles.length)
+if (closeFiles.length < 8) {
+  console.error('Too few close-arc frames:', closeFiles.length)
   process.exit(1)
 }
-console.log(`slow-mo frames: ${rawFiles.length}`)
+console.log(`close-arc frames: ${closeFiles.length}`)
 
-/** Night → graphite on cream paper (#f1ebdd). */
-function graphiteFilterComplex() {
+/**
+ * Initial D–style manga cel color:
+ * clean white body, cool night blues, warm lamp glow, thick ink lines,
+ * hard 4-band cel shading (not muddy sepia / neon washout).
+ */
+function mangaFilterComplex() {
   return [
-    '[0:v]eq=contrast=1.45:brightness=0.38:gamma=0.78,format=gray,eq=contrast=0.92:brightness=0.12[base]',
-    '[0:v]eq=contrast=1.7:brightness=0.35:gamma=0.7,format=gray,edgedetect=mode=colormix:low=0.03:high=0.1,negate[edges]',
-    `[base][edges]blend=all_mode=multiply:all_opacity=0.85,` +
-      `colorchannelmixer=rr=0.90:rg=0.05:rb=0.02:gr=0.06:gg=0.84:gb=0.04:br=0.04:bg=0.05:bb=0.72,` +
-      `curves=r='0/0.10 0.55/0.62 1/0.96':g='0/0.09 0.55/0.58 1/0.93':b='0/0.07 0.55/0.50 1/0.88'`,
+    // Kill grain → flatter regions for cel cuts
+    '[0:v]gblur=sigma=1.6,eq=contrast=1.38:saturation=1.48:brightness=0.1:gamma=0.92[col]',
+    // Cool night bias; keep highlight whites near-neutral
+    '[col]colorchannelmixer=rr=1.06:gg=1.02:bb=1.12:rb=-0.02:gr=-0.02,' +
+      'colorbalance=bs=0.14:bm=0.06:rs=-0.06:rm=-0.03:rh=0.02[grade]',
+    // Hard cel bands (neutral highs, cool mids/shadows)
+    `[grade]lutrgb=` +
+      `r='if(lt(val,32),10,if(lt(val,80),55,if(lt(val,140),115,if(lt(val,195),175,248))))':` +
+      `g='if(lt(val,32),12,if(lt(val,80),58,if(lt(val,140),118,if(lt(val,195),178,248))))':` +
+      `b='if(lt(val,32),26,if(lt(val,80),78,if(lt(val,140),135,if(lt(val,195),188,250))))'[cel]`,
+    // Thick ink outlines
+    '[cel]split[b][e]',
+    '[e]format=gray,edgedetect=mode=colormix:low=0.025:high=0.085,negate,' +
+      'eq=contrast=4.2:brightness=-0.22,dilation,gblur=sigma=0.45[lines]',
+    '[b][lines]blend=all_mode=multiply:all_opacity=0.68,' +
+      `curves=r='0/0 0.4/0.36 0.75/0.78 1/1':g='0/0 0.4/0.38 0.75/0.8 1/1':b='0/0.05 0.4/0.45 0.75/0.85 1/1',` +
+      'eq=saturation=1.18:contrast=1.16,unsharp=5:5:1.4:3:3:0.5',
   ].join(';')
 }
 
-console.log('redrawing as graphite…')
-execFileSync(
-  'ffmpeg',
-  [
-    '-y',
-    '-framerate',
-    String(FPS),
-    '-i',
-    path.join(RAW, 'a%03d.jpg'),
-    '-filter_complex',
-    graphiteFilterComplex(),
-    '-q:v',
-    '2',
-    path.join(SKETCH, 's%03d.jpg'),
-  ],
-  { stdio: 'inherit' },
-)
+function stylize(inputPattern, outPattern) {
+  execFileSync(
+    'ffmpeg',
+    [
+      '-y',
+      '-framerate',
+      String(FPS),
+      '-i',
+      inputPattern,
+      '-filter_complex',
+      mangaFilterComplex(),
+      '-q:v',
+      '2',
+      outPattern,
+    ],
+    { stdio: 'inherit' },
+  )
+}
 
-const sketchFiles = fs
+function stylizeOne(input, out) {
+  execFileSync(
+    'ffmpeg',
+    [
+      '-y',
+      '-i',
+      input,
+      '-filter_complex',
+      mangaFilterComplex(),
+      '-q:v',
+      '2',
+      '-update',
+      '1',
+      out,
+    ],
+    { stdio: 'inherit' },
+  )
+}
+
+console.log('manga cel-color redraw…')
+const openManga = path.join(TMP, 'open-manga.jpg')
+const closedManga = path.join(TMP, 'closed-manga.jpg')
+stylizeOne(OPEN_PLATE, openManga)
+stylizeOne(CLOSED_PLATE, closedManga)
+stylize(path.join(RAW, 'c%03d.jpg'), path.join(SKETCH, 'c%03d.jpg'))
+
+const sketchClose = fs
   .readdirSync(SKETCH)
-  .filter((f) => f.endsWith('.jpg'))
+  .filter((f) => f.startsWith('c') && f.endsWith('.jpg'))
   .sort()
-const arcN = sketchFiles.length
+const arcN = sketchClose.length
 
-function sampleArc(t) {
+/** t=0 open … t=1 closed along the real close arc */
+function sampleClose(t) {
   const idx = Math.min(arcN - 1, Math.max(0, Math.round(t * (arcN - 1))))
-  return path.join(SKETCH, sketchFiles[idx])
+  return path.join(SKETCH, sketchClose[idx])
 }
 
 function easeInOut(t) {
@@ -155,20 +235,31 @@ function easeInOut(t) {
 }
 
 console.log('composing 8s loop…')
-const closedSrc = sampleArc(0)
-await sharp(closedSrc).webp({ quality: 86 }).toFile(path.join(OUT_PUBLIC, 'fc-still.webp'))
-await sharp(closedSrc).jpeg({ quality: 92 }).toFile(path.join(ART, 'fc3s-redraw-still.jpg'))
+await sharp(closedManga).webp({ quality: 88 }).toFile(path.join(OUT_PUBLIC, 'fc-still.webp'))
+await sharp(closedManga).jpeg({ quality: 92 }).toFile(path.join(ART, 'fc3s-manga-still.jpg'))
+await sharp(openManga).jpeg({ quality: 92 }).toFile(path.join(ART, 'fc3s-manga-open.jpg'))
 
 let n = 0
 const copyFrame = (src, i) => {
   fs.copyFileSync(src, path.join(SEQ, `f${String(i).padStart(4, '0')}.jpg`))
 }
 
-for (let i = 0; i < HOLD0; i++, n++) copyFrame(sampleArc(0), n)
-for (let i = 0; i < OPEN_N; i++, n++) copyFrame(sampleArc(easeInOut((i + 1) / OPEN_N)), n)
-for (let i = 0; i < HOLD_UP; i++, n++) copyFrame(sampleArc(1), n)
-for (let i = 0; i < CLOSE_N; i++, n++) copyFrame(sampleArc(easeInOut(1 - (i + 1) / CLOSE_N)), n)
-for (let i = 0; i < HOLD1; i++, n++) copyFrame(sampleArc(0), n)
+// closed hold
+for (let i = 0; i < HOLD0; i++, n++) copyFrame(closedManga, n)
+// open = reverse of close arc (closed→open), end on open plate
+for (let i = 0; i < OPEN_N; i++, n++) {
+  const t = easeInOut(1 - (i + 1) / OPEN_N) // 1→0 along close arc
+  copyFrame(i === OPEN_N - 1 ? openManga : sampleClose(t), n)
+}
+// open hold
+for (let i = 0; i < HOLD_UP; i++, n++) copyFrame(openManga, n)
+// close = forward close arc → closed plate
+for (let i = 0; i < CLOSE_N; i++, n++) {
+  const t = easeInOut((i + 1) / CLOSE_N)
+  copyFrame(i === CLOSE_N - 1 ? closedManga : sampleClose(t), n)
+}
+// closed hold
+for (let i = 0; i < HOLD1; i++, n++) copyFrame(closedManga, n)
 
 const pattern = path.join(SEQ, 'f%04d.jpg')
 execFileSync(
@@ -184,7 +275,9 @@ execFileSync(
     '-b:v',
     '0',
     '-crf',
-    '36',
+    '34',
+    '-pix_fmt',
+    'yuv420p',
     '-row-mt',
     '1',
     '-an',
@@ -209,7 +302,7 @@ execFileSync(
     '-profile:v',
     'main',
     '-crf',
-    '22',
+    '20',
     '-movflags',
     '+faststart',
     '-an',
@@ -220,19 +313,18 @@ execFileSync(
   { stdio: 'inherit' },
 )
 
-for (const [name, t] of [
-  ['closed', 0],
-  ['q1', 0.22],
-  ['mid', 0.55],
-  ['open', 1],
+// QA zooms — car front
+for (const [name, src] of [
+  ['closed', closedManga],
+  ['open', openManga],
+  ['q1', sampleClose(0.75)], // early open (near closed end of close-arc reversed)
+  ['mid', sampleClose(0.45)],
 ]) {
-  const src = sampleArc(t)
   await sharp(src)
-    .extract({ left: 380, top: 200, width: 900, height: 500 })
+    .extract({ left: 300, top: 220, width: 1000, height: 560 })
     .resize(1080, 600)
     .jpeg({ quality: 92 })
     .toFile(path.join(ART, `hl-mech-${name}-zoom.jpg`))
-  await sharp(src).jpeg({ quality: 90 }).toFile(path.join(ART, `hl-mech-${name}.jpg`))
 }
 
 execFileSync(
@@ -303,7 +395,7 @@ execFileSync(
     '-pix_fmt',
     'yuv420p',
     '-crf',
-    '22',
+    '20',
     '-movflags',
     '+faststart',
     '-an',
@@ -322,35 +414,19 @@ execFileSync(
   [
     '-y',
     '-i',
-    path.join(SKETCH, 's%03d.jpg'),
+    path.join(SKETCH, 'c%03d.jpg'),
     '-vf',
-    'crop=iw*0.5:ih*0.36:iw*0.25:ih*0.26,scale=160:-1,tile=10x6',
+    'scale=180:-1,tile=10x5',
     '-update',
     '1',
     '-frames:v',
     '1',
-    path.join(ART, 'fc3s-sketch-arc-strip.jpg'),
-  ],
-  { stdio: 'inherit' },
-)
-execFileSync(
-  'ffmpeg',
-  [
-    '-y',
-    '-i',
-    path.join(RAW, 'a%03d.jpg'),
-    '-vf',
-    'crop=iw*0.5:ih*0.36:iw*0.25:ih*0.26,scale=160:-1,tile=10x6',
-    '-update',
-    '1',
-    '-frames:v',
-    '1',
-    path.join(ART, 'fc3s-raw-arc-strip.jpg'),
+    path.join(ART, 'fc3s-manga-arc-strip.jpg'),
   ],
   { stdio: 'inherit' },
 )
 
 fs.rmSync(TMP, { recursive: true, force: true })
 console.log(`wrote ${n} frames → public/sketch/fc-still.webp + fc-loop.{webm,mp4}`)
-console.log('source: Bilibili BV1JM411x7yC → sketch-src/hl/fc3s-ref-open.mp4')
-console.log('method: video snap + optical-flow slow-mo + graphite redraw')
+console.log('source: BV1JM411x7yC @t≥55s → sketch-src/hl/fc3s-ref-drive.mp4')
+console.log('style: Initial D manga cel-color (cool night, bold line)')
