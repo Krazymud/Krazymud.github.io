@@ -6,15 +6,16 @@ Replace line-SVG/sine placeholders with graphite-style RX-7 FC still + headlight
 
 ## Assets
 
-- `public/sketch/fc-still.webp` — graphite still, headlights down, warm paper `#f1ebdd`
-- `public/sketch/fc-up.webp` — matched pose, headlights up
-- Loop via CSS crossfade (`sketch-headlights`, ~8s ease-in-out), not hard-cut animated webp
-- `public/audio/{tap,confirm,unseal}.mp3` — soft wood/paper taps, no engine character
+- `public/sketch/fc-still.webp` — graphite still, headlights down
+- `public/sketch/fc-loop.webm` + `fc-loop.mp4` — 8s @ 24fps (192 frames) open/hold/close cycle
+- Keyframes `assets-src/sketch/hl/k00..k05.webp`; rebuild via `node scripts/build-headlight-seq.mjs`
+- `public/audio/{tap,confirm,unseal}.mp3` — soft wood/paper taps
 
 ## SketchStage
 
-- Base layer `fc-still.webp`; overlay `fc-up.webp` with opacity cycle
-- reduced-motion → still only (no overlay animation)
+- Loop: muted autoplay `<video>` (webm then mp4)
+- reduced-motion → still `<img>` only
+
 
 
 ## Cleanup

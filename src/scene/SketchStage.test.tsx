@@ -15,22 +15,22 @@ describe('SketchStage', () => {
   it('shows a static frame when reduced motion is preferred', () => {
     media(true)
     render(<SketchStage />)
-    const imgs = document.querySelectorAll('img')
-    expect(imgs).toHaveLength(1)
-    expect(imgs[0]).toHaveAttribute('src', expect.stringContaining('fc-still'))
+    expect(document.querySelector('video')).toBeNull()
+    expect(document.querySelector('img')!).toHaveAttribute('src', expect.stringContaining('fc-still'))
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'still')
   })
 
-  it('crossfades headlights over a multi-second loop otherwise', () => {
+  it('plays a multi-frame video loop otherwise', () => {
     media(false)
     render(<SketchStage />)
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'loop')
-    const imgs = [...document.querySelectorAll('img')]
-    expect(imgs.map((img) => img.getAttribute('src'))).toEqual([
-      expect.stringContaining('fc-still'),
-      expect.stringContaining('fc-up'),
-    ])
-    expect(imgs[1]).toHaveClass('sketch-headlights')
-    expect(imgs.every((img) => img.getAttribute('aria-hidden') === 'true')).toBe(true)
+    const video = document.querySelector('video')!
+    expect(video).toHaveAttribute('autoplay')
+    expect(video).toHaveAttribute('loop')
+    expect(video.muted).toBe(true)
+    expect(video).toHaveAttribute('playsinline')
+
+    const sources = [...video.querySelectorAll('source')].map((s) => s.getAttribute('src'))
+    expect(sources).toEqual([expect.stringContaining('fc-loop.webm'), expect.stringContaining('fc-loop.mp4')])
   })
 })
