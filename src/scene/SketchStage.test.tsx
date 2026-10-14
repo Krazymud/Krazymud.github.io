@@ -27,13 +27,26 @@ describe('SketchStage', () => {
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-route', 'home')
     const video = document.querySelector('video')
     expect(video).toBeTruthy()
-    expect(video!.getAttribute('src') || video!.querySelector('source')?.getAttribute('src')).toEqual(
-      expect.stringContaining('fc-drive-loop'),
-    )
+    // Prefer mp4 first for iOS Safari (webm-first source lists are flaky there).
+    const sources = [...video!.querySelectorAll('source')].map((s) => s.getAttribute('src') ?? '')
+    expect(sources[0]).toEqual(expect.stringContaining('fc-drive-loop.mp4'))
+    expect(sources.some((s) => s.includes('fc-drive-loop.webm'))).toBe(true)
     expect(video!.muted).toBe(true)
-    expect(video!.loop).toBe(true)
     expect(video!.playsInline).toBe(true)
+    expect(video).toHaveAttribute('playsinline')
+    expect(video).toHaveAttribute('webkit-playsinline')
     expect(video).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('restarts playback at end so iOS Safari keeps looping', () => {
+    media(false)
+    render(<SketchStage playLoop />)
+    const video = document.querySelector('video') as HTMLVideoElement
+    const play = vi.spyOn(video, 'play').mockResolvedValue(undefined)
+    Object.defineProperty(video, 'currentTime', { configurable: true, writable: true, value: 9.9 })
+    fireEvent(video, new Event('ended'))
+    expect(video.currentTime).toBe(0)
+    expect(play).toHaveBeenCalled()
   })
 
   it('applies route fade transition on both layers during loop exit', () => {
@@ -81,10 +94,14 @@ describe('SketchStage', () => {
     expect(video.style.opacity).toBe('0')
   })
 
-  it('anchors the crop toward the car nose', () => {
+  it('covers the viewport with a mobile-safe media crop', () => {
     media(false)
     render(<SketchStage playLoop={false} />)
+    const stage = screen.getByTestId('sketch-stage')
+    expect(stage.className).toMatch(/min-h-\[100dvh\]|min-h-dvh|h-\[100dvh\]/)
     const img = document.querySelector('img')!
-    expect(img.className).toMatch(/object-\[55%_60%\]|object-\[center_60%\]/)
+    expect(img.className).toMatch(/min-h-full/)
+    expect(img.className).toMatch(/min-w-full/)
+    expect(img.className).toMatch(/object-cover/)
   })
 })
