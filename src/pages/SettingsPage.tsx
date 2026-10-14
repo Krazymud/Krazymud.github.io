@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent } from 'react'
+import { copy } from '../config/copy'
 import { setPrefs, usePrefs } from '../prefs/prefs'
 import { useProgress } from '../progress/ProgressProvider'
 import { parseProgress, serializeProgress, type ProgressData } from '../progress/store'
@@ -56,9 +57,9 @@ export function SettingsPage() {
 
   return (
     <section className="space-y-6">
-      <h1 className="font-display text-2xl font-bold tracking-wide">设置</h1>
+      <h1 className="font-display text-2xl font-bold tracking-wide">{copy.settings.title}</h1>
 
-      <div className="border border-line bg-panel/90 p-4">
+      <div className="glass-panel rounded-lg p-4">
         <label className="flex items-center justify-between gap-4">
           <span>
             <span className="block text-sm font-bold">3D 车库</span>
@@ -84,7 +85,7 @@ export function SettingsPage() {
         </label>
       </div>
 
-      <div className="border border-line bg-panel/90 p-4">
+      <div className="glass-panel rounded-lg p-4">
         <h2 className="text-sm font-bold">导出进度</h2>
         <p className="mt-1 text-xs text-muted">当前已学 {learned} 个单词。换设备前先导出，在新设备上导入。</p>
         <button type="button" onClick={exportProgress} className="mt-3 border border-accent-hi bg-accent/20 px-4 py-2 text-sm">
@@ -92,7 +93,7 @@ export function SettingsPage() {
         </button>
       </div>
 
-      <div className="border border-line bg-panel/90 p-4">
+      <div className="glass-panel rounded-lg p-4">
         <h2 className="text-sm font-bold">导入进度</h2>
         <label className="mt-3 block text-xs text-muted">
           导入进度文件

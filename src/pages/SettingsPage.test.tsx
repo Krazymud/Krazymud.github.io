@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { PREFS_KEY, resetPrefsCache } from '../prefs/prefs'
 import { ProgressProvider } from '../progress/ProgressProvider'
 import { emptyProgress, STORAGE_KEY } from '../progress/store'
+import { copy } from '../config/copy'
 import { SettingsPage } from './SettingsPage'
 
 function renderSettings() {
@@ -22,6 +23,11 @@ describe('SettingsPage', () => {
   beforeEach(() => {
     localStorage.clear()
     resetPrefsCache()
+  })
+
+  it('uses the rebranded page title', () => {
+    renderSettings()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(copy.settings.title)
   })
 
   it('explains why an invalid file is rejected', async () => {

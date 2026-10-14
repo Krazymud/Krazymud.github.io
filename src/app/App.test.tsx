@@ -42,7 +42,7 @@ describe('app shell', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 404 })))
     renderAt('/vault')
     expect(document.querySelector('[data-theme="vault"]')).toBeNull()
-    expect(await screen.findByText('保险库还是空的。', {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(await screen.findByText(copy.vault.empty, {}, { timeout: 5000 })).toBeInTheDocument()
   })
 
   it('shows the sketch backdrop behind the garage page', () => {

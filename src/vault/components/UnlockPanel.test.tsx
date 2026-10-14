@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { copy } from '../../config/copy'
 import { HOLD_MS, UnlockPanel } from './UnlockPanel'
 
 const motion = vi.hoisted(() => ({ reduced: false }))
@@ -20,6 +21,13 @@ describe('UnlockPanel', () => {
   afterEach(() => {
     vi.useRealTimers()
     motion.reduced = false
+  })
+
+  it('shows vault copy without legacy English labels', () => {
+    render(<UnlockPanel canRemember onUnlock={vi.fn(async () => true)} />)
+    expect(screen.getByText(copy.vault.title)).toBeInTheDocument()
+    expect(screen.queryByText('PRIVATE VAULT')).not.toBeInTheDocument()
+    expect(screen.getByText(copy.vault.unseal)).toBeInTheDocument()
   })
 
   it('does not offer to save the passphrase', () => {
