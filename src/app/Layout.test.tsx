@@ -1,12 +1,17 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { stopAll, unlockAudio } from '../audio/sound'
+import { play, stopAll, unlockAudio } from '../audio/sound'
 import { getPrefs } from '../prefs/prefs'
 import { ProgressProvider } from '../progress/ProgressProvider'
 import { routes } from './routes'
 
-vi.mock('../audio/sound', () => ({ play: vi.fn(async () => undefined), stopAll: vi.fn(), unlockAudio: vi.fn() }))
+vi.mock('../audio/sound', () => ({
+  play: vi.fn(async () => undefined),
+  stopAll: vi.fn(),
+  unlockAudio: vi.fn(),
+}))
+
 
 function renderSettings() {
   const router = createMemoryRouter(routes, { initialEntries: ['/settings'] })
@@ -67,6 +72,14 @@ describe('Layout', () => {
     expect(screen.getByRole('link', { name: '案头' })).toBeInTheDocument()
     expect(screen.queryByText('MIDNIGHT GARAGE')).toBeNull()
   })
+
+  it('plays tap when navigating', () => {
+    renderSettings()
+    vi.mocked(play).mockClear()
+    fireEvent.click(screen.getByRole('link', { name: '日课' }))
+    expect(play).toHaveBeenCalledWith('tap')
+  })
+
 
   it('unlocks audio on any pointer, click or key press', () => {
     renderSettings()
