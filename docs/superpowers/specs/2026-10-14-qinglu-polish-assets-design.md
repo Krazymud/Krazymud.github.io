@@ -6,17 +6,17 @@ Replace line-SVG/sine placeholders with graphite-style RX-7 FC still + headlight
 
 ## Assets
 
-- `public/sketch/fc-still.webp` — graphite still, headlights down
-- `public/sketch/fc-loop.webm` + `fc-loop.mp4` — 8s @ 24fps (192 frames) open/hold/close cycle
-- Keyframes `sketch-src/hl/k00..k05.webp`; rebuild via `node scripts/build-headlight-seq.mjs`
-- `public/audio/{tap,confirm,unseal}.mp3` — soft wood/paper taps
+- `public/sketch/fc-still.webp` — graphite still, headlights down, warm paper `#f1ebdd`
+- `public/sketch/fc-loop.webp` — short loop (or dual-frame animated webp) of pop-up headlights up/down
+- Keep `fc-still.svg` only if needed for fallback; primary paths are webp
+- `public/audio/{tap,confirm,unseal}.mp3` — soft wood/paper taps, no engine character
 
 ## SketchStage
 
-- Loop: muted autoplay `<video>` (webm then mp4)
-- reduced-motion → still `<img>` only
-
-
+- `SKETCH_STILL` → `fc-still.webp`
+- `SKETCH_LOOP` → `fc-loop.webp`
+- reduced-motion → still only
+- Drop CSS breathe once real loop exists (or keep as last-resort fallback if loop fails)
 
 ## Cleanup
 

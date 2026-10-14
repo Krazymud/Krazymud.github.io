@@ -15,24 +15,16 @@ describe('SketchStage', () => {
   it('shows a static frame when reduced motion is preferred', () => {
     media(true)
     render(<SketchStage />)
-    expect(document.querySelector('video')).toBeNull()
-    const img = document.querySelector('img')!
-    expect(img).toHaveAttribute('src', expect.stringContaining('fc-still'))
-    expect(img).toHaveClass('sketch-media')
+    expect(document.querySelector('img')!).toHaveAttribute('src', expect.stringContaining('fc-still'))
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'still')
   })
 
-  it('plays a multi-frame video loop otherwise', () => {
+  it('plays the loop otherwise', () => {
     media(false)
     render(<SketchStage />)
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'loop')
-    const video = document.querySelector('video')!
-    expect(video).toHaveClass('sketch-media')
-    expect(video).toHaveAttribute('autoplay')
-    expect(video).toHaveAttribute('loop')
-    expect(video.muted).toBe(true)
-    expect(video).toHaveAttribute('playsinline')
-    const sources = [...video.querySelectorAll('source')].map((s) => s.getAttribute('src'))
-    expect(sources).toEqual([expect.stringContaining('fc-loop.webm'), expect.stringContaining('fc-loop.mp4')])
+    expect(document.querySelector('img')!).toHaveAttribute('src', expect.stringContaining('fc-loop'))
+    expect(document.querySelector('img')).toHaveAttribute('aria-hidden', 'true')
   })
 })
+

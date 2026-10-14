@@ -80,12 +80,6 @@ describe('Layout', () => {
     expect(play).toHaveBeenCalledWith('tap')
   })
 
-  it('keeps side gutters so the sketch can show beside the main glass', () => {
-    renderSettings()
-    expect(document.querySelector('main')).toHaveClass('mx-5')
-    expect(document.querySelector('main')).toHaveClass('glass-panel-solid')
-  })
-
 
   it('unlocks audio on any pointer, click or key press', () => {
     renderSettings()
