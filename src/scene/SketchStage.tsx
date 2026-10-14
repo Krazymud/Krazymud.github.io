@@ -14,10 +14,10 @@ export function SketchStage() {
       className="pointer-events-none fixed inset-0 overflow-hidden bg-[#f1ebdd]"
     >
       {reduced ? (
-        <img src={SKETCH_STILL} alt="" aria-hidden className="h-full w-full object-cover" />
+        <img src={SKETCH_STILL} alt="" aria-hidden className="sketch-media" />
       ) : (
         <video
-          className="h-full w-full object-cover"
+          className="sketch-media"
           autoPlay
           muted
           loop
