@@ -8,7 +8,6 @@ import type { VaultFile } from '../types'
 import { useVaultMutate, type MutateResult } from '../useVaultMutate'
 import { localCalendarToday, type WebClock } from '../web'
 import { defaultWebStore, type WebStore } from '../webStore'
-import { GoldSweep } from './GoldSweep'
 import { ListsTab, type ListDraft } from './ListsTab'
 import { MemoryCard } from './MemoryCard'
 import { NotesTab, type NoteDraft } from './NotesTab'
@@ -30,14 +29,13 @@ interface VaultContentProps {
   session: VaultSession
   file: VaultFile
   fetchBytes: FetchBytes
-  sweep: boolean
   onLock: () => void
   webStore?: WebStore | null
   webFetch?: typeof fetch
   clock?: WebClock
 }
 
-export function VaultContent({ session, file, fetchBytes, sweep, onLock, webStore, webFetch, clock }: VaultContentProps) {
+export function VaultContent({ session, file, fetchBytes, onLock, webStore, webFetch, clock }: VaultContentProps) {
   const [params, setParams] = useSearchParams()
   const [tokenInput, setTokenInput] = useState('')
   const raw = params.get('tab')
@@ -78,7 +76,6 @@ export function VaultContent({ session, file, fetchBytes, sweep, onLock, webStor
 
   return (
     <section>
-      {sweep && <GoldSweep />}
       <div className="flex items-center justify-between">
         <p className="font-display text-xs tracking-[0.35em] text-fg">{copy.vault.title}</p>
         <button type="button" onClick={onLock} className="border border-line px-3 py-1 text-xs text-muted hover:text-fg">
