@@ -87,10 +87,9 @@ export function Layout() {
           {copy.layout.progressSaveFailed}
         </p>
       )}
-      <main className="glass-panel glass-panel-solid relative z-10 mx-5 mt-4 flex max-w-md flex-col rounded-lg px-5 pt-6 pb-10 sm:mx-auto sm:w-full">
+      <main className="glass-panel glass-panel-solid relative z-10 mx-auto mt-4 flex w-full max-w-md flex-col rounded-lg px-5 pt-6 pb-10">
         <Outlet />
       </main>
-
       {perfEnabled && <PerfOverlay />}
     </div>
   )

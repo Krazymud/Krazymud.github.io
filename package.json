@@ -12,8 +12,7 @@
     "words": "tsx scripts/build-words.ts",
     "vault": "tsx scripts/vault.ts",
     "vault:rekey": "tsx scripts/vault-rekey.ts",
-    "audio": "tsx scripts/audio.ts",
-    "sketch:loop": "node scripts/build-headlight-seq.mjs"
+    "audio": "tsx scripts/audio.ts"
   },
   "dependencies": {
     "exifr": "^7.1.3",
