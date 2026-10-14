@@ -21,6 +21,15 @@ describe('fetchVaultBytes', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 500 })))
     await expect(fetchVaultBytes('vault.json')).rejects.toThrow('HTTP 500')
   })
+
+  it('always fetches vault paths with no-cache so a lagged blob 404 is not sticky', async () => {
+    const fetchImpl = vi.fn(async () => new Response(new Uint8Array([1])))
+    vi.stubGlobal('fetch', fetchImpl)
+    await fetchVaultBytes('blobs/a.bin')
+    await fetchVaultBytes('vault.json')
+    expect(fetchImpl.mock.calls[0][1]).toMatchObject({ cache: 'no-cache' })
+    expect(fetchImpl.mock.calls[1][1]).toMatchObject({ cache: 'no-cache' })
+  })
 })
 
 describe('vault repo', () => {

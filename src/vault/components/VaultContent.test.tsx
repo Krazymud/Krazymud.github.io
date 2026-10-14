@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { IDBFactory } from 'fake-indexeddb'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { decryptBytes, decryptJson } from '../crypto'
+import { decryptBytes, decryptJson, encryptBytes, encryptJson } from '../crypto'
 import { GitHubWriteError, SYNC_PENDING, TOKEN_DENIED } from '../github'
 import * as gitVault from '../gitVault'
 import * as photoProcess from '../photoProcess'
@@ -179,6 +179,51 @@ describe('VaultContent published edits', () => {
     fireEvent.click(screen.getByRole('tab', { name: '笔记' }))
     expect(await screen.findByText('刚写好')).toBeInTheDocument()
     expect(screen.queryByText('这篇笔记打不开')).not.toBeInTheDocument()
+  })
+
+  it('opens a note that only GitHub has after a cold load once the token finishes loading', async () => {
+    // Device B: site vault.json already lists a note another device committed, but Pages has not
+    // published the blob yet. The card mounts while IndexedDB token load is still in flight.
+    const sealed = await encryptBytes(vault.dek, new TextEncoder().encode('跨端刚写好'))
+    remote.set('note-cold', sealed)
+    const coldManifest: VaultManifest = {
+      ...session.manifest,
+      notes: [
+        ...session.manifest.notes,
+        { title: '跨端笔记', date: '2026-10-14', blob: 'note-cold', source: 'notes/cold.md', hash: 'c' },
+      ],
+    }
+    const coldFile = { ...vault.file, manifest: await encryptJson(vault.dek, coldManifest) }
+    const site = vault.fetchBytes
+    vault = {
+      ...vault,
+      file: coldFile,
+      fetchBytes: async (path) => (path === 'blobs/note-cold.bin' ? null : site(path)),
+    }
+    session = { dek: vault.dek, manifest: coldManifest }
+    readVaultFile.mockResolvedValue({ file: coldFile, commitSha: 'tip-cold' })
+
+    const tokenGate = deferred<void>()
+    const baseStore = store
+    store = {
+      ...baseStore,
+      loadToken: async () => {
+        await tokenGate.promise
+        return baseStore.loadToken()
+      },
+    }
+
+    renderVault('/vault?tab=notes')
+    expect(await screen.findByText('跨端笔记')).toBeInTheDocument()
+    expect(screen.queryByText('这篇笔记打不开')).not.toBeInTheDocument()
+
+    await act(async () => {
+      tokenGate.resolve()
+    })
+
+    expect(await screen.findByText('跨端刚写好')).toBeInTheDocument()
+    expect(screen.queryByText('这篇笔记打不开')).not.toBeInTheDocument()
+    expect(readBlobFile).toHaveBeenCalledWith(apiFetch, 'tok', 'note-cold', 'tip-cold')
   })
 
   it('keeps a just-edited note readable when the site and GitHub cannot serve the new blob yet', async () => {
