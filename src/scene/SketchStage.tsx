@@ -19,7 +19,7 @@ const ambienceClass =
 const sharpWrapBleedClass =
   'sketch-sharp-wrap absolute inset-x-0 top-1/2 z-[2] w-full -translate-y-1/2 sm:inset-0 sm:top-0 sm:h-full sm:translate-y-0'
 
-/** Dock (narrow home slot): fill the stage window. */
+/** Dock (narrow home slot): fill the stage window; same A 融边 mask as bleed. */
 const sharpWrapDockClass = 'sketch-sharp-wrap sketch-sharp-wrap-dock absolute inset-0 z-[2]'
 
 const sharpMediaClass =
@@ -164,27 +164,12 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
     setLoopDegraded(true)
   }
 
-  const stage = (
-    <div
-      data-testid="sketch-stage"
-      data-motion={motion}
-      data-route={playLoop ? 'home' : 'inner'}
-      data-fit="a"
-      data-placement={docked ? 'dock' : 'bleed'}
-      className={
-        docked
-          ? 'pointer-events-none absolute inset-0 overflow-hidden bg-ink'
-          : 'pointer-events-none fixed inset-0 h-[100dvh] min-h-[100dvh] w-full overflow-hidden bg-ink'
-      }
-    >
-      {!docked ? <div className="sketch-ambience-tint sm:hidden" aria-hidden /> : null}
-      <img
-        src={DRIVE_STILL}
-        alt=""
-        aria-hidden
-        className={`${ambienceClass}${docked ? '' : ' sm:hidden'}`}
-      />
-      <div className={`sketch-paper-noise${docked ? '' : ' sm:hidden'}`} aria-hidden />
+  const layers = (
+    <>
+      {/* A 融边: paper tint + blur bed + sharp plate (mask on wrap in bleed, on group in dock). */}
+      <div className="sketch-ambience-tint sm:hidden" aria-hidden />
+      <img src={DRIVE_STILL} alt="" aria-hidden className={`${ambienceClass} sm:hidden`} />
+      <div className="sketch-paper-noise sm:hidden" aria-hidden />
       <div
         className={docked ? sharpWrapDockClass : sharpWrapBleedClass}
         data-testid="sketch-sharp-wrap"
@@ -214,6 +199,29 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
           </video>
         ) : null}
       </div>
+    </>
+  )
+
+  const stage = (
+    <div
+      data-testid="sketch-stage"
+      data-motion={motion}
+      data-route={playLoop ? 'home' : 'inner'}
+      data-fit="a"
+      data-placement={docked ? 'dock' : 'bleed'}
+      className={
+        docked
+          ? 'pointer-events-none absolute inset-0 overflow-hidden'
+          : 'pointer-events-none fixed inset-0 h-[100dvh] min-h-[100dvh] w-full overflow-hidden bg-ink'
+      }
+    >
+      {docked ? (
+        <div className="sketch-a-blend absolute inset-0" data-testid="sketch-a-blend">
+          {layers}
+        </div>
+      ) : (
+        layers
+      )}
     </div>
   )
 

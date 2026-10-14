@@ -122,7 +122,7 @@ describe('SketchStage', () => {
     expect(document.documentElement.dataset.sketchFit).toBe('a')
   })
 
-  it('docks into the home stage slot on narrow home', async () => {
+  it('docks into the home stage slot with the verified A blend stack', async () => {
     media({ narrow: true })
     const slot = document.createElement('div')
     slot.setAttribute(HOME_STAGE_ATTR, '')
@@ -138,6 +138,10 @@ describe('SketchStage', () => {
     expect(stage).toHaveAttribute('data-placement', 'dock')
     expect(stage.className).toMatch(/absolute/)
     expect(stage.className).not.toMatch(/fixed/)
+    expect(stage.querySelector('[data-testid="sketch-a-blend"]')).toBeTruthy()
+    expect(stage.querySelector('.sketch-ambience-tint')).toBeTruthy()
+    expect(stage.querySelector('.sketch-ambience')).toBeTruthy()
+    expect(stage.querySelector('.sketch-paper-noise')).toBeTruthy()
     expect(stage.querySelector('.sketch-sharp-wrap-dock')).toBeTruthy()
     expect(document.documentElement.dataset.sketchPlacement).toBe('dock')
   })

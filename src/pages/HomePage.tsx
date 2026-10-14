@@ -53,11 +53,11 @@ export function HomePage() {
         </div>
       </div>
 
-      {/* Narrow-only stage window; SketchStage portals the drive loop here. */}
+      {/* Narrow-only stage window; SketchStage portals the drive loop + A 融边 here. */}
       <div
         data-testid="home-stage"
         {...{ [HOME_STAGE_ATTR]: '' }}
-        className="relative -mx-5 aspect-video overflow-hidden sm:hidden"
+        className="relative -mx-5 my-1 aspect-video overflow-hidden sm:hidden"
       />
 
       <div

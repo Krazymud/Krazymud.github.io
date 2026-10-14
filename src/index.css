@@ -152,9 +152,9 @@ body {
   will-change: filter, transform;
 }
 
+/* Verified A 融边 dissolve (bleed wrap + dock group share this curve). */
+.sketch-a-blend,
 .sketch-sharp-wrap {
-  aspect-ratio: 16 / 9;
-  /* Multi-stop ease so the plate lip never reads as a bar. */
   -webkit-mask-image: linear-gradient(
     to bottom,
     transparent 0%,
@@ -183,23 +183,15 @@ body {
   );
 }
 
-/* Narrow home dock: fill the in-flow stage window with a light seam dissolve. */
+.sketch-sharp-wrap {
+  aspect-ratio: 16 / 9;
+}
+
+/* Narrow home dock: fill the slot; mask lives on .sketch-a-blend (whole stack). */
 .sketch-sharp-wrap-dock {
   aspect-ratio: auto;
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    #000 10%,
-    #000 90%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    #000 10%,
-    #000 90%,
-    transparent 100%
-  );
+  -webkit-mask-image: none;
+  mask-image: none;
 }
 
 @media (min-width: 640px) {
