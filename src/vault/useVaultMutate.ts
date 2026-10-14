@@ -121,12 +121,13 @@ export function useVaultMutate(options: {
   bytesRef.current = fetchBytes
   clockRef.current = clock
 
+  function isReady() {
+    return phaseRef.current === 'ready'
+  }
+
   async function awaitReady() {
-    for (;;) {
-      if (phaseRef.current === 'ready') return
-      const gate = readyGate.current
-      await gate.promise
-      if (phaseRef.current === 'ready') return
+    while (!isReady()) {
+      await readyGate.current.promise
     }
   }
 

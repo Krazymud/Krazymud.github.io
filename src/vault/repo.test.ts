@@ -27,8 +27,8 @@ describe('fetchVaultBytes', () => {
     vi.stubGlobal('fetch', fetchImpl)
     await fetchVaultBytes('blobs/a.bin')
     await fetchVaultBytes('vault.json')
-    expect(fetchImpl.mock.calls[0][1]).toMatchObject({ cache: 'no-cache' })
-    expect(fetchImpl.mock.calls[1][1]).toMatchObject({ cache: 'no-cache' })
+    expect(fetchImpl).toHaveBeenNthCalledWith(1, expect.stringContaining('blobs/a.bin'), { cache: 'no-cache' })
+    expect(fetchImpl).toHaveBeenNthCalledWith(2, expect.stringContaining('vault.json'), { cache: 'no-cache' })
   })
 })
 
