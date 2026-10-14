@@ -29,7 +29,7 @@ function opened(file: VaultFile, session: VaultSession, manual: boolean): VaultS
   const today = studyDay(new Date())
   const door = !prefersReducedMotion() && !doorPlayedOn(today)
   if (door) markDoorPlayed(today)
-  if (door || manual) void play('unlock')
+  if (door || manual) void play('unseal')
   return { status: 'open', file, session, door }
 }
 

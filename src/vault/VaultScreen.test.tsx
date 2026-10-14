@@ -74,7 +74,7 @@ describe('VaultScreen', () => {
     renderVault(vault.fetchBytes, null)
     await enter(TEST_PASSPHRASE)
     await screen.findByRole('tab', { name: '照片' })
-    expect(vi.mocked(play).mock.calls.map(([name]) => name)).toEqual(['ignition', 'unlock'])
+    expect(vi.mocked(play).mock.calls.map(([name]) => name)).toEqual(['unseal'])
   })
 
   it('does not play the unlock sound for a wrong passphrase', async () => {
@@ -83,7 +83,7 @@ describe('VaultScreen', () => {
     renderVault(vault.fetchBytes, null)
     await enter('iceland aurora penguin goodbye')
     await screen.findByRole('alert')
-    expect(vi.mocked(play).mock.calls.map(([name]) => name)).toEqual(['ignition'])
+    expect(vi.mocked(play).mock.calls.map(([name]) => name)).toEqual([])
   })
 
   it('says 口令不对 for a wrong passphrase', async () => {
@@ -238,7 +238,7 @@ describe('VaultScreen', () => {
     await screen.findByRole('tab', { name: '照片' })
     expect(screen.queryByTestId('vault-door')).not.toBeInTheDocument()
     expect(localStorage.getItem(DOOR_DAY_KEY)).toBeNull()
-    expect(sounds()).toEqual(['ignition', 'unlock'])
+    expect(sounds()).toEqual(['unseal'])
   })
 
   it('opens a remembered vault with the door and its sound', async () => {
@@ -249,7 +249,7 @@ describe('VaultScreen', () => {
     renderVault(vault.fetchBytes, store)
     await screen.findByRole('tab', { name: '照片' })
     expect(screen.getByTestId('vault-door')).toBeInTheDocument()
-    expect(sounds()).toEqual(['unlock'])
+    expect(sounds()).toEqual(['unseal'])
   })
 
   it('still plays the unlock sound once for a manual unlock after the door', async () => {
@@ -260,7 +260,7 @@ describe('VaultScreen', () => {
     await enter(TEST_PASSPHRASE)
     await screen.findByRole('tab', { name: '照片' })
     expect(screen.queryByTestId('vault-door')).not.toBeInTheDocument()
-    expect(sounds()).toEqual(['ignition', 'unlock'])
+    expect(sounds()).toEqual(['unseal'])
   })
 
   it('stays quiet when a remembered vault opens after the door', async () => {

@@ -46,10 +46,10 @@ describe('HomePage', () => {
     expect(screen.queryByRole('button', { name: '改装' })).not.toBeInTheDocument()
   })
 
-  it('blips the throttle when she sets off', () => {
+  it('taps when she sets off', () => {
     renderHome()
     fireEvent.click(screen.getByRole('link', { name: /出发/ }))
-    expect(play).toHaveBeenCalledWith('blip')
+    expect(play).toHaveBeenCalledWith('tap')
   })
 
   it('stays quiet when she only looks at a finished lap', async () => {

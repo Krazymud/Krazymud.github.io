@@ -44,7 +44,7 @@ export function Intro({ onDone }: IntroProps) {
     ignited.current = true
     setLeaving(true)
     unlockAudio()
-    void play('ignition')
+    void play('confirm')
     emitIgnition()
     setPrefs({ introSeen: true })
     fade.current = window.setTimeout(onDone, reduced ? 0 : INTRO_FADE_MS)

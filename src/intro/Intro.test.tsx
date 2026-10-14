@@ -77,7 +77,7 @@ describe('Intro', () => {
     advance(INTRO_MIN_MS)
     fireEvent.click(ignite()!)
     expect(unlockAudio).toHaveBeenCalled()
-    expect(play).toHaveBeenCalledWith('ignition')
+    expect(play).toHaveBeenCalledWith('confirm')
     expect(lit).toHaveBeenCalledTimes(1)
     expect(getPrefs().introSeen).toBe(true)
     expect(onDone).not.toHaveBeenCalled()

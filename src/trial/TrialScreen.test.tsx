@@ -183,7 +183,7 @@ describe('TrialScreen', () => {
       fireEvent.click(options().find((b) => b.textContent?.includes('阿尔法'))!)
       await screen.findByRole('button', { name: '会了' })
       expect(nitro).toHaveBeenCalledTimes(1)
-      expect(vi.mocked(play)).toHaveBeenCalledWith('rev')
+      expect(vi.mocked(play)).toHaveBeenCalledWith('confirm')
       expect(document.querySelector('[style*="radial-gradient"]')).toBeInTheDocument()
     } finally {
       off()
@@ -200,7 +200,7 @@ describe('TrialScreen', () => {
       fireEvent.click(good)
     }
     await screen.findByText('圈速')
-    expect(vi.mocked(play).mock.calls.map(([name]) => name)).toEqual(['rev', 'rev'])
+    expect(vi.mocked(play).mock.calls.map(([name]) => name)).toEqual(['confirm', 'confirm'])
   })
 
   it('stays quiet when an already finished lap is opened again', async () => {

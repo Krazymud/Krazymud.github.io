@@ -110,7 +110,7 @@ export function TrialScreen({ source, now = () => new Date() }: TrialScreenProps
   useEffect(() => {
     if (!nitro) return
     emitNitro()
-    void play('rev')
+    void play('confirm')
   }, [nitro, cursor])
 
   const finished = session !== undefined && isFinished(session)
@@ -123,7 +123,7 @@ export function TrialScreen({ source, now = () => new Date() }: TrialScreenProps
     }
     if (finished && !finishedOnOpen.current) {
       finishedOnOpen.current = true
-      void play('rev')
+      void play('confirm')
     }
   }, [session, finished])
 
