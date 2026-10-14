@@ -1,24 +1,17 @@
 @import 'tailwindcss';
-@import '@fontsource/rajdhani/500.css';
-@import '@fontsource/rajdhani/700.css';
 
 @theme {
-  --color-ink: #050506;
-  --color-panel: #0e0e10;
-  --color-line: #2a2a2e;
-  --color-fg: #e4e4e6;
-  --color-muted: #86868c;
-  --font-display: 'Rajdhani', system-ui, sans-serif;
+  --color-ink: #f7f4ec;
+  --color-panel: rgba(255, 255, 255, 0.55);
+  --color-line: #d8d2c4;
+  --color-fg: #1a1a1a;
+  --color-muted: #6e6e73;
+  --font-display: 'Songti SC', 'STSong', 'Noto Serif SC', ui-serif, serif;
 }
 
 :root {
-  --accent: #9e1c22;
-  --accent-hi: #c1272d;
-}
-
-[data-theme='vault'] {
-  --accent: #a8894f;
-  --accent-hi: #bf9f62;
+  --accent: #1a1a1a;
+  --accent-hi: #2c2c2c;
 }
 
 @theme inline {
@@ -115,4 +108,14 @@ body {
   @media (prefers-reduced-motion: reduce) {
     animation: none;
   }
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    0 8px 28px rgba(20, 20, 20, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
 }
