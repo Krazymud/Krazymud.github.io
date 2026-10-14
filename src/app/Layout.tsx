@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
-import { stopAll, unlockAudio } from '../audio/sound'
+import { play, stopAll, unlockAudio } from '../audio/sound'
 import { perfEnabled } from '../perf/perf'
 import { PerfOverlay } from '../perf/PerfOverlay'
 import { setPrefs, usePrefs } from '../prefs/prefs'
@@ -65,6 +65,7 @@ export function Layout() {
               key={item.to}
               to={item.to}
               end={item.end}
+              onClick={() => void play('tap')}
               className={({ isActive }) => (isActive ? 'border-b border-accent-hi text-fg' : 'text-muted hover:text-fg')}
             >
               {item.label}
@@ -86,7 +87,7 @@ export function Layout() {
           {copy.layout.progressSaveFailed}
         </p>
       )}
-      <main className="glass-panel relative z-10 mx-auto mt-4 flex w-full max-w-md flex-col rounded-lg px-5 pt-6 pb-10">
+      <main className="glass-panel glass-panel-solid relative z-10 mx-auto mt-4 flex w-full max-w-md flex-col rounded-lg px-5 pt-6 pb-10">
         <Outlet />
       </main>
       {perfEnabled && <PerfOverlay />}

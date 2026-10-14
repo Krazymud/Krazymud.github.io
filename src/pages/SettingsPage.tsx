@@ -103,7 +103,7 @@ export function SettingsPage() {
           </a>
           （MIT 协议）。
         </p>
-        <p>素描舞台为青庐占位稿，成片石墨循环与音效待替换。</p>
+        <p>素描舞台为青庐石墨稿（RX-7 FC）；轻触音效为站内合成。</p>
       </section>
     </section>
   )

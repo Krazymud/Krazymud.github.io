@@ -1,12 +1,9 @@
 import type { AudioClip } from './lib/audio.ts'
 
-// assets-src/audio 里的源文件（Freesound，均为 CC0）：
-// ignition.mp3 = #659560 EwanPenman11「Ferrari start up and drive off」
-// rev.mp3 = #478756 richwise「Supercar rev」
-// unlock.mp3 = #396448 hz37「Car Lock」
+// 青庐轻触音：源文件放在 assets-src/audio，由 `npm run audio` 编码进 public/audio。
+// 当前线上文件由 ffmpeg 合成写入；有纸木录制时可覆盖同源名源文件再跑脚本。
 export const audioConfig: AudioClip[] = [
-  { name: 'ignition', source: 'ignition.mp3', start: 20.3, end: 28.6, fadeIn: 0.05, fadeOut: 0.6, loudness: -16 },
-  { name: 'rev', source: 'rev.mp3', start: 6.0, end: 8.9, fadeIn: 0.03, fadeOut: 0.4, loudness: -16 },
-  { name: 'blip', source: 'rev.mp3', start: 10.0, end: 11.2, fadeIn: 0.03, fadeOut: 0.3, loudness: -18 },
-  { name: 'unlock', source: 'unlock.mp3', start: 0, end: 0.6, fadeIn: 0, fadeOut: 0.05, loudness: -20 },
+  { name: 'tap', source: 'tap.mp3', start: 0, end: 0.08, fadeIn: 0, fadeOut: 0.02, loudness: -22 },
+  { name: 'confirm', source: 'confirm.mp3', start: 0, end: 0.2, fadeIn: 0, fadeOut: 0.04, loudness: -20 },
+  { name: 'unseal', source: 'unseal.mp3', start: 0, end: 0.4, fadeIn: 0.02, fadeOut: 0.08, loudness: -20 },
 ]

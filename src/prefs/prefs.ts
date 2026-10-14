@@ -1,25 +1,14 @@
 import { useSyncExternalStore } from 'react'
-import { isSwatchId, PALETTES, type ModPart } from '../garage/mods'
 import { PREFS_KEY } from './key'
 
 export { PREFS_KEY }
 
 export interface Prefs {
-  scene3d: boolean
   muted: boolean
-  introSeen: boolean
-  paint: string
-  rim: string
-  caliper: string
 }
 
 export const DEFAULT_PREFS: Prefs = {
-  scene3d: true,
   muted: false,
-  introSeen: false,
-  paint: PALETTES.paint[0].id,
-  rim: PALETTES.rim[0].id,
-  caliper: PALETTES.caliper[0].id,
 }
 
 export function readPrefs(): Prefs {
@@ -29,18 +18,8 @@ export function readPrefs(): Prefs {
     const parsed: unknown = JSON.parse(raw)
     if (typeof parsed !== 'object' || parsed === null) return { ...DEFAULT_PREFS }
     const record = parsed as Record<string, unknown>
-    const flag = (key: 'scene3d' | 'muted' | 'introSeen'): boolean => {
-      const value = record[key]
-      return typeof value === 'boolean' ? value : DEFAULT_PREFS[key]
-    }
-    const colour = (key: ModPart): string => (isSwatchId(key, record[key]) ? (record[key] as string) : DEFAULT_PREFS[key])
     return {
-      scene3d: flag('scene3d'),
-      muted: flag('muted'),
-      introSeen: flag('introSeen'),
-      paint: colour('paint'),
-      rim: colour('rim'),
-      caliper: colour('caliper'),
+      muted: typeof record.muted === 'boolean' ? record.muted : DEFAULT_PREFS.muted,
     }
   } catch {
     return { ...DEFAULT_PREFS }

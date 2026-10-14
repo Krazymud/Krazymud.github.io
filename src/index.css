@@ -120,16 +120,6 @@ body {
   -webkit-backdrop-filter: blur(18px) saturate(1.15);
 }
 
-@keyframes sketch-breathe {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.015);
-  }
-}
-
-@utility sketch-breathe {
-  animation: sketch-breathe 12s ease-in-out infinite;
+.glass-panel-solid {
+  background: rgba(247, 244, 236, 0.88);
 }

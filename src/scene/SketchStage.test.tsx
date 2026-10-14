@@ -23,6 +23,8 @@ describe('SketchStage', () => {
     media(false)
     render(<SketchStage />)
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'loop')
+    expect(document.querySelector('img')!).toHaveAttribute('src', expect.stringContaining('fc-loop'))
     expect(document.querySelector('img')).toHaveAttribute('aria-hidden', 'true')
   })
 })
+
