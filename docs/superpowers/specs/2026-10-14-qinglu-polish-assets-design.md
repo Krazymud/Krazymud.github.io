@@ -8,7 +8,7 @@ Replace line-SVG/sine placeholders with graphite-style RX-7 FC still + headlight
 
 - `public/sketch/fc-still.webp` — graphite still, headlights down
 - `public/sketch/fc-loop.webm` + `fc-loop.mp4` — 8s @ 24fps (192 frames) open/hold/close cycle
-- Keyframes `assets-src/sketch/hl/k00..k05.webp`; rebuild via `node scripts/build-headlight-seq.mjs`
+- Keyframes `public/sketch/hl-src/k00..k05.webp`; rebuild via `node scripts/build-headlight-seq.mjs`
 - `public/audio/{tap,confirm,unseal}.mp3` — soft wood/paper taps
 
 ## SketchStage
