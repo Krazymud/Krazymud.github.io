@@ -1,17 +1,17 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-ink: #f7f4ec;
-  --color-panel: rgba(255, 255, 255, 0.55);
-  --color-line: #d8d2c4;
-  --color-fg: #1a1a1a;
-  --color-muted: #6e6e73;
+  --color-ink: #eef1f5;
+  --color-panel: rgba(245, 248, 252, 0.5);
+  --color-line: #c5ccd6;
+  --color-fg: #1a2433;
+  --color-muted: #5c6570;
   --font-display: 'Songti SC', 'STSong', 'Noto Serif SC', ui-serif, serif;
 }
 
 :root {
-  --accent: #1a1a1a;
-  --accent-hi: #2c2c2c;
+  --accent: #1a2433;
+  --accent-hi: #243044;
 }
 
 @theme inline {
@@ -111,7 +111,7 @@ body {
 }
 
 .glass-panel {
-  background: rgba(255, 255, 255, 0.52);
+  background: rgba(245, 248, 252, 0.48);
   border: 1px solid rgba(255, 255, 255, 0.75);
   box-shadow:
     0 8px 28px rgba(20, 20, 20, 0.08),
@@ -121,7 +121,7 @@ body {
 }
 
 .glass-panel-solid {
-  background: rgba(247, 244, 236, 0.88);
+  background: rgba(238, 241, 245, 0.9);
 }
 
 .glass-panel-nav {
@@ -131,8 +131,8 @@ body {
 .home-hero-fade {
   background: linear-gradient(
     180deg,
-    rgba(241, 235, 221, 0.12) 0%,
-    rgba(241, 235, 221, 0.35) 45%,
-    rgba(241, 235, 221, 0.82) 100%
+    #eef1f51f 0%,
+    #eef1f559 45%,
+    #eef1f5d1 100%
   );
 }
