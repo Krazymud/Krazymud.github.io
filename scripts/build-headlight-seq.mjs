@@ -1,5 +1,5 @@
 /**
- * Build public/sketch/fc-loop.{webm,mp4} from public/sketch/hl-src/k00..k05.webp
+ * Build public/sketch/fc-loop.{webm,mp4} from sketch-src/hl/k00..k05.webp
  * Usage: node scripts/build-headlight-seq.mjs
  * Requires: sharp, ffmpeg on PATH
  */
@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url'
 import sharp from 'sharp'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const SRC = path.join(root, 'public/sketch/hl-src')
+const SRC = path.join(root, 'sketch-src/hl')
 const OUT_PUBLIC = path.join(root, 'public/sketch')
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'hl-seq-'))
 const NORM = path.join(TMP, 'norm')
