@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetSound, setAudioContextFactory } from '../audio/sound'
+import { copy } from '../config/copy'
 import { site } from '../config/site'
 import { PREFS_KEY, resetPrefsCache } from '../prefs/prefs'
 import { ProgressProvider } from '../progress/ProgressProvider'
@@ -32,9 +33,9 @@ describe('app shell', () => {
 
   it('greets her in the garage with today\'s trial status', () => {
     renderAt('/')
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(`HELLO, ${site.nickname}`)
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(copy.home.hello(site.nickname))
     expect(screen.getByText('0 / 20')).toBeInTheDocument()
-    expect(screen.getByText('今日试炼')).toBeInTheDocument()
+    expect(screen.getByText(copy.home.trialToday)).toBeInTheDocument()
   })
 
   it('does not set a vault data-theme on the layout shell', async () => {
@@ -52,7 +53,7 @@ describe('app shell', () => {
 
   it('redirects unknown paths to the garage', async () => {
     renderAt('/2018/09/05/leetcode05/')
-    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(`HELLO, ${site.nickname}`)
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(copy.home.hello(site.nickname))
   })
 
   it('shows the ignition intro on the first visit to the garage only', () => {
