@@ -31,7 +31,8 @@ describe('app shell', () => {
 
   it('greets her in the garage with today\'s trial status', () => {
     renderAt('/')
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(copy.home.hello(site.nickname))
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(copy.siteName)
+    expect(screen.getByText(new RegExp(copy.home.hello(site.nickname)))).toBeInTheDocument()
     expect(screen.getByText('0 / 20')).toBeInTheDocument()
     expect(screen.getByText(copy.home.trialToday)).toBeInTheDocument()
   })
@@ -50,12 +51,13 @@ describe('app shell', () => {
 
   it('redirects unknown paths to the garage', async () => {
     renderAt('/2018/09/05/leetcode05/')
-    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(copy.home.hello(site.nickname))
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(copy.siteName)
   })
 
   it('shows the garage greeting and sketch layer on a first visit', () => {
     renderAt('/')
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(copy.home.hello(site.nickname))
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(copy.siteName)
+    expect(screen.getByText(new RegExp(copy.home.hello(site.nickname)))).toBeInTheDocument()
     expect(screen.getByTestId('sketch-stage')).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: '点火开场' })).toBeNull()
     expect(screen.queryByRole('status', { name: '引擎预热' })).toBeNull()

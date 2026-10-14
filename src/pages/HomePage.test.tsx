@@ -36,8 +36,9 @@ describe('HomePage', () => {
 
   it('greets in qinglu copy without garage mods entry', () => {
     renderHome()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(copy.siteName)
     expect(screen.getByText(copy.home.eyebrow)).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(copy.home.hello(site.nickname))
+    expect(screen.getByText(new RegExp(copy.home.hello(site.nickname)))).toBeInTheDocument()
     expect(screen.getByRole('link', { name: copy.home.vaultLink })).toBeInTheDocument()
     expect(screen.getByText(copy.home.trialToday)).toBeInTheDocument()
     expect(screen.queryByText('WELCOME BACK')).toBeNull()

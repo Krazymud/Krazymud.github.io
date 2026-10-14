@@ -1,14 +1,14 @@
 /**
- * FC3S headlight loop — Initial D manga cel-color redraw from drive footage.
+ * FC3S headlight loop — graphite pencil redraw for 青庐·纸窗.
  *
  * Source: sketch-src/hl/fc3s-ref-drive.mp4
- *   trimmed from Bilibili BV1JM411x7yC @ t≥55s (car fills frame, night street)
+ *   trimmed from Bilibili BV1JM411x7yC @ t≥55s (car fills frame)
  *
  * Pipeline:
  *   1) Zoom-crop car hero (cuts left sidewalk pedestrians)
  *   2) Cut full dual-close snap (open → flush); optical-flow slow-mo; reverse = open
- *   3) Clean manga grade (denoise + bilateral flatten + ink lines — no RGB posterize blotches)
- *   4) Darken left strip to hide residual walkers
+ *   3) Low-sat graphite grade (warm paper wash + pencil lines — not cel / sepia wash)
+ *   4) Soft vignette to hide residual walkers
  *   5) Compose 8s @ 24fps loop with long closed bookends → public/sketch/*
  *
  * Usage: node scripts/build-headlight-seq.mjs
@@ -161,22 +161,20 @@ if (closeFiles.length < 8) {
 console.log(`close-arc frames: ${closeFiles.length}`)
 
 /**
- * Clean Initial D–adjacent manga grade:
- * heavy denoise + bilateral flatten + cool night + bold ink.
- * Avoids per-channel lutrgb posterize (rainbow 色块色斑).
+ * Graphite pencil on warm paper:
+ * desaturate night footage, lift midtones toward paper, soft pencil edges.
  */
 function mangaFilterComplex() {
   return [
-    // Denoise + mild flatten (keep body readable; avoid crushing to mud)
-    '[0:v]hqdn3d=8:6:10:8,bilateral=sigmaS=3.5:sigmaR=0.06,' +
-      'eq=contrast=1.42:saturation=1.35:brightness=0.14:gamma=0.9[col]',
-    '[col]colorbalance=bs=0.1:bm=0.04:rs=-0.04:rm=-0.02,' +
-      `curves=all='0/0 0.28/0.26 0.6/0.68 1/1'[grade]`,
+    '[0:v]hqdn3d=7:5:9:6,bilateral=sigmaS=2.8:sigmaR=0.05,' +
+      'eq=contrast=1.22:saturation=0.14:brightness=0.22:gamma=0.88[flat]',
+    '[flat]colorbalance=rs=0.05:rm=0.03:gs=0.02:bs=-0.04:bm=-0.02,' +
+      `curves=all='0/0.1 0.35/0.42 0.7/0.82 1/0.98'[grade]`,
     '[grade]split[b][e]',
-    '[e]format=gray,edgedetect=mode=colormix:low=0.04:high=0.12,negate,' +
-      'eq=contrast=3.1:brightness=-0.12,dilation,gblur=sigma=0.35[lines]',
-    '[b][lines]blend=all_mode=multiply:all_opacity=0.5,' +
-      'eq=saturation=1.2:contrast=1.14,unsharp=5:5:1.3',
+    '[e]format=gray,edgedetect=mode=colormix:low=0.045:high=0.13,negate,' +
+      'eq=contrast=2.6:brightness=-0.08,gblur=sigma=0.3[lines]',
+    '[b][lines]blend=all_mode=multiply:all_opacity=0.38,' +
+      'eq=saturation=0.22:contrast=1.08,unsharp=5:5:0.9',
   ].join(';')
 }
 
@@ -230,15 +228,20 @@ async function scrubWalkers(input, out) {
     `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="top" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#02050c" stop-opacity="0.72"/>
-          <stop offset="32%" stop-color="#02050c" stop-opacity="0.28"/>
-          <stop offset="48%" stop-color="#02050c" stop-opacity="0"/>
+          <stop offset="0%" stop-color="#2a2824" stop-opacity="0.55"/>
+          <stop offset="30%" stop-color="#2a2824" stop-opacity="0.18"/>
+          <stop offset="48%" stop-color="#2a2824" stop-opacity="0"/>
         </linearGradient>
         <linearGradient id="left" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#02050c" stop-opacity="0.55"/>
-          <stop offset="10%" stop-color="#02050c" stop-opacity="0"/>
+          <stop offset="0%" stop-color="#2a2824" stop-opacity="0.4"/>
+          <stop offset="10%" stop-color="#2a2824" stop-opacity="0"/>
+        </linearGradient>
+        <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#f7f4ec" stop-opacity="0.18"/>
+          <stop offset="100%" stop-color="#f7f4ec" stop-opacity="0.32"/>
         </linearGradient>
       </defs>
+      <rect width="100%" height="100%" fill="url(#paper)"/>
       <rect width="100%" height="100%" fill="url(#top)"/>
       <rect width="100%" height="100%" fill="url(#left)"/>
     </svg>`,
@@ -249,7 +252,7 @@ async function scrubWalkers(input, out) {
     .toFile(out)
 }
 
-console.log('manga cel-color redraw…')
+console.log('graphite paper-window redraw…')
 const openRaw = path.join(TMP, 'open-raw.jpg')
 const closedRaw = path.join(TMP, 'closed-raw.jpg')
 stylizeOne(OPEN_PLATE, openRaw)
@@ -502,7 +505,7 @@ execFileSync(
 fs.rmSync(TMP, { recursive: true, force: true })
 console.log(`wrote ${n} frames → public/sketch/fc-still.webp + fc-loop.{webm,mp4}`)
 console.log('source: BV1JM411x7yC @t≥55s → sketch-src/hl/fc3s-ref-drive.mp4')
-console.log('style: clean manga grade (bilateral+ink); loop closed→open→close→closed')
+console.log('style: graphite pencil on warm paper; loop closed→open→close→closed')
 console.log(
   `timing: closed ${HOLD0 / FPS}s | open ${OPEN_N / FPS}s | hold ${HOLD_UP / FPS}s | close ${CLOSE_N / FPS}s | closed ${HOLD1 / FPS}s`,
 )

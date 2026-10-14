@@ -73,7 +73,7 @@ export function UnlockPanel({ canRemember, onUnlock }: UnlockPanelProps) {
       onAnimationEnd={() => setShaking(false)}
       className={`glass-panel mt-6 rounded-lg px-5 py-8 text-center ${shaking ? 'motion-safe:animate-vault-shake' : ''}`}
     >
-      <p className="font-display text-xs tracking-[0.35em] text-fg">{copy.vault.title}</p>
+      <p className="font-display text-sm text-fg">{copy.vault.title}</p>
 
       <label className="mt-8 block text-left text-xs text-muted">
         口令

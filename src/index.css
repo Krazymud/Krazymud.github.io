@@ -1,29 +1,37 @@
 @import 'tailwindcss';
 
+/* 青庐·纸窗：暖纸 + 墨色 + 浅液态玻璃 */
 @theme {
   --color-ink: #f7f4ec;
-  --color-panel: rgba(255, 255, 255, 0.55);
+  --color-paper: #faf8f2;
+  --color-panel: rgba(255, 255, 255, 0.48);
   --color-line: #d8d2c4;
-  --color-fg: #1a1a1a;
-  --color-muted: #6e6e73;
-  --font-display: 'Songti SC', 'STSong', 'Noto Serif SC', ui-serif, serif;
+  --color-fg: #1c1b19;
+  --color-muted: #6e6a63;
+  --font-display: 'Songti SC', 'STSong', 'Noto Serif SC', 'Source Han Serif SC', ui-serif, serif;
 }
 
 :root {
-  --accent: #1a1a1a;
-  --accent-hi: #2c2c2c;
+  --accent: #1c1b19;
+  --accent-hi: #2a2824;
+  --glass-fill: rgba(255, 252, 245, 0.52);
+  --glass-fill-solid: rgba(247, 244, 236, 0.72);
+  --glass-edge: rgba(255, 255, 255, 0.7);
+  --radius-panel: 0.875rem;
 }
 
 @theme inline {
   --color-accent: var(--accent);
   --color-accent-hi: var(--accent-hi);
+  --color-bg: var(--color-ink);
+  --color-paper: #faf8f2;
 }
 
 html,
 body {
   background: var(--color-ink);
   color: var(--color-fg);
-  font-family: system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-family: system-ui, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -111,58 +119,51 @@ body {
 }
 
 .glass-panel {
-  /* 半透明为主：即使 iOS 上 backdrop-filter 弱，也能透出素描车 */
-  background: rgba(255, 255, 255, 0.34);
-  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-panel);
   box-shadow:
-    0 8px 28px rgba(20, 20, 20, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(22px) saturate(1.2);
-  -webkit-backdrop-filter: blur(22px) saturate(1.2);
-  /* 促发 Safari 合成层，减轻 video 上毛玻璃失效 */
+    0 10px 32px rgba(28, 27, 25, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(1.15);
+  -webkit-backdrop-filter: blur(20px) saturate(1.15);
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
 }
 
 .glass-panel-solid {
-  /* 主内容区略提不透明以保证字可读，仍明显透车 */
-  background: rgba(247, 244, 236, 0.42);
+  background: var(--glass-fill-solid);
 }
 
 @media (max-width: 640px) {
   .glass-panel {
-    background: rgba(255, 255, 255, 0.22);
+    background: rgba(255, 252, 245, 0.42);
   }
 
   .glass-panel-solid {
-    background: rgba(247, 244, 236, 0.3);
+    background: rgba(247, 244, 236, 0.62);
   }
 }
 
-/* 素描舞台：桌面 cover；竖屏手机 contain 并缩小，避免裁切放大 */
+/* 窗外素描：桌面 cover；手机略收底，仍满宽氛围 */
 .sketch-media {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 55%;
+  object-position: center 58%;
+  filter: contrast(1.02) saturate(0.92);
 }
 
 @media (max-width: 640px) {
   .sketch-media {
-    object-fit: contain;
-    object-position: center bottom;
-    aspect-ratio: 16 / 9;
-    width: min(92vw, calc(42dvh * 16 / 9));
-    height: auto;
-    max-height: 42dvh;
-    position: absolute;
-    left: 50%;
-    bottom: max(12%, env(safe-area-inset-bottom, 0px));
-    transform: translateX(-50%);
+    object-fit: cover;
+    object-position: center 62%;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    position: static;
+    left: auto;
+    bottom: auto;
+    transform: none;
   }
 }
-
-
-
-
-

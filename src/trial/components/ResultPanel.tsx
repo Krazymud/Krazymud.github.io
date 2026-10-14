@@ -31,10 +31,10 @@ export function ResultPanel({ session, dueTomorrow, mastered }: ResultPanelProps
 
   return (
     <section className="mt-6">
-      <p className="text-center font-display text-xs tracking-[0.35em] text-accent-hi">{copy.trial.completeEyebrow}</p>
+      <p className="text-center font-display text-sm text-accent-hi">{copy.trial.completeEyebrow}</p>
       <dl className="mt-6 grid grid-cols-2 gap-3">
         {stats.map((stat) => (
-          <div key={stat.label} className="border border-line bg-panel/90 px-4 py-3">
+          <div key={stat.label} className="rounded-[var(--radius-panel)] border border-line bg-ink/60 px-4 py-3">
             <dt className="text-xs text-muted">{stat.label}</dt>
             <dd className="mt-1 font-display text-2xl font-bold">{stat.value}</dd>
           </div>

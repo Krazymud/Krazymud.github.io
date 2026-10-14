@@ -162,7 +162,7 @@ function ListForm({
           value={title}
           aria-invalid={invalid}
           onChange={(event) => setTitle(event.target.value)}
-          className="mt-1 w-full border border-line bg-bg px-3 py-2 text-sm text-fg"
+          className="mt-1 w-full border border-line bg-ink px-3 py-2 text-sm text-fg"
         />
       </label>
       {rows.map((row, index) => (
@@ -173,7 +173,7 @@ function ListForm({
             onChange={(event) =>
               setRows((current) => current.map((item) => (item.key === row.key ? { ...item, text: event.target.value } : item)))
             }
-            className="min-w-0 flex-1 border border-line bg-bg px-3 py-2 text-sm text-fg"
+            className="min-w-0 flex-1 border border-line bg-ink px-3 py-2 text-sm text-fg"
           />
           <button type="button" onClick={() => setRows((current) => current.filter((item) => item.key !== row.key))} className={secondaryButton}>
             删除

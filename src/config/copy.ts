@@ -1,7 +1,7 @@
 export const copy = {
   siteName: '青庐',
   nav: {
-    home: '青庐',
+    home: '归庐',
     trial: '日课',
     vault: '锦匣',
     settings: '案头',

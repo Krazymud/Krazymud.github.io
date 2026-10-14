@@ -141,7 +141,7 @@ function NoteForm({
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           aria-invalid={invalid === 'title'}
-          className="mt-1 w-full border border-line bg-bg px-3 py-2 text-sm text-fg"
+          className="mt-1 w-full border border-line bg-ink px-3 py-2 text-sm text-fg"
         />
       </label>
       <label className="block text-xs text-muted">
@@ -151,7 +151,7 @@ function NoteForm({
           value={date}
           onChange={(event) => setDate(event.target.value)}
           aria-invalid={invalid === 'date'}
-          className="mt-1 w-full border border-line bg-bg px-3 py-2 text-sm text-fg"
+          className="mt-1 w-full border border-line bg-ink px-3 py-2 text-sm text-fg"
         />
       </label>
       <label className="block text-xs text-muted">
@@ -159,7 +159,7 @@ function NoteForm({
         <textarea
           value={body}
           onChange={(event) => setBody(event.target.value)}
-          className="mt-1 w-full border border-line bg-bg px-3 py-2 text-sm text-fg"
+          className="mt-1 w-full border border-line bg-ink px-3 py-2 text-sm text-fg"
         />
       </label>
       <div className="flex gap-2">

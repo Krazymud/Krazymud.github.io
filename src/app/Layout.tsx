@@ -57,8 +57,8 @@ export function Layout() {
       }
     >
       <SceneHost scene={scene} />
-      <header className="glass-panel relative z-10 mx-5 mt-4 flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-xs">
-        <span className="font-display text-accent-hi">{copy.siteName}</span>
+      <header className="glass-panel relative z-10 mx-5 mt-4 flex items-center justify-between gap-3 px-4 py-3 text-xs">
+        <span className="font-display text-sm text-accent-hi">{copy.siteName}</span>
         <nav className="flex items-center gap-4">
           {NAV.map((item) => (
             <NavLink
@@ -83,11 +83,11 @@ export function Layout() {
         </nav>
       </header>
       {saveFailed && (
-        <p role="alert" className="glass-panel relative z-10 mx-5 mt-3 rounded-lg px-3 py-2 text-xs">
+        <p role="alert" className="glass-panel relative z-10 mx-5 mt-3 px-3 py-2 text-xs">
           {copy.layout.progressSaveFailed}
         </p>
       )}
-      <main className="glass-panel glass-panel-solid relative z-10 mx-5 mt-4 flex max-w-md flex-col rounded-lg px-5 pt-6 pb-10 sm:mx-auto sm:w-full">
+      <main className="glass-panel glass-panel-solid relative z-10 mx-5 mt-4 flex max-w-md flex-col px-5 pt-6 pb-10 sm:mx-auto sm:w-full">
         <Outlet />
       </main>
 

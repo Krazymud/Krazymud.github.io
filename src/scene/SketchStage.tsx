@@ -11,7 +11,7 @@ export function SketchStage() {
     <div
       data-testid="sketch-stage"
       data-motion={reduced ? 'still' : 'loop'}
-      className="pointer-events-none fixed inset-0 overflow-hidden bg-[#f1ebdd]"
+      className="pointer-events-none fixed inset-0 overflow-hidden bg-ink"
     >
       {reduced ? (
         <img src={SKETCH_STILL} alt="" aria-hidden className="sketch-media" />

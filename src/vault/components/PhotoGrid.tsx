@@ -147,14 +147,14 @@ export function PhotoGrid({
             aria-label="照片说明"
             value={caption}
             onChange={(event) => setCaption(event.target.value)}
-            className="border border-line bg-bg px-2 py-1 text-sm"
+            className="border border-line bg-ink px-2 py-1 text-sm"
           />
           <input
             aria-label="照片日期"
             type="date"
             value={date}
             onChange={(event) => setDate(event.target.value)}
-            className="border border-line bg-bg px-2 py-1 text-sm"
+            className="border border-line bg-ink px-2 py-1 text-sm"
           />
           <div className="flex gap-2">
             <button type="submit" disabled={!editable} className={`${smallButton} border-accent-hi text-fg`}>

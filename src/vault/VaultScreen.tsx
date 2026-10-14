@@ -37,7 +37,7 @@ function opened(file: VaultFile, session: VaultSession, manual: boolean): VaultS
 function Notice({ children }: { children: ReactNode }) {
   return (
     <section className="glass-panel mt-10 rounded-lg px-5 py-8 text-center">
-      <p className="font-display text-xs tracking-[0.35em] text-fg">{copy.vault.title}</p>
+      <p className="font-display text-sm text-fg">{copy.vault.title}</p>
       <div className="mt-4 text-sm text-muted">{children}</div>
     </section>
   )
