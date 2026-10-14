@@ -10,7 +10,10 @@ const media = (reduce: boolean) =>
   }))
 
 describe('SketchStage', () => {
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    delete document.documentElement.dataset.sketchFit
+  })
 
   it('stays on still when not on home', () => {
     media(false)
@@ -94,14 +97,29 @@ describe('SketchStage', () => {
     expect(video.style.opacity).toBe('0')
   })
 
-  it('shows the full car on narrow viewports and covers on larger ones', () => {
+  it('A 融边 keeps contain + paper noise on narrow viewports', () => {
     media(false)
-    render(<SketchStage playLoop={false} />)
+    render(<SketchStage playLoop={false} fit="a" />)
     const stage = screen.getByTestId('sketch-stage')
+    expect(stage).toHaveAttribute('data-fit', 'a')
     expect(stage.className).toMatch(/min-h-\[100dvh\]|min-h-dvh|h-\[100dvh\]/)
     const img = document.querySelector('img')!
     expect(img.className).toMatch(/object-contain/)
+    expect(img.className).toMatch(/sketch-fit-a-media/)
     expect(img.className).toMatch(/sm:object-cover/)
-    expect(img.className).toMatch(/object-center/)
+    expect(stage.querySelector('.sketch-paper-noise')).toBeTruthy()
+    expect(document.documentElement.dataset.sketchFit).toBe('a')
+  })
+
+  it('C 折中微裁 scales cover so the plate can soft-crop the car', () => {
+    media(false)
+    render(<SketchStage playLoop={false} fit="c" />)
+    const stage = screen.getByTestId('sketch-stage')
+    expect(stage).toHaveAttribute('data-fit', 'c')
+    const img = document.querySelector('img')!
+    expect(img.className).toMatch(/object-cover/)
+    expect(img.className).toMatch(/scale-\[1\.1\]/)
+    expect(stage.querySelector('.sketch-paper-noise')).toBeNull()
+    expect(document.documentElement.dataset.sketchFit).toBe('c')
   })
 })

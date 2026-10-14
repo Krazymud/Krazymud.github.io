@@ -7,10 +7,43 @@ export const DRIVE_STILL = `${base}sketch/fc-drive-still.webp`
 export const DRIVE_LOOP = `${base}sketch/fc-drive-loop.webm`
 const DRIVE_LOOP_MP4 = `${base}sketch/fc-drive-loop.mp4`
 
-// Phone portrait: contain so the full RX-7 stays in frame (cover crops it on tall viewports).
-// sm+: cover the stage; keep a nose-biased crop for desktop.
-const layerClass =
-  'absolute inset-0 h-full w-full object-contain object-center sm:object-cover sm:object-[55%_60%]'
+/** Narrow-viewport fusion preview: A 融边 / C 折中微裁. Desktop always covers. */
+export type SketchFit = 'a' | 'c'
+
+const baseLayer =
+  'absolute inset-0 h-full w-full object-center sm:object-cover sm:object-[55%_60%] sm:scale-100'
+
+function layerClassFor(fit: SketchFit) {
+  if (fit === 'c') {
+    // Soft enlarge + car-biased cover: wheels/tail may clip slightly for a full-bleed fill.
+    return `${baseLayer} object-cover object-[55%_48%] scale-[1.1] sm:object-[55%_60%]`
+  }
+  // A: contain full car; edge feather / paper fill handled via CSS classes.
+  return `${baseLayer} object-contain sketch-fit-a-media`
+}
+
+function readSketchFit(): SketchFit {
+  if (typeof window === 'undefined') return 'a'
+  const value = new URLSearchParams(window.location.search).get('sketchFit')
+  return value === 'c' ? 'c' : 'a'
+}
+
+function useSketchFit(forced?: SketchFit) {
+  const [fit, setFit] = useState<SketchFit>(() => forced ?? readSketchFit())
+
+  useEffect(() => {
+    if (forced) {
+      setFit(forced)
+      return
+    }
+    const sync = () => setFit(readSketchFit())
+    sync()
+    window.addEventListener('popstate', sync)
+    return () => window.removeEventListener('popstate', sync)
+  }, [forced])
+
+  return fit
+}
 
 function restartLoop(video: HTMLVideoElement) {
   try {
@@ -22,15 +55,31 @@ function restartLoop(video: HTMLVideoElement) {
   if (playPromise !== undefined) void playPromise.catch(() => {})
 }
 
-export function SketchStage({ playLoop }: { playLoop: boolean }) {
+export function SketchStage({
+  playLoop,
+  fit: fitProp,
+}: {
+  playLoop: boolean
+  /** Optional override for tests / previews; otherwise `?sketchFit=a|c`. */
+  fit?: SketchFit
+}) {
   const reduced = usePrefersReducedMotion()
+  const fit = useSketchFit(fitProp)
   const wantLoop = playLoop && !reduced
   const videoRef = useRef<HTMLVideoElement>(null)
   const fade = `opacity ${ROUTE_FADE_MS}ms ease-in-out`
+  const layerClass = layerClassFor(fit)
 
   const [videoMounted, setVideoMounted] = useState(wantLoop)
   const [loopFadedIn, setLoopFadedIn] = useState(false)
   const [loopDegraded, setLoopDegraded] = useState(false)
+
+  useEffect(() => {
+    document.documentElement.dataset.sketchFit = fit
+    return () => {
+      delete document.documentElement.dataset.sketchFit
+    }
+  }, [fit])
 
   useEffect(() => {
     if (wantLoop) {
@@ -65,8 +114,6 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
       }, ROUTE_FADE_MS)
 
       // Native `loop` is unreliable on iOS (often stops after 1–2 cycles on large files).
-      // Omit `loop` so `ended` fires, then manually seek + play. Also recover if Safari
-      // pauses at EOF without emitting `ended`.
       const onEnded = () => restartLoop(video)
       const onPause = () => {
         if (!wantLoop || document.hidden || loopDegraded) return
@@ -109,8 +156,10 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
       data-testid="sketch-stage"
       data-motion={motion}
       data-route={playLoop ? 'home' : 'inner'}
+      data-fit={fit}
       className="pointer-events-none fixed inset-0 h-[100dvh] min-h-[100dvh] w-full overflow-hidden bg-ink"
     >
+      {fit === 'a' ? <div className="sketch-paper-noise" aria-hidden /> : null}
       <img
         src={DRIVE_STILL}
         alt=""
@@ -124,7 +173,6 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
           muted
           autoPlay
           playsInline
-          // Keep attribute for older WebKit; React's playsInline maps to playsinline.
           {...{ 'webkit-playsinline': '' }}
           preload="auto"
           aria-hidden
@@ -132,7 +180,6 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
           style={{ opacity: videoOpacity, transition: fade }}
           onError={handleVideoError}
         >
-          {/* mp4 first: iOS cannot play webm; listing it first can stall source selection. */}
           <source src={DRIVE_LOOP_MP4} type="video/mp4" />
           <source src={DRIVE_LOOP} type="video/webm" />
         </video>
