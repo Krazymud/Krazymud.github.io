@@ -31,7 +31,7 @@ export function ResultPanel({ session, dueTomorrow, mastered }: ResultPanelProps
 
   return (
     <section className="mt-6">
-      <p className="text-center font-display text-xs tracking-[0.35em] text-accent-hi">{copy.trial.completeEyebrow}</p>
+      <p className="text-center font-display text-xs tracking-wide text-accent-hi">{copy.trial.completeEyebrow}</p>
       <dl className="mt-6 grid grid-cols-2 gap-3">
         {stats.map((stat) => (
           <div key={stat.label} className="border border-line bg-panel/90 px-4 py-3">

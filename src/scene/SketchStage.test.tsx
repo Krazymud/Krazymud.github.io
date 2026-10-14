@@ -26,5 +26,12 @@ describe('SketchStage', () => {
     expect(document.querySelector('img')!).toHaveAttribute('src', expect.stringContaining('fc-loop'))
     expect(document.querySelector('img')).toHaveAttribute('aria-hidden', 'true')
   })
+
+  it('anchors the crop toward the car nose', () => {
+    media(false)
+    render(<SketchStage />)
+    const img = document.querySelector('img')!
+    expect(img.className).toMatch(/object-\[55%_60%\]|object-\[center_60%\]/)
+  })
 })
 

@@ -60,4 +60,11 @@ describe('Dashboard', () => {
     const rule = css.slice(css.indexOf('@utility animate-breathe'))
     expect(rule).toMatch(/^@utility animate-breathe \{[^}]*@media \(prefers-reduced-motion: reduce\) \{\s*animation: none;/)
   })
+
+  it('does not glow completed week dots', () => {
+    render(<Dashboard stats={base} />)
+    const lit = screen.getByTestId('day-0')
+    expect(lit.className).not.toMatch(/shadow-\[/)
+    expect(screen.getByText('连续').className).not.toMatch(/tracking-\[0\.3em\]/)
+  })
 })

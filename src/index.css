@@ -123,3 +123,16 @@ body {
 .glass-panel-solid {
   background: rgba(247, 244, 236, 0.88);
 }
+
+.glass-panel-nav {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.home-hero-fade {
+  background: linear-gradient(
+    180deg,
+    rgba(241, 235, 221, 0.12) 0%,
+    rgba(241, 235, 221, 0.35) 45%,
+    rgba(241, 235, 221, 0.82) 100%
+  );
+}

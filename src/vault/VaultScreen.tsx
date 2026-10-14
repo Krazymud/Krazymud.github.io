@@ -10,7 +10,7 @@ import { fetchVaultBytes, loadVaultFile, unlockWithKey, unlockWithPassphrase, ty
 import type { VaultFile } from './types'
 import { UnlockPanel } from './components/UnlockPanel'
 import { VaultContent } from './components/VaultContent'
-import { VaultDoor } from './components/VaultDoor'
+import { UnsealFade } from './components/UnsealFade'
 
 type VaultState =
   | { status: 'loading' }
@@ -37,7 +37,7 @@ function opened(file: VaultFile, session: VaultSession, manual: boolean): VaultS
 function Notice({ children }: { children: ReactNode }) {
   return (
     <section className="glass-panel mt-10 rounded-lg px-5 py-8 text-center">
-      <p className="font-display text-xs tracking-[0.35em] text-fg">{copy.vault.title}</p>
+      <p className="font-display text-xs tracking-wide text-fg">{copy.vault.title}</p>
       <div className="mt-4 text-sm text-muted">{children}</div>
     </section>
   )
@@ -127,9 +127,9 @@ export function VaultScreen({ fetchBytes = fetchVaultBytes, keyStore }: VaultScr
       return (
         <>
           <div inert={state.door}>
-            <VaultContent session={state.session} file={state.file} fetchBytes={fetchBytes} sweep={!state.door} onLock={() => void lock(state.file)} />
+            <VaultContent session={state.session} file={state.file} fetchBytes={fetchBytes} onLock={() => void lock(state.file)} />
           </div>
-          {state.door && <VaultDoor onDone={doorDone} />}
+          {state.door && <UnsealFade onDone={doorDone} />}
         </>
       )
   }

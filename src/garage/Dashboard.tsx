@@ -37,7 +37,7 @@ function Ring({ id, fill, value, max, caption, label }: { id: string; fill: numb
         </svg>
         <span className="absolute inset-0 flex items-center justify-center font-display text-xl font-bold tabular-nums">{value}</span>
       </div>
-      <span className="text-[10px] tracking-[0.3em] text-muted">{caption}</span>
+      <span className="text-[10px] text-muted">{caption}</span>
     </div>
   )
 }
@@ -57,7 +57,7 @@ export function Dashboard({ stats }: { stats: GarageStats }) {
               data-testid={`day-${i}`}
               className={
                 done
-                  ? 'h-2.5 w-2.5 rounded-full bg-accent-hi shadow-[0_0_6px_var(--color-accent-hi)]'
+                  ? 'h-2.5 w-2.5 rounded-full bg-accent-hi'
                   : i === 6
                     ? 'h-2.5 w-2.5 rounded-full border border-accent-hi animate-breathe'
                     : 'h-2.5 w-2.5 rounded-full border border-line'
@@ -65,7 +65,7 @@ export function Dashboard({ stats }: { stats: GarageStats }) {
             />
           ))}
         </div>
-        <span className="text-[10px] tracking-[0.3em] text-muted">本周</span>
+        <span className="text-[10px] text-muted">本周</span>
       </div>
       <Ring id="mastered" fill={masteredFill} value={stats.mastered} max={ceilTo(stats.mastered, 100)} caption="掌握" label={`已掌握 ${stats.mastered} 个词`} />
     </div>

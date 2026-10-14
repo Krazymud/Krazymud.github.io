@@ -16,7 +16,7 @@ export function SketchStage() {
         src={reduced ? SKETCH_STILL : SKETCH_LOOP}
         alt=""
         aria-hidden
-        className="h-full w-full object-cover"
+        className="h-full w-full object-cover object-[55%_60%]"
       />
     </div>
   )

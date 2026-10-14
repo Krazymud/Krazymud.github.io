@@ -64,7 +64,6 @@ function renderVault(path = '/vault') {
             session={session}
             file={vault.file}
             fetchBytes={vault.fetchBytes}
-            sweep={false}
             onLock={() => undefined}
             webStore={store}
             webFetch={apiFetch}
