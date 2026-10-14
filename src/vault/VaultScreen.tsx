@@ -10,7 +10,7 @@ import { fetchVaultBytes, loadVaultFile, unlockWithKey, unlockWithPassphrase, ty
 import type { VaultFile } from './types'
 import { UnlockPanel } from './components/UnlockPanel'
 import { VaultContent } from './components/VaultContent'
-import { VaultDoor } from './components/VaultDoor'
+import { UnsealFade } from './components/UnsealFade'
 
 type VaultState =
   | { status: 'loading' }
@@ -129,7 +129,7 @@ export function VaultScreen({ fetchBytes = fetchVaultBytes, keyStore }: VaultScr
           <div inert={state.door}>
             <VaultContent session={state.session} file={state.file} fetchBytes={fetchBytes} sweep={!state.door} onLock={() => void lock(state.file)} />
           </div>
-          {state.door && <VaultDoor onDone={doorDone} />}
+          {state.door && <UnsealFade onDone={doorDone} />}
         </>
       )
   }

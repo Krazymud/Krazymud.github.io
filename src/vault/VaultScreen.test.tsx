@@ -203,29 +203,29 @@ describe('VaultScreen', () => {
     expect(memory.compareDocumentPosition(tablist) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  it('swings the door open on the first visit of the day only', async () => {
+  it('plays unseal fade on the first visit of the day only', async () => {
     const vault = await makeTestVault()
     const first = renderVault(vault.fetchBytes, null)
     await enter(TEST_PASSPHRASE)
     await screen.findByRole('tab', { name: '照片' })
-    expect(screen.getByTestId('vault-door')).toBeInTheDocument()
+    expect(screen.getByTestId('unseal-fade')).toBeInTheDocument()
     expect(localStorage.getItem(DOOR_DAY_KEY)).toBe(studyDay(new Date()))
     first.unmount()
 
     renderVault(vault.fetchBytes, null)
     await enter(TEST_PASSPHRASE)
     await screen.findByRole('tab', { name: '照片' })
-    expect(screen.queryByTestId('vault-door')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('unseal-fade')).not.toBeInTheDocument()
   })
 
-  it('keeps the vault inert until the door is skipped', async () => {
+  it('keeps the vault inert until unseal fade is skipped', async () => {
     const vault = await makeTestVault()
     renderVault(vault.fetchBytes, null)
     await enter(TEST_PASSPHRASE)
     const tab = await screen.findByRole('tab', { name: '照片' })
     expect(tab.closest('[inert]')).not.toBeNull()
-    fireEvent.click(screen.getByTestId('vault-door'))
-    expect(screen.queryByTestId('vault-door')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('unseal-fade'))
+    expect(screen.queryByTestId('unseal-fade')).not.toBeInTheDocument()
     expect(tab.closest('[inert]')).toBeNull()
   })
 
@@ -236,7 +236,7 @@ describe('VaultScreen', () => {
     renderVault(vault.fetchBytes, null)
     await enter(TEST_PASSPHRASE)
     await screen.findByRole('tab', { name: '照片' })
-    expect(screen.queryByTestId('vault-door')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('unseal-fade')).not.toBeInTheDocument()
     expect(localStorage.getItem(DOOR_DAY_KEY)).toBeNull()
     expect(sounds()).toEqual(['unseal'])
   })
@@ -248,7 +248,7 @@ describe('VaultScreen', () => {
     await store.save(vault.dek)
     renderVault(vault.fetchBytes, store)
     await screen.findByRole('tab', { name: '照片' })
-    expect(screen.getByTestId('vault-door')).toBeInTheDocument()
+    expect(screen.getByTestId('unseal-fade')).toBeInTheDocument()
     expect(sounds()).toEqual(['unseal'])
   })
 
@@ -259,7 +259,7 @@ describe('VaultScreen', () => {
     renderVault(vault.fetchBytes, null)
     await enter(TEST_PASSPHRASE)
     await screen.findByRole('tab', { name: '照片' })
-    expect(screen.queryByTestId('vault-door')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('unseal-fade')).not.toBeInTheDocument()
     expect(sounds()).toEqual(['unseal'])
   })
 
@@ -271,7 +271,7 @@ describe('VaultScreen', () => {
     await store.save(vault.dek)
     renderVault(vault.fetchBytes, store)
     await screen.findByRole('tab', { name: '照片' })
-    expect(screen.queryByTestId('vault-door')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('unseal-fade')).not.toBeInTheDocument()
     expect(sounds()).toEqual([])
   })
 })
