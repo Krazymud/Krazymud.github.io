@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { usePrefersReducedMotion } from './hooks'
+import { nudgeWeChatMediaPlay } from './wechatAutoplay'
 
 const base = import.meta.env.BASE_URL
 export const ROUTE_FADE_MS = 300
@@ -141,7 +142,17 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
     prepareInlineVideo(video)
 
     if (wantLoop) {
-      const onPlaying = () => setLoopFadedIn(true)
+      let nudgeTimer: number | undefined
+      let nudgeCount = 0
+      const MAX_NUDGES = 20
+
+      const onPlaying = () => {
+        setLoopFadedIn(true)
+        if (nudgeTimer !== undefined) {
+          window.clearInterval(nudgeTimer)
+          nudgeTimer = undefined
+        }
+      }
       const onEnded = () => restartLoop(video)
       const onPause = () => {
         if (!wantLoop || document.hidden || loopDegraded) return
@@ -150,7 +161,15 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
           (video.duration > 0 &&
             Number.isFinite(video.duration) &&
             video.currentTime >= video.duration - 0.05)
-        if (atEnd) restartLoop(video)
+        if (atEnd) {
+          restartLoop(video)
+          return
+        }
+        // WeChat often paints frame 0 then pauses muted autoplay — keep nudging.
+        tryPlay(video)
+      }
+      const onCanPlay = () => {
+        if (video.paused) tryPlay(video)
       }
       // WeChat / iOS: first autoplay may fail; retry on the next user gesture.
       const onGesture = () => {
@@ -165,18 +184,41 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
       video.addEventListener('playing', onPlaying)
       video.addEventListener('ended', onEnded)
       video.addEventListener('pause', onPause)
+      video.addEventListener('canplay', onCanPlay)
+      video.addEventListener('loadeddata', onCanPlay)
       document.addEventListener('touchstart', onGesture, { passive: true, capture: true })
       document.addEventListener('pointerdown', onGesture, { capture: true })
       document.addEventListener('visibilitychange', onVisible)
 
       tryPlay(video)
       const playTimer = window.setTimeout(() => tryPlay(video), ROUTE_FADE_MS)
+      // Classic WeChat unlock: invoke getNetworkType on WeixinJSBridgeReady.
+      const stopWeChatNudge = nudgeWeChatMediaPlay(() => tryPlay(video))
+      // Brief interval covers the “show first frame then pause” case before any gesture.
+      nudgeTimer = window.setInterval(() => {
+        if (!wantLoop || loopDegraded || document.hidden) return
+        if (!video.paused) {
+          if (nudgeTimer !== undefined) window.clearInterval(nudgeTimer)
+          nudgeTimer = undefined
+          return
+        }
+        nudgeCount += 1
+        tryPlay(video)
+        if (nudgeCount >= MAX_NUDGES && nudgeTimer !== undefined) {
+          window.clearInterval(nudgeTimer)
+          nudgeTimer = undefined
+        }
+      }, 250)
 
       return () => {
         clearTimeout(playTimer)
+        if (nudgeTimer !== undefined) window.clearInterval(nudgeTimer)
+        stopWeChatNudge()
         video.removeEventListener('playing', onPlaying)
         video.removeEventListener('ended', onEnded)
         video.removeEventListener('pause', onPause)
+        video.removeEventListener('canplay', onCanPlay)
+        video.removeEventListener('loadeddata', onCanPlay)
         document.removeEventListener('touchstart', onGesture, true)
         document.removeEventListener('pointerdown', onGesture, true)
         document.removeEventListener('visibilitychange', onVisible)
