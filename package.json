@@ -12,7 +12,8 @@
     "words": "tsx scripts/build-words.ts",
     "vault": "tsx scripts/vault.ts",
     "vault:rekey": "tsx scripts/vault-rekey.ts",
-    "audio": "tsx scripts/audio.ts"
+    "audio": "tsx scripts/audio.ts",
+    "sync:cos": "tsx scripts/sync-cos-site.ts"
   },
   "dependencies": {
     "exifr": "^7.1.3",
