@@ -73,3 +73,15 @@ npm run sync:cos
 ```
 
 Without credentials the script exits non-zero (`Missing COS_BUCKET`, etc.) and does not upload. Sync does not remove objects that no longer exist in `dist/`.
+
+## 9. Browser vault client (Vite public env)
+
+The encrypted vault transport reads **public** build-time variables (no secrets in the bundle). Set these in `.env` / CI when building a COS-backed vault:
+
+| Variable | Purpose |
+|----------|---------|
+| `VITE_COS_BUCKET` | COS bucket name (same bucket as site sync; objects under `vault/` prefix) |
+| `VITE_COS_REGION` | Region (e.g. `ap-guangzhou`) |
+| `VITE_STS_ISSUER_URL` | HTTPS endpoint that mints short-lived STS credentials for browser `PutObject` / `GetObject` on `vault/*` |
+
+`cosConfig.ts` maps these to `COS_VAULT_CONFIG` (`vaultPrefix` is fixed to `vault`). STS issuance and CAM scoping for `vault/*` are separate from the CI site-sync CAM user in section 3.
