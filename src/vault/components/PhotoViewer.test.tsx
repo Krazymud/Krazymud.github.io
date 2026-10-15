@@ -28,4 +28,12 @@ describe('PhotoViewer', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: '关闭' }))
     expect(onClose).toHaveBeenCalled()
   })
+
+  it('resets image transform on double-click', async () => {
+    render(<PhotoViewer photos={photos} index={0} read={read} onIndex={() => {}} onClose={() => {}} />)
+    const img = await screen.findByRole('img', { name: '海边' })
+    expect(img).toHaveStyle({ transform: 'translate(0px, 0px) scale(1)' })
+    fireEvent.doubleClick(img)
+    expect(img).toHaveStyle({ transform: 'translate(0px, 0px) scale(1)' })
+  })
 })

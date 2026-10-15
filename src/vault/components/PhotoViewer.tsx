@@ -1,9 +1,15 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { PhotoEntry } from '../types'
 import { useBlobUrl, type ReadBlob } from '../useBlob'
+import { applyPan, applyPinch, resetZoom, type ZoomState } from './photoZoom'
 
 const SWIPE_PX = 50
+const ZOOM_SWIPE_MAX_SCALE = 1.02
+
+function pointerDistance(a: { x: number; y: number }, b: { x: number; y: number }) {
+  return Math.hypot(b.x - a.x, b.y - a.y)
+}
 
 interface PhotoViewerProps {
   photos: PhotoEntry[]
@@ -16,7 +22,11 @@ interface PhotoViewerProps {
 export function PhotoViewer({ photos, index, read, onIndex, onClose }: PhotoViewerProps) {
   const photo = photos[index]
   const full = useBlobUrl(photo.full, read, 'image/webp')
-  const touchX = useRef<number | null>(null)
+  const [zoom, setZoom] = useState<ZoomState>(resetZoom)
+  const pointers = useRef(new Map<number, { x: number; y: number }>())
+  const pinchStartDist = useRef(0)
+  const pinchStartScale = useRef(1)
+  const swipeStartX = useRef<number | null>(null)
 
   const go = useCallback(
     (delta: number) => {
@@ -25,6 +35,10 @@ export function PhotoViewer({ photos, index, read, onIndex, onClose }: PhotoView
     },
     [index, photos.length, onIndex],
   )
+
+  useEffect(() => {
+    setZoom(resetZoom())
+  }, [index])
 
   useEffect(() => {
     const prevOverflow = document.body.style.overflow
@@ -44,6 +58,66 @@ export function PhotoViewer({ photos, index, read, onIndex, onClose }: PhotoView
     return () => window.removeEventListener('keydown', onKey)
   }, [go, onClose])
 
+  const beginPinchIfNeeded = useCallback(() => {
+    if (pointers.current.size !== 2) return
+    const pts = [...pointers.current.values()]
+    pinchStartDist.current = pointerDistance(pts[0], pts[1])
+    pinchStartScale.current = zoom.scale
+  }, [zoom.scale])
+
+  const onImagePointerDown = (event: React.PointerEvent<HTMLImageElement>) => {
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
+    event.currentTarget.setPointerCapture(event.pointerId)
+    if (pointers.current.size === 2) {
+      beginPinchIfNeeded()
+    } else if (pointers.current.size === 1 && zoom.scale <= ZOOM_SWIPE_MAX_SCALE) {
+      swipeStartX.current = event.clientX
+    }
+  }
+
+  const onImagePointerMove = (event: React.PointerEvent<HTMLImageElement>) => {
+    const prev = pointers.current.get(event.pointerId)
+    if (!prev) return
+    const dx = event.clientX - prev.x
+    const dy = event.clientY - prev.y
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
+
+    if (pointers.current.size === 2) {
+      const pts = [...pointers.current.values()]
+      const dist = pointerDistance(pts[0], pts[1])
+      setZoom((z) => applyPinch(z, pinchStartDist.current, dist, pinchStartScale.current))
+    } else if (pointers.current.size === 1) {
+      setZoom((z) => (z.scale > ZOOM_SWIPE_MAX_SCALE ? applyPan(z, dx, dy) : z))
+    }
+  }
+
+  const onImagePointerUp = (event: React.PointerEvent<HTMLImageElement>) => {
+    pointers.current.delete(event.pointerId)
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+
+    if (pointers.current.size === 1) {
+      swipeStartX.current = null
+    }
+
+    if (pointers.current.size === 0 && swipeStartX.current !== null) {
+      const dx = event.clientX - swipeStartX.current
+      swipeStartX.current = null
+      if (zoom.scale <= ZOOM_SWIPE_MAX_SCALE && Math.abs(dx) > SWIPE_PX) go(dx < 0 ? 1 : -1)
+    } else if (pointers.current.size === 0) {
+      swipeStartX.current = null
+    }
+
+    if (pointers.current.size === 2) {
+      beginPinchIfNeeded()
+    }
+  }
+
+  const onImageDoubleClick = () => {
+    setZoom(resetZoom())
+  }
+
   const ui = (
     <div
       role="dialog"
@@ -51,15 +125,6 @@ export function PhotoViewer({ photos, index, read, onIndex, onClose }: PhotoView
       aria-label="照片"
       className="fixed inset-0 z-50 flex flex-col bg-ink/95"
       style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
-      onTouchStart={(event) => {
-        touchX.current = event.touches[0].clientX
-      }}
-      onTouchEnd={(event) => {
-        if (touchX.current === null) return
-        const dx = event.changedTouches[0].clientX - touchX.current
-        touchX.current = null
-        if (Math.abs(dx) > SWIPE_PX) go(dx < 0 ? 1 : -1)
-      }}
     >
       <div className="flex shrink-0 items-center justify-between bg-ink/70 px-4 py-3 text-sm text-muted">
         <span>
@@ -69,9 +134,22 @@ export function PhotoViewer({ photos, index, read, onIndex, onClose }: PhotoView
           关闭
         </button>
       </div>
-      <div className="flex min-h-0 flex-1 items-center justify-center px-2">
+      <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden px-2 touch-none">
         {full.status === 'ready' && (
-          <img src={full.url} alt={photo.caption || photo.date} className="max-h-full max-w-full object-contain" />
+          <img
+            src={full.url}
+            alt={photo.caption || photo.date}
+            className="max-h-full max-w-full object-contain"
+            style={{
+              transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.scale})`,
+              transformOrigin: 'center center',
+            }}
+            onPointerDown={onImagePointerDown}
+            onPointerMove={onImagePointerMove}
+            onPointerUp={onImagePointerUp}
+            onPointerCancel={onImagePointerUp}
+            onDoubleClick={onImageDoubleClick}
+          />
         )}
         {full.status === 'loading' && <p className="text-sm text-muted">正在解密…</p>}
         {full.status === 'failed' && <p className="text-sm text-muted">这张照片打不开</p>}
