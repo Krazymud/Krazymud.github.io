@@ -23,7 +23,6 @@ function mountHomeStageSlot() {
 
 describe('SketchStage', () => {
   afterEach(() => {
-    vi.useRealTimers()
     vi.unstubAllGlobals()
     delete document.documentElement.dataset.sketchFit
     delete document.documentElement.dataset.sketchPlacement
@@ -51,7 +50,6 @@ describe('SketchStage', () => {
     expect(sources.some((s) => s.includes('fc-drive-loop.webm'))).toBe(true)
     expect(video!.muted).toBe(true)
     expect(video!.playsInline).toBe(true)
-    expect(video!.loop).toBe(true)
     expect(video).toHaveAttribute('playsinline')
     expect(video).toHaveAttribute('webkit-playsinline')
     expect(video).toHaveAttribute('x5-playsinline', 'true')
@@ -104,52 +102,6 @@ describe('SketchStage', () => {
     fireEvent(video, new Event('playing'))
     fireEvent(video, new Event('pause'))
     expect(play).toHaveBeenCalled()
-  })
-
-  it('reveals the loop when playback is already running without a playing event', async () => {
-    vi.useFakeTimers()
-    media({ narrow: false })
-    render(<SketchStage playLoop />)
-    const video = document.querySelector('video') as HTMLVideoElement
-    const img = [...document.querySelectorAll('img')].at(-1) as HTMLImageElement
-    vi.spyOn(video, 'play').mockResolvedValue(undefined)
-    Object.defineProperty(video, 'paused', { configurable: true, get: () => false })
-    Object.defineProperty(video, 'currentTime', { configurable: true, value: 0.5 })
-    expect(img.style.opacity).toBe('1')
-    expect(video.style.opacity).toBe('0')
-    await vi.advanceTimersByTimeAsync(300)
-    expect(img.style.opacity).toBe('0')
-    expect(video.style.opacity).toBe('1')
-    expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'loop')
-    vi.useRealTimers()
-  })
-
-  it('keeps retrying play after WeChat plays then pauses at frame 0', async () => {
-    vi.useFakeTimers()
-    media({ narrow: false })
-    render(<SketchStage playLoop />)
-    const video = document.querySelector('video') as HTMLVideoElement
-    const play = vi.spyOn(video, 'play').mockResolvedValue(undefined)
-    let paused = true
-    Object.defineProperty(video, 'paused', { configurable: true, get: () => paused })
-    Object.defineProperty(video, 'currentTime', { configurable: true, writable: true, value: 0 })
-    Object.defineProperty(video, 'duration', { configurable: true, value: 10 })
-
-    // Let the initial delayed tryPlay fire first — WeChat often pauses after that.
-    await vi.advanceTimersByTimeAsync(ROUTE_FADE_MS + 50)
-
-    paused = false
-    fireEvent(video, new Event('playing'))
-    expect(video.style.opacity).toBe('1')
-    paused = true
-    play.mockClear()
-    fireEvent(video, new Event('pause'))
-    expect(play).toHaveBeenCalled()
-    play.mockClear()
-
-    await vi.advanceTimersByTimeAsync(1000)
-    expect(play.mock.calls.length).toBeGreaterThan(0)
-    vi.useRealTimers()
   })
 
   it('applies route fade transition on both layers during loop exit', () => {

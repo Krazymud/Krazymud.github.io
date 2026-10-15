@@ -11,8 +11,7 @@ export interface VaultSession {
 const BASE = `${import.meta.env.BASE_URL}vault/`
 
 export const fetchVaultBytes: FetchBytes = async (path) => {
-  // Blobs must not reuse a cached 404 from the Pages lag window after vault.json already lists them.
-  const response = await fetch(`${BASE}${path}`, { cache: 'no-cache' })
+  const response = await fetch(`${BASE}${path}`, { cache: path === 'vault.json' ? 'no-cache' : 'default' })
   if (response.status === 404) return null
   if (!response.ok) throw new Error(`HTTP ${response.status} for ${path}`)
   // The dev server answers unknown paths with index.html.
