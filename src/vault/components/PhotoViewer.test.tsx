@@ -36,4 +36,25 @@ describe('PhotoViewer', () => {
     fireEvent.doubleClick(img)
     expect(img).toHaveStyle({ transform: 'translate(0px, 0px) scale(1)' })
   })
+
+  it('closes when tapping non-control overlay areas but not image or nav buttons', async () => {
+    const onClose = vi.fn()
+    const onIndex = vi.fn()
+    render(
+      <PhotoViewer photos={photos} index={0} read={read} onIndex={onIndex} onClose={onClose} />,
+    )
+    const dialog = screen.getByRole('dialog', { name: '照片' })
+    await screen.findByRole('img', { name: '海边' })
+
+    fireEvent.click(within(dialog).getByText('1 / 2'))
+    expect(onClose).toHaveBeenCalledTimes(1)
+
+    onClose.mockClear()
+    fireEvent.click(screen.getByRole('img', { name: '海边' }))
+    expect(onClose).not.toHaveBeenCalled()
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '下一张' }))
+    expect(onClose).not.toHaveBeenCalled()
+    expect(onIndex).toHaveBeenCalledWith(1)
+  })
 })

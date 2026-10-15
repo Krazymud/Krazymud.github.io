@@ -120,6 +120,10 @@ export function PhotoViewer({ photos, index, read, onIndex, onClose }: PhotoView
     setZoom(resetZoom())
   }
 
+  const stopBubble = (event: React.MouseEvent) => {
+    event.stopPropagation()
+  }
+
   const ui = (
     <div
       role="dialog"
@@ -127,12 +131,20 @@ export function PhotoViewer({ photos, index, read, onIndex, onClose }: PhotoView
       aria-label="照片"
       className="fixed inset-0 z-50 flex flex-col bg-ink/95"
       style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+      onClick={onClose}
     >
       <div className="flex shrink-0 items-center justify-between bg-ink/70 px-4 py-3 text-sm text-muted">
         <span>
           {index + 1} / {photos.length}
         </span>
-        <button type="button" onClick={onClose} className="min-h-11 min-w-11 px-3 hover:text-fg">
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation()
+            onClose()
+          }}
+          className="min-h-11 min-w-11 px-3 hover:text-fg"
+        >
           关闭
         </button>
       </div>
@@ -146,6 +158,7 @@ export function PhotoViewer({ photos, index, read, onIndex, onClose }: PhotoView
               transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.scale})`,
               transformOrigin: 'center center',
             }}
+            onClick={stopBubble}
             onPointerDown={onImagePointerDown}
             onPointerMove={onImagePointerMove}
             onPointerUp={onImagePointerUp}
@@ -162,7 +175,10 @@ export function PhotoViewer({ photos, index, read, onIndex, onClose }: PhotoView
         <div className="mt-3 grid grid-cols-2 gap-3">
           <button
             type="button"
-            onClick={() => go(-1)}
+            onClick={(event) => {
+              stopBubble(event)
+              go(-1)
+            }}
             disabled={index === 0}
             className="min-h-11 border border-line disabled:opacity-30"
           >
@@ -170,7 +186,10 @@ export function PhotoViewer({ photos, index, read, onIndex, onClose }: PhotoView
           </button>
           <button
             type="button"
-            onClick={() => go(1)}
+            onClick={(event) => {
+              stopBubble(event)
+              go(1)
+            }}
             disabled={index === photos.length - 1}
             className="min-h-11 border border-line disabled:opacity-30"
           >
