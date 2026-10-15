@@ -1,5 +1,6 @@
 import { signedCosRequest, type CosCreds } from './cosAuth'
-import { GitHubWriteError, SYNC_PENDING, TOKEN_DENIED } from './github'
+import { GitHubWriteError, SYNC_PENDING } from './github'
+import { GATE_DENIED } from './vaultErrors'
 import type { VaultFile } from './types'
 
 export class CosConflictError extends Error {
@@ -45,7 +46,7 @@ function formatIfMatchEtag(etag: string): string {
 
 function assertCosOk(response: Response): void {
   if (response.status === 401 || response.status === 403) {
-    throw new GitHubWriteError(TOKEN_DENIED)
+    throw new GitHubWriteError(GATE_DENIED)
   }
   if (!response.ok) {
     throw new GitHubWriteError(SYNC_PENDING)
@@ -70,7 +71,7 @@ export async function readVaultFile(options: {
     throw new CosNotFoundError()
   }
   if (response.status === 401 || response.status === 403) {
-    throw new GitHubWriteError(TOKEN_DENIED)
+    throw new GitHubWriteError(GATE_DENIED)
   }
   if (!response.ok) {
     throw new GitHubWriteError(SYNC_PENDING)
