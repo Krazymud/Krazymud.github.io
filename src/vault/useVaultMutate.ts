@@ -175,7 +175,40 @@ export function useVaultMutate(options: {
     const merged = mergeWorking(emptyWorking(remoteManifest), onlyEdits(local))
     fileRef.current = remote.file
     baseShaRef.current = remote.commitSha
-    return merged
+    // onlyEdits drops post-push retained blobs (updatedAt was cleared). Keep any sealed
+    // bytes that still match the merged manifest so list/note cards stay readable.
+    return {
+      ...merged,
+      dirtyBlobs: referencedBlobs({
+        ...merged,
+        dirtyBlobs: { ...local.dirtyBlobs, ...merged.dirtyBlobs },
+      }),
+    }
+  }
+
+  async function readRemoteBlob(saved: string, name: string): Promise<Uint8Array | null> {
+    const refs = [baseShaRef.current, GITHUB_WEB.branch].filter(
+      (value, index, all): value is string => value != null && all.indexOf(value) === index,
+    )
+    let denied: unknown = null
+    for (const ref of refs) {
+      try {
+        return await readBlobFile(fetchRef.current, saved, name, ref)
+      } catch (error) {
+        if (error instanceof GitHubWriteError && error.message === TOKEN_DENIED) denied = error
+      }
+    }
+    if (denied) throw denied
+    return null
+  }
+
+  function rememberBlob(name: string, bytes: Uint8Array) {
+    const current = workingRef.current
+    if (current.dirtyBlobs[name]) return
+    workingRef.current = {
+      ...current,
+      dirtyBlobs: { ...current.dirtyBlobs, [name]: bytes },
+    }
   }
 
   async function push(start: WorkingVault, saved: string): Promise<WorkingVault> {
@@ -262,12 +295,7 @@ export function useVaultMutate(options: {
     const saved = tokenRef.current
     if (bytes === null && saved) {
       try {
-        bytes = await readBlobFile(
-          fetchRef.current,
-          saved,
-          entry.blob,
-          baseShaRef.current ?? GITHUB_WEB.branch,
-        )
+        bytes = await readRemoteBlob(saved, entry.blob)
       } catch (error) {
         if (error instanceof GitHubWriteError) throw error
         throw new WorkingBlobError()
@@ -362,7 +390,13 @@ export function useVaultMutate(options: {
       }
       if (generation.current !== id) return
 
-      let next = emptyWorking(latestManifest)
+      let next = {
+        ...emptyWorking(latestManifest),
+        dirtyBlobs: referencedBlobs({
+          ...emptyWorking(latestManifest),
+          dirtyBlobs: workingRef.current.dirtyBlobs,
+        }),
+      }
       if (pending) next = mergeWorking(next, onlyEdits(pending))
       let migrated = false
       if (savedToken) {
@@ -430,14 +464,15 @@ export function useVaultMutate(options: {
     }
     const saved = tokenRef.current
     if (bytes === null && saved) {
-      bytes = await readBlobFile(
-        fetchRef.current,
-        saved,
-        name,
-        baseShaRef.current ?? GITHUB_WEB.branch,
-      )
+      try {
+        bytes = await readRemoteBlob(saved, name)
+      } catch (error) {
+        failure = error
+        bytes = null
+      }
     }
     if (bytes === null) throw failure ?? new Error(`missing blob ${name}`)
+    rememberBlob(name, bytes)
     return decryptBytes(dekRef.current, bytes)
   }, [])
 

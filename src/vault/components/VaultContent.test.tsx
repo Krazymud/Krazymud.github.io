@@ -181,6 +181,52 @@ describe('VaultContent published edits', () => {
     expect(screen.queryByText('这篇笔记打不开')).not.toBeInTheDocument()
   })
 
+  it('opens a list that only GitHub has after a cold load once the token finishes loading', async () => {
+    const sealed = await encryptBytes(
+      vault.dek,
+      new TextEncoder().encode(JSON.stringify({ items: [{ text: '跨端清单项', done: false }] })),
+    )
+    remote.set('list-cold', sealed)
+    const coldManifest: VaultManifest = {
+      ...session.manifest,
+      lists: [
+        ...session.manifest.lists,
+        { title: '跨端清单', blob: 'list-cold', source: 'lists/cold.md', hash: 'c' },
+      ],
+    }
+    const coldFile = { ...vault.file, manifest: await encryptJson(vault.dek, coldManifest) }
+    const site = vault.fetchBytes
+    vault = {
+      ...vault,
+      file: coldFile,
+      fetchBytes: async (path) => (path === 'blobs/list-cold.bin' ? null : site(path)),
+    }
+    session = { dek: vault.dek, manifest: coldManifest }
+    readVaultFile.mockResolvedValue({ file: coldFile, commitSha: 'tip-list-cold' })
+
+    const tokenGate = deferred<void>()
+    const baseStore = store
+    store = {
+      ...baseStore,
+      loadToken: async () => {
+        await tokenGate.promise
+        return baseStore.loadToken()
+      },
+    }
+
+    renderVault('/vault?tab=lists')
+    expect(await screen.findByText('跨端清单')).toBeInTheDocument()
+    expect(screen.queryByText('这个清单打不开')).not.toBeInTheDocument()
+
+    await act(async () => {
+      tokenGate.resolve()
+    })
+
+    expect(await screen.findByText('已完成 0 / 1')).toBeInTheDocument()
+    expect(screen.queryByText('这个清单打不开')).not.toBeInTheDocument()
+    expect(readBlobFile).toHaveBeenCalledWith(apiFetch, 'tok', 'list-cold', 'tip-list-cold')
+  })
+
   it('opens a note that only GitHub has after a cold load once the token finishes loading', async () => {
     // Device B: site vault.json already lists a note another device committed, but Pages has not
     // published the blob yet. The card mounts while IndexedDB token load is still in flight.
@@ -258,6 +304,37 @@ describe('VaultContent published edits', () => {
     expect(await screen.findByText('已完成 1 / 2')).toBeInTheDocument()
     fireEvent.click(await screen.findByRole('button', { name: /一起去的地方/ }))
     expect(await screen.findByText('去北海道')).toBeInTheDocument()
+  })
+
+  it('keeps a just-edited list readable after re-saving the token rebases the vault', async () => {
+    readBlobFile.mockImplementation(rejectUnpublishedBlobs)
+    renderVault('/vault?tab=lists')
+    const edit = await screen.findByRole('button', { name: '编辑' })
+    await screen.findByText('已完成 1 / 2')
+    await waitFor(() => expect(edit).toBeEnabled())
+    fireEvent.click(edit)
+    fireEvent.change(screen.getByLabelText('条目 2'), { target: { value: '去北海道' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    const sent = await committed(commitVaultUpdate.mock.calls[0][0])
+    const edited = sent.lists.find((list) => list.source === 'lists/a.md')!
+    readVaultFile.mockResolvedValue({
+      file: commitVaultUpdate.mock.calls[0][0].vaultFile,
+      commitSha: 'after-edit',
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: '忘记令牌' }))
+    fireEvent.change(screen.getByLabelText('令牌'), { target: { value: 'tok' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存令牌' }))
+
+    await waitFor(() => expect(screen.getByRole('button', { name: '忘记令牌' })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('tab', { name: '照片' }))
+    fireEvent.click(screen.getByRole('tab', { name: '清单' }))
+    expect(await screen.findByText('已完成 1 / 2')).toBeInTheDocument()
+    expect(screen.queryByText('这个清单打不开')).not.toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: /一起去的地方/ }))
+    expect(await screen.findByText('去北海道')).toBeInTheDocument()
+    expect(edited.blob).not.toBe('list-a')
   })
 
   it('keeps a just-added photo readable when the site and GitHub cannot serve the new blob yet', async () => {

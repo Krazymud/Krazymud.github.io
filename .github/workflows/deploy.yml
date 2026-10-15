@@ -12,7 +12,9 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  # Keep tip builds: vault content commits are bursty, and cancelling the latest
+  # leave Pages on an older vault.json while GitHub already lists new blobs.
+  cancel-in-progress: false
 
 jobs:
   build:
