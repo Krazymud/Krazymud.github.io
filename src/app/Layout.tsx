@@ -1,3 +1,4 @@
+import { motion, useReducedMotion } from 'motion/react'
 import { useEffect } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { play, stopAll, unlockAudio } from '../audio/sound'
@@ -25,10 +26,14 @@ function SpeakerIcon({ muted }: { muted: boolean }) {
   )
 }
 
+const INNER_MAIN =
+  'glass-panel glass-panel-solid relative z-10 mx-auto mt-4 flex w-full max-w-md flex-col rounded-lg px-5 pt-6 pb-10'
+
 export function Layout() {
   const { pathname } = useLocation()
   const { saveFailed } = useProgress()
   const { muted } = usePrefs()
+  const reducedMotion = useReducedMotion() ?? false
   const scene = sceneFor(pathname)
   const isHome = pathname === '/'
 
@@ -93,10 +98,20 @@ export function Layout() {
         <main className="relative z-10 mx-auto w-full max-w-md px-5 pt-6 pb-10">
           <Outlet />
         </main>
-      ) : (
-        <main className="glass-panel glass-panel-solid relative z-10 mx-auto mt-4 flex w-full max-w-md flex-col rounded-lg px-5 pt-6 pb-10">
+      ) : reducedMotion ? (
+        <main className={INNER_MAIN}>
           <Outlet />
         </main>
+      ) : (
+        <motion.main
+          key={pathname}
+          className={INNER_MAIN}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.26, ease: 'easeOut' }}
+        >
+          <Outlet />
+        </motion.main>
       )}
       {perfEnabled && <PerfOverlay />}
     </div>
