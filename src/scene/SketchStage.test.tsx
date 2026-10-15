@@ -23,6 +23,7 @@ function mountHomeStageSlot() {
 
 describe('SketchStage', () => {
   afterEach(() => {
+    vi.useRealTimers()
     vi.unstubAllGlobals()
     delete document.documentElement.dataset.sketchFit
     delete document.documentElement.dataset.sketchPlacement
@@ -102,6 +103,23 @@ describe('SketchStage', () => {
     fireEvent(video, new Event('playing'))
     fireEvent(video, new Event('pause'))
     expect(play).toHaveBeenCalled()
+  })
+
+  it('reveals the loop when playback is already running without a playing event', async () => {
+    vi.useFakeTimers()
+    media({ narrow: false })
+    render(<SketchStage playLoop />)
+    const video = document.querySelector('video') as HTMLVideoElement
+    const img = [...document.querySelectorAll('img')].at(-1) as HTMLImageElement
+    vi.spyOn(video, 'play').mockResolvedValue(undefined)
+    Object.defineProperty(video, 'paused', { configurable: true, get: () => false })
+    expect(img.style.opacity).toBe('1')
+    expect(video.style.opacity).toBe('0')
+    await vi.advanceTimersByTimeAsync(300)
+    expect(img.style.opacity).toBe('0')
+    expect(video.style.opacity).toBe('1')
+    expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'loop')
+    vi.useRealTimers()
   })
 
   it('applies route fade transition on both layers during loop exit', () => {

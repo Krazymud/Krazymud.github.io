@@ -146,12 +146,23 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
       let nudgeCount = 0
       const MAX_NUDGES = 20
 
-      const onPlaying = () => {
+      const markRevealed = () => {
         setLoopFadedIn(true)
         if (nudgeTimer !== undefined) {
           window.clearInterval(nudgeTimer)
           nudgeTimer = undefined
         }
+      }
+      // Reveal whenever the element is actually running — not only on a `playing`
+      // event. autoPlay / an earlier tryPlay can start before this effect attaches,
+      // so WeChat/iOS may never fire `playing` again while the still stays opaque.
+      const revealIfPlaying = () => {
+        if (loopDegraded || video.paused) return false
+        markRevealed()
+        return true
+      }
+      const onPlaying = () => {
+        markRevealed()
       }
       const onEnded = () => restartLoop(video)
       const onPause = () => {
@@ -169,16 +180,18 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
         tryPlay(video)
       }
       const onCanPlay = () => {
+        if (revealIfPlaying()) return
         if (video.paused) tryPlay(video)
       }
       // WeChat / iOS: first autoplay may fail; retry on the next user gesture.
       const onGesture = () => {
         if (wantLoop && !loopDegraded && video.paused) tryPlay(video)
+        else revealIfPlaying()
       }
       const onVisible = () => {
-        if (document.visibilityState === 'visible' && wantLoop && !loopDegraded && video.paused) {
-          tryPlay(video)
-        }
+        if (document.visibilityState !== 'visible' || !wantLoop || loopDegraded) return
+        if (video.paused) tryPlay(video)
+        else revealIfPlaying()
       }
 
       video.addEventListener('playing', onPlaying)
@@ -191,17 +204,20 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
       document.addEventListener('visibilitychange', onVisible)
 
       tryPlay(video)
-      const playTimer = window.setTimeout(() => tryPlay(video), ROUTE_FADE_MS)
+      revealIfPlaying()
+      const playTimer = window.setTimeout(() => {
+        tryPlay(video)
+        revealIfPlaying()
+      }, ROUTE_FADE_MS)
       // Classic WeChat unlock: invoke getNetworkType on WeixinJSBridgeReady.
-      const stopWeChatNudge = nudgeWeChatMediaPlay(() => tryPlay(video))
+      const stopWeChatNudge = nudgeWeChatMediaPlay(() => {
+        tryPlay(video)
+        revealIfPlaying()
+      })
       // Brief interval covers the “show first frame then pause” case before any gesture.
       nudgeTimer = window.setInterval(() => {
         if (!wantLoop || loopDegraded || document.hidden) return
-        if (!video.paused) {
-          if (nudgeTimer !== undefined) window.clearInterval(nudgeTimer)
-          nudgeTimer = undefined
-          return
-        }
+        if (revealIfPlaying()) return
         nudgeCount += 1
         tryPlay(video)
         if (nudgeCount >= MAX_NUDGES && nudgeTimer !== undefined) {
