@@ -85,3 +85,48 @@ The encrypted vault transport reads **public** build-time variables (no secrets 
 | `VITE_STS_ISSUER_URL` | HTTPS endpoint that mints short-lived STS credentials for browser `PutObject` / `GetObject` on `vault/*` |
 
 `cosConfig.ts` maps these to `COS_VAULT_CONFIG` (`vaultPrefix` is fixed to `vault`). STS issuance and CAM scoping for `vault/*` are separate from the CI site-sync CAM user in section 3.
+
+## 10. SCF STS issuer (`scf/sts-issuer`)
+
+Browser clients POST `{ "gate": "<sync gate>" }` to `VITE_STS_ISSUER_URL` and receive short-lived COS credentials scoped to `vault/*` only.
+
+### CAM for STS parent keys
+
+Create a CAM user (or use a sub-account) whose API keys are stored **only** in SCF environment variables—not in GitHub or the static site bundle:
+
+- Allow `sts:AssumeRole` / `sts:GetFederationToken` as required by `qcloud-cos-sts` for the configured policy (see Tencent STS docs for your account).
+- The inline policy in `index.js` allows only `cos:GetObject`, `cos:PutObject`, `cos:HeadObject` on the `STS_RESOURCE` ARN below.
+
+### Build and deploy
+
+```bash
+cd scf/sts-issuer
+npm install --omit=dev
+zip -r ../sts-issuer.zip index.js node_modules package.json
+```
+
+Upload `scf/sts-issuer.zip` to a **Node.js** SCF function (handler `index.main_handler`). Expose via **API Gateway** (POST) or **Function URL**; set `VITE_STS_ISSUER_URL` to that HTTPS URL.
+
+### SCF environment variables
+
+| Variable | Purpose |
+|----------|---------|
+| `STS_GATE` | Shared sync gate secret; must match the value users enter in the vault UI |
+| `COS_SECRET_ID` | Parent CAM SecretId for STS |
+| `COS_SECRET_KEY` | Parent CAM SecretKey |
+| `STS_RESOURCE` | Full CAM resource ARN for `vault/*`, e.g. `qcs::cos:ap-guangzhou:uid/<APPID>:<bucket>/vault/*` |
+| `CORS_ORIGIN` | Site origin allowed by CORS (e.g. `https://your.cdn.domain`); use `*` only for smoke tests |
+
+### Responses
+
+| Status | Body | Meaning |
+|--------|------|---------|
+| 200 | `{ secretId, secretKey, sessionToken, startTime, expiredTime }` | Temp creds (30 min default) |
+| 401 | `{ "error": "gate" }` | Wrong or missing gate |
+| 429 | `{ "error": "rate" }` | Per-IP in-memory rate limit (resets per instance) |
+
+After deploy, verify with curl (replace URL and gate):
+
+```bash
+curl -sS -X POST "$STS_ISSUER_URL" -H 'Content-Type: application/json' -d '{"gate":"YOUR_GATE"}'
+```
