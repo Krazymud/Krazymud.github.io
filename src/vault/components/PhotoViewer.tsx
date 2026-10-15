@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import type { PhotoEntry } from '../types'
 import { useBlobUrl, type ReadBlob } from '../useBlob'
 
@@ -26,6 +27,14 @@ export function PhotoViewer({ photos, index, read, onIndex, onClose }: PhotoView
   )
 
   useEffect(() => {
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prevOverflow
+    }
+  }, [])
+
+  useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
       else if (event.key === 'ArrowLeft') go(-1)
@@ -35,12 +44,13 @@ export function PhotoViewer({ photos, index, read, onIndex, onClose }: PhotoView
     return () => window.removeEventListener('keydown', onKey)
   }, [go, onClose])
 
-  return (
+  const ui = (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="照片"
-      className="fixed inset-0 z-30 flex flex-col bg-ink/95"
+      className="fixed inset-0 z-50 flex flex-col bg-ink/95"
+      style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
       onTouchStart={(event) => {
         touchX.current = event.touches[0].clientX
       }}
@@ -51,11 +61,11 @@ export function PhotoViewer({ photos, index, read, onIndex, onClose }: PhotoView
         if (Math.abs(dx) > SWIPE_PX) go(dx < 0 ? 1 : -1)
       }}
     >
-      <div className="flex items-center justify-between px-4 py-3 text-xs text-muted">
+      <div className="flex shrink-0 items-center justify-between bg-ink/70 px-4 py-3 text-sm text-muted">
         <span>
           {index + 1} / {photos.length}
         </span>
-        <button type="button" onClick={onClose} className="px-2 py-1 hover:text-fg">
+        <button type="button" onClick={onClose} className="min-h-11 min-w-11 px-3 hover:text-fg">
           关闭
         </button>
       </div>
@@ -66,18 +76,30 @@ export function PhotoViewer({ photos, index, read, onIndex, onClose }: PhotoView
         {full.status === 'loading' && <p className="text-sm text-muted">正在解密…</p>}
         {full.status === 'failed' && <p className="text-sm text-muted">这张照片打不开</p>}
       </div>
-      <div className="px-4 py-4 text-center">
-        {photo.caption && <p className="text-sm">{photo.caption}</p>}
+      <div className="shrink-0 bg-ink/70 px-4 py-3 text-center">
+        {photo.caption && <p className="text-sm text-fg">{photo.caption}</p>}
         <p className="mt-1 text-xs text-muted">{photo.date}</p>
-        <div className="mt-3 flex justify-center gap-6 text-sm">
-          <button type="button" onClick={() => go(-1)} disabled={index === 0} className="disabled:opacity-30">
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => go(-1)}
+            disabled={index === 0}
+            className="min-h-11 border border-line disabled:opacity-30"
+          >
             上一张
           </button>
-          <button type="button" onClick={() => go(1)} disabled={index === photos.length - 1} className="disabled:opacity-30">
+          <button
+            type="button"
+            onClick={() => go(1)}
+            disabled={index === photos.length - 1}
+            className="min-h-11 border border-line disabled:opacity-30"
+          >
             下一张
           </button>
         </div>
       </div>
     </div>
   )
+
+  return createPortal(ui, document.body)
 }
