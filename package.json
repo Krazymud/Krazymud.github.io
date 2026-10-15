@@ -13,7 +13,8 @@
     "vault": "tsx scripts/vault.ts",
     "vault:rekey": "tsx scripts/vault-rekey.ts",
     "audio": "tsx scripts/audio.ts",
-    "sync:cos": "tsx scripts/sync-cos-site.ts"
+    "sync:cos": "tsx scripts/sync-cos-site.ts",
+    "vault:migrate-cos": "tsx scripts/migrate-vault-to-cos.ts"
   },
   "dependencies": {
     "exifr": "^7.1.3",

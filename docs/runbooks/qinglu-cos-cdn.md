@@ -74,6 +74,21 @@ npm run sync:cos
 
 Without credentials the script exits non-zero (`Missing COS_BUCKET`, etc.) and does not upload. Sync does not remove objects that no longer exist in `dist/`.
 
+## One-shot vault migration (GitHub → COS)
+
+Upload the encrypted vault from `public/vault/` to COS prefix `vault/` using **long-lived CAM keys** with `cos:PutObject` and `cos:HeadObject` on `vault/*` (not browser STS). Use a dedicated backup/migration CAM user—not the site-sync user in section 3.
+
+```bash
+export COS_SECRET_ID=… COS_SECRET_KEY=… COS_BUCKET=… COS_REGION=…
+npm run vault:migrate-cos -- --dry-run   # list COS keys from local files; no credentials required
+npm run vault:migrate-cos                # upload blobs + vault.json, HEAD verify, re-download vault.json
+npm run vault:migrate-cos -- --force     # overwrite existing remote vault.json
+```
+
+The script refuses to run if remote `vault/vault.json` already exists unless `--force`. After upload it HEADs every object and compares downloaded `vault.json` bytes to the local file.
+
+Optional: `COS_VAULT_PREFIX` (default `vault`).
+
 ## 9. Browser vault client (Vite public env)
 
 The encrypted vault transport reads **public** build-time variables (no secrets in the bundle). Set these in `.env` / CI when building a COS-backed vault:
