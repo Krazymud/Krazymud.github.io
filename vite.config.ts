@@ -1,36 +1,10 @@
 /// <reference types="vitest/config" />
-import fs from 'node:fs'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig, type Plugin } from 'vite'
-
-/** Dev-only: browser agent logs POST here → /opt/cursor/logs/debug.log (NDJSON). */
-function agentDebugIngest(): Plugin {
-  const logPath = '/opt/cursor/logs/debug.log'
-  return {
-    name: 'agent-debug-ingest',
-    configureServer(server) {
-      server.middlewares.use('/__debug_ingest', (req, res, next) => {
-        if (req.method !== 'POST') return next()
-        const chunks: Buffer[] = []
-        req.on('data', (c: Buffer) => chunks.push(c))
-        req.on('end', () => {
-          try {
-            const line = Buffer.concat(chunks).toString('utf8').trim()
-            if (line) fs.appendFileSync(logPath, `${line}\n`)
-          } catch {
-            // Ignore log write failures during instrumentation.
-          }
-          res.statusCode = 204
-          res.end()
-        })
-      })
-    },
-  }
-}
+import { defineConfig } from 'vite'
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), agentDebugIngest()],
+  plugins: [react(), tailwindcss()],
   build: {
     // The lazy Stage chunk carries three.js (~1.15 MB raw); the index-*.js gzip budget is checked separately.
     chunkSizeWarningLimit: 1200,
