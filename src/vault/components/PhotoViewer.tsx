@@ -23,6 +23,8 @@ export function PhotoViewer({ photos, index, read, onIndex, onClose }: PhotoView
   const photo = photos[index]
   const full = useBlobUrl(photo.full, read, 'image/webp')
   const [zoom, setZoom] = useState<ZoomState>(resetZoom)
+  const zoomRef = useRef(zoom)
+  zoomRef.current = zoom
   const pointers = useRef(new Map<number, { x: number; y: number }>())
   const pinchStartDist = useRef(0)
   const pinchStartScale = useRef(1)
@@ -62,15 +64,15 @@ export function PhotoViewer({ photos, index, read, onIndex, onClose }: PhotoView
     if (pointers.current.size !== 2) return
     const pts = [...pointers.current.values()]
     pinchStartDist.current = pointerDistance(pts[0], pts[1])
-    pinchStartScale.current = zoom.scale
-  }, [zoom.scale])
+    pinchStartScale.current = zoomRef.current.scale
+  }, [])
 
   const onImagePointerDown = (event: React.PointerEvent<HTMLImageElement>) => {
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
     event.currentTarget.setPointerCapture(event.pointerId)
     if (pointers.current.size === 2) {
       beginPinchIfNeeded()
-    } else if (pointers.current.size === 1 && zoom.scale <= ZOOM_SWIPE_MAX_SCALE) {
+    } else if (pointers.current.size === 1 && zoomRef.current.scale <= ZOOM_SWIPE_MAX_SCALE) {
       swipeStartX.current = event.clientX
     }
   }
@@ -104,7 +106,7 @@ export function PhotoViewer({ photos, index, read, onIndex, onClose }: PhotoView
     if (pointers.current.size === 0 && swipeStartX.current !== null) {
       const dx = event.clientX - swipeStartX.current
       swipeStartX.current = null
-      if (zoom.scale <= ZOOM_SWIPE_MAX_SCALE && Math.abs(dx) > SWIPE_PX) go(dx < 0 ? 1 : -1)
+      if (zoomRef.current.scale <= ZOOM_SWIPE_MAX_SCALE && Math.abs(dx) > SWIPE_PX) go(dx < 0 ? 1 : -1)
     } else if (pointers.current.size === 0) {
       swipeStartX.current = null
     }

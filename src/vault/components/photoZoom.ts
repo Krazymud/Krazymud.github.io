@@ -21,6 +21,9 @@ export function applyPinch(
 ): ZoomState {
   if (startDist <= 0) return prev
   const scale = clampScale(startScale * (dist / startDist))
+  if (scale <= MIN_SCALE) {
+    return { scale: MIN_SCALE, x: 0, y: 0 }
+  }
   return { scale, x: prev.x, y: prev.y }
 }
 
