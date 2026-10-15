@@ -76,10 +76,64 @@ function prepareInlineVideo(video: HTMLVideoElement) {
   video.setAttribute('x5-video-player-fullscreen', 'false')
 }
 
-function tryPlay(video: HTMLVideoElement) {
+// #region agent log
+function agentLog(
+  hypothesisId: string,
+  location: string,
+  message: string,
+  data: Record<string, unknown> = {},
+) {
+  fetch('/__debug_ingest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      hypothesisId,
+      location,
+      message,
+      data,
+      timestamp: Date.now(),
+      sessionId: 'drive-loop-stuck',
+    }),
+  }).catch(() => {})
+}
+// #endregion
+
+function tryPlay(video: HTMLVideoElement, source = 'unknown') {
   prepareInlineVideo(video)
+  // #region agent log
+  agentLog('C', 'SketchStage.tsx:tryPlay', 'tryPlay called', {
+    source,
+    paused: video.paused,
+    currentTime: video.currentTime,
+    readyState: video.readyState,
+    muted: video.muted,
+  })
+  // #endregion
   const playPromise = video.play()
-  if (playPromise !== undefined) void playPromise.catch(() => {})
+  if (playPromise !== undefined) {
+    void playPromise.then(
+      () => {
+        // #region agent log
+        agentLog('C', 'SketchStage.tsx:tryPlay', 'play() resolved', {
+          source,
+          paused: video.paused,
+          currentTime: video.currentTime,
+        })
+        // #endregion
+      },
+      (err: unknown) => {
+        // #region agent log
+        agentLog('C', 'SketchStage.tsx:tryPlay', 'play() rejected', {
+          source,
+          paused: video.paused,
+          currentTime: video.currentTime,
+          error: err instanceof Error ? err.message : String(err),
+          name: err instanceof Error ? err.name : typeof err,
+        })
+        // #endregion
+      },
+    )
+  }
 }
 
 function restartLoop(video: HTMLVideoElement) {
@@ -88,7 +142,7 @@ function restartLoop(video: HTMLVideoElement) {
   } catch {
     // Ignore seek errors while metadata is not ready.
   }
-  tryPlay(video)
+  tryPlay(video, 'restartLoop')
 }
 
 export function SketchStage({ playLoop }: { playLoop: boolean }) {
@@ -118,6 +172,14 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
   }, [docked])
 
   useEffect(() => {
+    // #region agent log
+    agentLog('B', 'SketchStage.tsx:readyEffect', 'readyForVideo effect', {
+      readyForVideo,
+      wantLoop,
+      needsDock,
+      docked,
+    })
+    // #endregion
     if (readyForVideo) {
       setLoopDegraded(false)
       setVideoMounted(true)
@@ -135,6 +197,21 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
     return () => clearTimeout(unmountTimer)
   }, [readyForVideo, wantLoop, needsDock, docked])
 
+  // #region agent log
+  useEffect(() => {
+    const video = videoRef.current
+    agentLog('D', 'SketchStage.tsx:revealState', 'loopFadedIn/paused snapshot', {
+      loopFadedIn,
+      videoMounted,
+      loopDegraded,
+      paused: video?.paused ?? null,
+      currentTime: video?.currentTime ?? null,
+      readyState: video?.readyState ?? null,
+      loopVisible: wantLoop && loopFadedIn && !loopDegraded,
+    })
+  }, [loopFadedIn, videoMounted, loopDegraded, wantLoop])
+  // #endregion
+
   useEffect(() => {
     const video = videoRef.current
     if (!video || !videoMounted) return
@@ -145,8 +222,30 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
       let nudgeTimer: number | undefined
       let nudgeCount = 0
       const MAX_NUDGES = 20
+      // #region agent log
+      let revealedOnce = false
+      agentLog('B', 'SketchStage.tsx:playEffect', 'play effect attach', {
+        docked,
+        videoMounted,
+        loopDegraded,
+        paused: video.paused,
+        currentTime: video.currentTime,
+        readyState: video.readyState,
+      })
+      // #endregion
 
-      const markRevealed = () => {
+      const markRevealed = (via: string) => {
+        // #region agent log
+        const clearingNudge = nudgeTimer !== undefined
+        agentLog('A', 'SketchStage.tsx:markRevealed', 'markRevealed', {
+          via,
+          clearingNudge,
+          paused: video.paused,
+          currentTime: video.currentTime,
+          revealedOnce,
+        })
+        revealedOnce = true
+        // #endregion
         setLoopFadedIn(true)
         if (nudgeTimer !== undefined) {
           window.clearInterval(nudgeTimer)
@@ -156,16 +255,39 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
       // Reveal whenever the element is actually running — not only on a `playing`
       // event. autoPlay / an earlier tryPlay can start before this effect attaches,
       // so WeChat/iOS may never fire `playing` again while the still stays opaque.
-      const revealIfPlaying = () => {
-        if (loopDegraded || video.paused) return false
-        markRevealed()
+      const revealIfPlaying = (via = 'revealIfPlaying') => {
+        if (loopDegraded || video.paused) {
+          // #region agent log
+          agentLog('D', 'SketchStage.tsx:revealIfPlaying', 'skip reveal', {
+            via,
+            loopDegraded,
+            paused: video.paused,
+            currentTime: video.currentTime,
+          })
+          // #endregion
+          return false
+        }
+        markRevealed(via)
         return true
       }
       const onPlaying = () => {
-        markRevealed()
+        markRevealed('playing-event')
       }
       const onEnded = () => restartLoop(video)
       const onPause = () => {
+        // #region agent log
+        agentLog('A', 'SketchStage.tsx:onPause', 'pause event', {
+          wantLoop,
+          hidden: document.hidden,
+          loopDegraded,
+          paused: video.paused,
+          currentTime: video.currentTime,
+          ended: video.ended,
+          duration: video.duration,
+          nudgeActive: nudgeTimer !== undefined,
+          revealedOnce,
+        })
+        // #endregion
         if (!wantLoop || document.hidden || loopDegraded) return
         const atEnd =
           video.ended ||
@@ -177,21 +299,21 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
           return
         }
         // WeChat often paints frame 0 then pauses muted autoplay — keep nudging.
-        tryPlay(video)
+        tryPlay(video, 'onPause')
       }
       const onCanPlay = () => {
-        if (revealIfPlaying()) return
-        if (video.paused) tryPlay(video)
+        if (revealIfPlaying('canplay')) return
+        if (video.paused) tryPlay(video, 'onCanPlay')
       }
       // WeChat / iOS: first autoplay may fail; retry on the next user gesture.
       const onGesture = () => {
-        if (wantLoop && !loopDegraded && video.paused) tryPlay(video)
-        else revealIfPlaying()
+        if (wantLoop && !loopDegraded && video.paused) tryPlay(video, 'onGesture')
+        else revealIfPlaying('onGesture')
       }
       const onVisible = () => {
         if (document.visibilityState !== 'visible' || !wantLoop || loopDegraded) return
-        if (video.paused) tryPlay(video)
-        else revealIfPlaying()
+        if (video.paused) tryPlay(video, 'onVisible')
+        else revealIfPlaying('onVisible')
       }
 
       video.addEventListener('playing', onPlaying)
@@ -203,30 +325,54 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
       document.addEventListener('pointerdown', onGesture, { capture: true })
       document.addEventListener('visibilitychange', onVisible)
 
-      tryPlay(video)
-      revealIfPlaying()
+      tryPlay(video, 'effect-immediate')
+      revealIfPlaying('effect-immediate')
       const playTimer = window.setTimeout(() => {
-        tryPlay(video)
-        revealIfPlaying()
+        tryPlay(video, 'effect-delay')
+        revealIfPlaying('effect-delay')
       }, ROUTE_FADE_MS)
       // Classic WeChat unlock: invoke getNetworkType on WeixinJSBridgeReady.
       const stopWeChatNudge = nudgeWeChatMediaPlay(() => {
-        tryPlay(video)
-        revealIfPlaying()
+        tryPlay(video, 'wechat-nudge')
+        revealIfPlaying('wechat-nudge')
       })
       // Brief interval covers the “show first frame then pause” case before any gesture.
       nudgeTimer = window.setInterval(() => {
         if (!wantLoop || loopDegraded || document.hidden) return
-        if (revealIfPlaying()) return
+        // #region agent log
+        agentLog('A', 'SketchStage.tsx:nudge', 'nudge tick', {
+          nudgeCount,
+          paused: video.paused,
+          currentTime: video.currentTime,
+          revealedOnce,
+          nudgeActive: nudgeTimer !== undefined,
+        })
+        // #endregion
+        if (revealIfPlaying('nudge')) return
         nudgeCount += 1
-        tryPlay(video)
+        tryPlay(video, `nudge-${nudgeCount}`)
         if (nudgeCount >= MAX_NUDGES && nudgeTimer !== undefined) {
+          // #region agent log
+          agentLog('A', 'SketchStage.tsx:nudge', 'nudge exhausted', {
+            nudgeCount,
+            paused: video.paused,
+            revealedOnce,
+          })
+          // #endregion
           window.clearInterval(nudgeTimer)
           nudgeTimer = undefined
         }
       }, 250)
 
       return () => {
+        // #region agent log
+        agentLog('B', 'SketchStage.tsx:playEffect', 'play effect cleanup', {
+          paused: video.paused,
+          currentTime: video.currentTime,
+          revealedOnce,
+          nudgeActive: nudgeTimer !== undefined,
+        })
+        // #endregion
         clearTimeout(playTimer)
         if (nudgeTimer !== undefined) window.clearInterval(nudgeTimer)
         stopWeChatNudge()
