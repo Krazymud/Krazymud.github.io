@@ -80,7 +80,7 @@ Create `docs/runbooks/qinglu-cos-cdn.md` covering:
 
 - [ ] **Step 2: Implement `scripts/sync-cos-site.ts`**
 
-Use Node 24 + `fetch` + the same SigV4 helper that Task 3 will formalize in `src/vault/cosAuth.ts` — for this task, put a minimal duplicate signer in the script **or** import from `src/vault/cosAuth.ts` once Task 3 exists. Prefer: **do Task 3 first if implementing in one branch**, otherwise inline a minimal PUT signer here and delete duplication in Task 3.
+Use Node 24 + `fetch`. **Implement Task 2 (`cosAuth`) before finishing this task’s upload code**, then import `signedCosRequest` from `src/vault/cosAuth.ts`. Do not leave a permanent duplicate signer in the script.
 
 Minimal behavior:
 
@@ -201,7 +201,8 @@ git commit -m "feat(infra): shared COS SigV4 helper"
 - Create: `src/vault/cosVault.test.ts`
 
 **Interfaces:**
-- Consumes: `CosCreds` + `signedCosRequest` from `cosAuth.ts`; `VaultFile` from `types.ts`; error strings from `github.ts` (`TOKEN_DENIED`, `SYNC_PENDING`) **or** new `VaultTransportError` — prefer reusing `GitHubWriteError` renamed later; for this task export:
+- Consumes: `CosCreds` + `signedCosRequest` from `cosAuth.ts`; `VaultFile` from `types.ts`
+- Errors: export `CosConflictError` / `CosNotFoundError`; map gate/auth failures to `GitHubWriteError` with updated copy from Task 5; reuse `SYNC_PENDING` string for soft sync failures. For this task export:
 
 ```ts
 export class CosConflictError extends Error {
@@ -254,7 +255,7 @@ const creds = { secretId: 'AKIDtest', secretKey: 'secret', sessionToken: 'tok' }
 
 describe('readVaultFile', () => {
   it('returns null etag object body as VaultFile', async () => {
-    const file = { version: 1, kdf: {}, wrap: '', manifest: '' }
+    const file = { version: 1 as const, kdf: { alg: 'PBKDF2', hash: 'SHA-256', iterations: 1, salt: '' }, wrappedKey: '', manifest: '' }
     const fetchImpl = vi.fn(async () =>
       new Response(JSON.stringify(file), { status: 200, headers: { ETag: '"abc"' } }),
     )
@@ -282,7 +283,12 @@ describe('putVaultUpdate', () => {
         fetch: fetchImpl as unknown as typeof fetch,
         creds,
         config,
-        vaultFile: { version: 1, kdf: {} as never, wrap: '', manifest: '' },
+        vaultFile: {
+          version: 1,
+          kdf: { alg: 'PBKDF2', hash: 'SHA-256', iterations: 1, salt: '' },
+          wrappedKey: '',
+          manifest: '',
+        },
         etag: 'old',
         blobs: { a: new Uint8Array([1]) },
       }),
@@ -458,7 +464,7 @@ git commit -m "feat(vault): SCF STS issuer and browser ticket helper"
 **Files:**
 - Modify: `src/vault/useVaultMutate.ts`
 - Modify: `src/vault/useVaultMutate.test.tsx`
-- Modify: `src/vault/webStore.ts` (gate persistence; keep `loadToken`/`saveToken` API names **or** add `loadGate`/`saveGate` aliases that use the same IDB key — pick aliases and update UI)
+- Modify: `src/vault/webStore.ts` — keep IDB key `token` and `loadToken`/`saveToken`/`forgetToken` methods; value is now the sync gate (not a GitHub PAT). No IDB migration.
 - Modify: `src/vault/components/VaultContent.tsx` + tests — copy「同步口令」/「忘记口令」, stop saying GitHub 令牌
 
 **Interfaces:**
@@ -637,6 +643,8 @@ git commit -m "feat(infra): hourly COS vault backup to GitHub"
 ---
 
 ### Task 8: Cutover verification + mark spec
+
+**Ops:** Live Steps 1–3 checklist → `docs/runbooks/qinglu-cos-cdn.md` §11; spec stays `代码已就绪，待运维切流` until that checklist is checked with evidence.
 
 **Files:**
 - Modify: `docs/superpowers/specs/2026-10-15-qinglu-infra-cos-cdn-design.md` status → `已实现` (only after real cutover evidence)
