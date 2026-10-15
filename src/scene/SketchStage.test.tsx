@@ -38,7 +38,7 @@ describe('SketchStage', () => {
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-placement', 'bleed')
   })
 
-  it('requests the drive loop on desktop home when motion is allowed', () => {
+  it('requests the desktop drive loop on wide home when motion is allowed', () => {
     media({ narrow: false })
     render(<SketchStage playLoop />)
     expect(screen.getByTestId('sketch-stage')).toHaveAttribute('data-motion', 'loop')
@@ -47,13 +47,29 @@ describe('SketchStage', () => {
     expect(video).toBeTruthy()
     const sources = [...video!.querySelectorAll('source')].map((s) => s.getAttribute('src') ?? '')
     expect(sources[0]).toEqual(expect.stringContaining('fc-drive-loop.mp4'))
+    expect(sources[0]).not.toEqual(expect.stringContaining('fc-drive-loop-mobile'))
     expect(sources.some((s) => s.includes('fc-drive-loop.webm'))).toBe(true)
+    expect(sources.every((s) => !s.includes('fc-drive-loop-mobile'))).toBe(true)
     expect(video!.muted).toBe(true)
     expect(video!.playsInline).toBe(true)
     expect(video).toHaveAttribute('playsinline')
     expect(video).toHaveAttribute('webkit-playsinline')
     expect(video).toHaveAttribute('x5-playsinline', 'true')
     expect(video).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('requests the mobile drive loop when docked on narrow home', async () => {
+    media({ narrow: true })
+    const slot = mountHomeStageSlot()
+    render(<SketchStage playLoop />)
+    await vi.waitFor(() => {
+      expect(slot.querySelector('video')).toBeTruthy()
+    })
+    const video = slot.querySelector('video')!
+    const sources = [...video.querySelectorAll('source')].map((s) => s.getAttribute('src') ?? '')
+    expect(sources[0]).toEqual(expect.stringContaining('fc-drive-loop-mobile.mp4'))
+    expect(sources.some((s) => s.includes('fc-drive-loop-mobile.webm'))).toBe(true)
+    expect(sources.every((s) => s.includes('fc-drive-loop-mobile'))).toBe(true)
   })
 
   it('keeps the still until the video reports playing', () => {
