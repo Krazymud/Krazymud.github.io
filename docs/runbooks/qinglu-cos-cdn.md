@@ -170,3 +170,39 @@ After deploy, verify with curl (replace URL and gate):
 ```bash
 curl -sS -X POST "$STS_ISSUER_URL" -H 'Content-Type: application/json' -d '{"gate":"YOUR_GATE"}'
 ```
+
+## 11. Acceptance checklist (live cutover)
+
+Run from mainland China (or document a proxy-less check). Leave boxes unchecked until an operator records evidence (screenshot, header dump, workflow run URL). When all sections pass, update `docs/superpowers/specs/2026-10-15-qinglu-infra-cos-cdn-design.md` status to `已实现`.
+
+### Phase A — static site + CDN
+
+- [ ] **Step 1:** With CDN test domain (or post-ICP custom domain), load **homepage** and **drive loop** from a China network; confirm acceptable first paint and video start vs GitHub Pages.
+- [ ] **Step 1b:** `GET` `index.html` (and `404.html` if used); response headers include `Cache-Control: no-cache` (or equivalent) **or** CDN console shows a **do-not-cache** rule for those paths.
+
+### Phase B — vault on COS
+
+- [ ] **Step 2.1:** One-time `npm run vault:migrate-cos` with live CAM secrets (see [One-shot vault migration](#one-shot-vault-migration-github--cos)); HEAD verify passes.
+- [ ] **Step 2.2:** Device A: unlock vault with sync gate; edit a note. Device B: unlock with same gate; see the edit within minutes.
+- [ ] **Step 2.3:** Concurrent edit on two devices → one side shows「还没同步」or merge succeeds after retry; **no silent data loss**.
+- [ ] **Step 2.4:** Within ~1h (or after `workflow_dispatch`), GitHub `public/vault/` reflects COS backup (`content(vault): backup from cos` commit or Actions log).
+- [ ] **Step 2.5:** Browser devtools: vault writes use COS + STS issuer only; **no** `api.github.com` calls for vault mutate path.
+
+### Phase C — DNS (after ICP)
+
+- [ ] **Step 3:** Custom domain CNAME points to Tencent CDN; HTTPS valid.
+- [ ] **Step 3b:** Rollback target documented: revert CNAME to **GitHub Pages** (see [§8 Rollback](#8-rollback)); verify Pages still serves last deploy.
+
+## Code ready (merged in COS+CDN infra PR)
+
+Application and automation land in repo; Tencent console + secrets remain operator-owned:
+
+| Area | What shipped |
+|------|----------------|
+| Site sync | `scripts/sync-cos-site.ts`, `npm run sync:cos`, GitHub Actions dual deploy (`COS_SYNC_ENABLED`) |
+| COS signing | `src/vault/cosAuth.ts` (SigV4 for Node + browser creds) |
+| Vault transport | `src/vault/cosVault.ts` (ETag conditional put, manifest + blobs) |
+| STS issuer | `scf/sts-issuer/` (gate-gated short-lived `vault/*` creds) |
+| Mutate cutover | `useVaultMutate` + UI copy for sync gate (COS path when `VITE_*` set) |
+| Migration | `npm run vault:migrate-cos` (GitHub `public/vault/` → COS `vault/`) |
+| GitHub backup | `npm run vault:backup-cos`, hourly `.github/workflows/vault-backup.yml` |

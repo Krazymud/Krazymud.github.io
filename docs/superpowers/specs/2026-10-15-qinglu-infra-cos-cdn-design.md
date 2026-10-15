@@ -1,8 +1,9 @@
 # 青庐基建：腾讯云 COS + CDN（W2）
 
 日期：2026-10-15  
-状态：待审阅  
-基线：master（纸墨抛光 #60 已合入）；锦匣仍以 GitHub Pages + `gitVault` 为权威读写  
+状态：代码已就绪，待运维切流  
+运维：现场验收与 DNS 切流步骤见 `docs/runbooks/qinglu-cos-cdn.md` §11；全部勾选并有证据后，再将本状态改为 `已实现`。  
+基线：master（纸墨抛光 #60 已合入）；锦匣仍以 GitHub Pages + `gitVault` 为权威读写（切流前）；COS 路径见本 spec §2–4  
 选型：方案 2（国内加速）+ **W2（COS 为 vault 权威源，GitHub 备份）**
 
 ## 1. 目标与非目标
