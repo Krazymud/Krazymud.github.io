@@ -6,10 +6,16 @@
  *   docs/superpowers/assets/2026-10-14-qinglu-drive-inbetweens/manifest.json
  *
  * Each listed frame is held for `holdFrames` @ `fps`, with a short
- * `dissolveFrames` crossfade into the next. Output: public/sketch/fc-drive-loop.{webm,mp4}
- * Target duration: 8–12s.
+ * `dissolveFrames` crossfade into the next.
+ *
+ * Outputs:
+ *   public/sketch/fc-drive-loop.{webm,mp4}         — desktop / original width
+ *   public/sketch/fc-drive-loop-mobile.{webm,mp4}  — phone dock lean encode
+ *
+ * Target duration: 8–12s. Both mp4s use +faststart (moov before mdat).
  */
 import { access, mkdir, readFile } from "node:fs/promises"
+import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { spawnSync } from "node:child_process"
@@ -20,14 +26,17 @@ const manifestPath = path.join(
   "docs/superpowers/assets/2026-10-14-qinglu-drive-inbetweens/manifest.json",
 )
 const outDir = path.join(root, "public/sketch")
-const webm = path.join(outDir, "fc-drive-loop.webm")
-const mp4 = path.join(outDir, "fc-drive-loop.mp4")
+const desktopWebm = path.join(outDir, "fc-drive-loop.webm")
+const desktopMp4 = path.join(outDir, "fc-drive-loop.mp4")
+const mobileWebm = path.join(outDir, "fc-drive-loop-mobile.webm")
+const mobileMp4 = path.join(outDir, "fc-drive-loop-mobile.mp4")
 
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"))
 const fps = Number(manifest.fps) || 24
 const holdFrames = Number(manifest.holdFrames) || 3
 const dissolveFrames = Number(manifest.dissolveFrames) || 2
 const outWidth = Number(manifest.outWidth) || 1600
+const mobileOutWidth = Number(manifest.mobileOutWidth) || 1280
 const holdSec = holdFrames / fps
 const fadeSec = dissolveFrames / fps
 
@@ -49,9 +58,8 @@ for (const file of absFrames) {
   }
 }
 
-const scale = `scale=${outWidth}:-2:flags=lanczos,format=yuv420p,fps=${fps}`
-
-function buildXfadeFilter(n) {
+function buildXfadeFilter(n, width) {
+  const scale = `scale=${width}:-2:flags=lanczos,format=yuv420p,fps=${fps}`
   const parts = []
   for (let i = 0; i < n; i++) {
     parts.push(`[${i}:v]${scale}[v${i}]`)
@@ -70,7 +78,7 @@ function buildXfadeFilter(n) {
   return { filter: parts.join(";"), duration: elapsed }
 }
 
-function runFfmpeg(outputPath, vcodec, extraArgs) {
+function runFfmpeg(outputPath, width, vcodec, extraArgs) {
   const inputs = absFrames.flatMap((file) => [
     "-loop",
     "1",
@@ -79,7 +87,7 @@ function runFfmpeg(outputPath, vcodec, extraArgs) {
     "-i",
     file,
   ])
-  const { filter, duration } = buildXfadeFilter(absFrames.length)
+  const { filter, duration } = buildXfadeFilter(absFrames.length, width)
   const args = [
     "-y",
     ...inputs,
@@ -93,18 +101,30 @@ function runFfmpeg(outputPath, vcodec, extraArgs) {
     ...extraArgs,
     outputPath,
   ]
-  console.log(`encoding ${path.basename(outputPath)} (~${duration.toFixed(2)}s)…`)
+  console.log(`encoding ${path.basename(outputPath)} @${width} (~${duration.toFixed(2)}s)…`)
   const r = spawnSync("ffmpeg", args, { stdio: "inherit" })
   if (r.status !== 0) process.exit(r.status ?? 1)
   return duration
 }
 
+function assertFaststart(filePath) {
+  const bytes = readFileSync(filePath)
+  const moovAt = bytes.indexOf("moov")
+  const mdatAt = bytes.indexOf("mdat")
+  if (moovAt < 0 || mdatAt < 0 || moovAt > mdatAt) {
+    console.error(
+      `${path.basename(filePath)} is not faststart (moov@${moovAt}, mdat@${mdatAt}); iOS will stick on frame 0`,
+    )
+    process.exit(1)
+  }
+  return bytes.byteLength
+}
+
 await mkdir(outDir, { recursive: true })
-// Leaner encodes: phone dock is ~400px; 1600/@crf23 was ~11MB and sat on frame 0
-// on cellular. iPhone also needs moov before mdat (faststart) or it cannot leave
-// frame 0 until the whole file downloads.
-runFfmpeg(webm, "libvpx-vp9", ["-b:v", "0", "-crf", "36", "-row-mt", "1"])
-runFfmpeg(mp4, "libx264", [
+
+// Desktop: original width / quality.
+runFfmpeg(desktopWebm, outWidth, "libvpx-vp9", ["-b:v", "0", "-crf", "32", "-row-mt", "1"])
+runFfmpeg(desktopMp4, outWidth, "libx264", [
   "-pix_fmt",
   "yuv420p",
   "-profile:v",
@@ -112,7 +132,29 @@ runFfmpeg(mp4, "libx264", [
   "-level",
   "4.0",
   "-crf",
-  "28",
+  "23",
+  "-movflags",
+  "+faststart",
+])
+
+// Mobile: leaner for cellular start; 1280 is still sharp in the ~400px dock.
+runFfmpeg(mobileWebm, mobileOutWidth, "libvpx-vp9", [
+  "-b:v",
+  "0",
+  "-crf",
+  "34",
+  "-row-mt",
+  "1",
+])
+runFfmpeg(mobileMp4, mobileOutWidth, "libx264", [
+  "-pix_fmt",
+  "yuv420p",
+  "-profile:v",
+  "high",
+  "-level",
+  "4.0",
+  "-crf",
+  "26",
   "-movflags",
   "+faststart",
 ])
@@ -126,7 +168,7 @@ const probe = spawnSync(
     "format=duration,size",
     "-of",
     "default=noprint_wrappers=1",
-    webm,
+    desktopWebm,
   ],
   { encoding: "utf8" },
 )
@@ -139,18 +181,12 @@ if (!(duration >= 8 && duration <= 12)) {
   process.exit(1)
 }
 
-const { readFileSync } = await import("node:fs")
-const mp4Bytes = readFileSync(mp4)
-const moovAt = mp4Bytes.indexOf("moov")
-const mdatAt = mp4Bytes.indexOf("mdat")
-if (moovAt < 0 || mdatAt < 0 || moovAt > mdatAt) {
-  console.error(`mp4 is not faststart (moov@${moovAt}, mdat@${mdatAt}); iOS will stick on frame 0`)
-  process.exit(1)
-}
-const maxMp4Bytes = 4.5 * 1024 * 1024
-if (mp4Bytes.byteLength > maxMp4Bytes) {
+assertFaststart(desktopMp4)
+const mobileBytes = assertFaststart(mobileMp4)
+const maxMobileMp4Bytes = 4.5 * 1024 * 1024
+if (mobileBytes > maxMobileMp4Bytes) {
   console.error(
-    `mp4 is ${(mp4Bytes.byteLength / 1024 / 1024).toFixed(1)}MB (max ${maxMp4Bytes / 1024 / 1024}MB); raise crf or lower outWidth`,
+    `mobile mp4 is ${(mobileBytes / 1024 / 1024).toFixed(1)}MB (max ${maxMobileMp4Bytes / 1024 / 1024}MB); raise crf or lower mobileOutWidth`,
   )
   process.exit(1)
 }

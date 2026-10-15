@@ -6,8 +6,12 @@ import { nudgeWeChatMediaPlay } from './wechatAutoplay'
 const base = import.meta.env.BASE_URL
 export const ROUTE_FADE_MS = 300
 export const DRIVE_STILL = `${base}sketch/fc-drive-still.webp`
+/** Desktop / wide: original-resolution loop. */
 export const DRIVE_LOOP = `${base}sketch/fc-drive-loop.webm`
 const DRIVE_LOOP_MP4 = `${base}sketch/fc-drive-loop.mp4`
+/** Narrow / phone dock: leaner encode for faster start, still ~720p. */
+export const DRIVE_LOOP_MOBILE = `${base}sketch/fc-drive-loop-mobile.webm`
+const DRIVE_LOOP_MOBILE_MP4 = `${base}sketch/fc-drive-loop-mobile.mp4`
 
 /** HomePage mounts this on narrow viewports as the drive-loop window. */
 export const HOME_STAGE_ATTR = 'data-home-stage'
@@ -140,6 +144,8 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
     if (!video || !videoMounted) return
 
     prepareInlineVideo(video)
+    // Quality swap remounts <video>; keep the still until the new source plays.
+    setLoopFadedIn(false)
 
     if (wantLoop) {
       let nudgeTimer: number | undefined
@@ -229,7 +235,7 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
       video.pause()
     }, ROUTE_FADE_MS)
     return () => clearTimeout(pauseTimer)
-  }, [wantLoop, videoMounted, loopDegraded, docked])
+  }, [wantLoop, videoMounted, loopDegraded, docked, narrow])
 
   const loopVisible = wantLoop && loopFadedIn && !loopDegraded
   const stillOpacity = loopVisible ? 0 : 1
@@ -260,6 +266,7 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
         />
         {videoMounted ? (
           <video
+            key={narrow ? 'mobile' : 'desktop'}
             ref={videoRef}
             muted
             autoPlay
@@ -276,8 +283,17 @@ export function SketchStage({ playLoop }: { playLoop: boolean }) {
             style={{ opacity: videoOpacity, transition: fade }}
             onError={handleVideoError}
           >
-            <source src={DRIVE_LOOP_MP4} type="video/mp4" />
-            <source src={DRIVE_LOOP} type="video/webm" />
+            {narrow ? (
+              <>
+                <source src={DRIVE_LOOP_MOBILE_MP4} type="video/mp4" />
+                <source src={DRIVE_LOOP_MOBILE} type="video/webm" />
+              </>
+            ) : (
+              <>
+                <source src={DRIVE_LOOP_MP4} type="video/mp4" />
+                <source src={DRIVE_LOOP} type="video/webm" />
+              </>
+            )}
           </video>
         ) : null}
       </div>
