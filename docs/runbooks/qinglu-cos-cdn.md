@@ -35,18 +35,24 @@ Create a CAM sub-user or use API keys scoped for GitHub Actions:
 - A **custom mainland domain** on Tencent CDN requires **ICP filing**.
 - Until filing is done: use the CDN test domain for speed checks; keep **GitHub Pages as primary DNS** for the public site.
 
-## 6. GitHub Actions secrets
+## 6. GitHub Actions (dual deploy)
 
-| Secret            | Purpose                                      |
-|-------------------|----------------------------------------------|
-| `COS_SECRET_ID`   | CAM SecretId for site sync                   |
-| `COS_SECRET_KEY`  | CAM SecretKey for site sync                  |
-| `COS_BUCKET`      | Bucket name                                  |
-| `COS_REGION`      | Bucket region (e.g. `ap-guangzhou`)        |
-| `CDN_PURGE_URLS`  | Optional comma-separated URLs to refresh after deploy |
-| (optional)        | Tencent CDN API credentials if automating purge beyond `CDN_PURGE_URLS` |
+COS sync is **off by default** so Pages deploy never depends on Tencent credentials.
 
-Optional workflow env (not always secrets): `COS_SITE_PREFIX` (default `site`), `CDN_DOMAIN` (used to derive purge URLs when `CDN_PURGE_URLS` is unset).
+| Type | Name | Purpose |
+|------|------|---------|
+| **Variable** | `COS_SYNC_ENABLED` | Set to `true` to run the `Sync dist to COS` step after build. GitHub does not allow `secrets` in step `if:`; use this flag instead. |
+| Secret | `COS_SECRET_ID` | CAM SecretId (required when sync enabled) |
+| Secret | `COS_SECRET_KEY` | CAM SecretKey |
+| Secret | `COS_BUCKET` | Bucket name |
+| Secret | `COS_REGION` | Region (e.g. `ap-guangzhou`) |
+| Secret | `CDN_PURGE_URLS` | Optional comma-separated URLs to log after sync |
+| **Variable** | `COS_SITE_PREFIX` | Optional; object prefix under bucket (default `site`) |
+| **Variable** | `CDN_DOMAIN` | Optional hostname; used to derive purge URL hints when `CDN_PURGE_URLS` is unset |
+
+**CDN purge:** The sync script only **logs** recommended purge URLs (from `CDN_PURGE_URLS` or derived from `CDN_DOMAIN`). Operators refresh CDN cache manually in the console until automated Tencent CDN API purge is implemented.
+
+**Stale objects:** Sync uploads and overwrites keys present in `dist/`; it does **not** delete COS objects removed from the site. Prune/lifecycle for deleted paths is deferred.
 
 ## 7. Alarms
 
@@ -66,4 +72,4 @@ npm run build
 npm run sync:cos
 ```
 
-Without credentials the script exits non-zero and does not upload.
+Without credentials the script exits non-zero (`Missing COS_BUCKET`, etc.) and does not upload. Sync does not remove objects that no longer exist in `dist/`.
