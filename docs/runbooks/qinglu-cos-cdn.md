@@ -89,6 +89,31 @@ The script refuses to run if remote `vault/vault.json` already exists unless `--
 
 Optional: `COS_VAULT_PREFIX` (default `vault`).
 
+## Hourly GitHub backup (COS → `public/vault/`)
+
+COS is the live vault authority; GitHub keeps an encrypted mirror for history and Pages fallback. Workflow **Vault backup from COS** runs hourly (`0 * * * *`) and on `workflow_dispatch`.
+
+| Type | Name | Purpose |
+|------|------|---------|
+| Secret | `COS_SECRET_ID` | CAM SecretId with **read** on `vault/*` |
+| Secret | `COS_SECRET_KEY` | CAM SecretKey |
+| Secret | `COS_BUCKET` | Bucket name |
+| Secret | `COS_REGION` | Region (e.g. `ap-guangzhou`) |
+
+CAM for backup (separate from site-sync user): allow `cos:GetObject` and `cos:ListBucket` on `vault/*` (and list prefix `vault/`). Do not grant write to `site/*` on the same keys if you split users.
+
+The job runs `npm run vault:backup-cos`, then commits `public/vault/` only when `git diff` shows changes (`content(vault): backup from cos`). Failed COS access fails the workflow (Actions email on failure).
+
+Local pull (same env vars as migration):
+
+```bash
+export COS_SECRET_ID=… COS_SECRET_KEY=… COS_BUCKET=… COS_REGION=…
+npm run vault:backup-cos              # download; leave extra local blobs
+npm run vault:backup-cos -- --prune   # also delete local blobs absent from COS
+```
+
+Optional: `COS_VAULT_PREFIX` (default `vault`).
+
 ## 9. Browser vault client (Vite public env)
 
 The encrypted vault transport reads **public** build-time variables (no secrets in the bundle). Set these in `.env` / CI when building a COS-backed vault:
