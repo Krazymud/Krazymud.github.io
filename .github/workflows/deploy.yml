@@ -25,9 +25,18 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm test
-      - run: npm run build
+      - name: Build site
+        env:
+          VITE_COS_BUCKET: ${{ vars.VITE_COS_BUCKET }}
+          VITE_COS_REGION: ${{ vars.VITE_COS_REGION }}
+          VITE_STS_ISSUER_URL: ${{ vars.VITE_STS_ISSUER_URL }}
+        run: npm run build
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
       - name: Sync dist to COS
         if: vars.COS_SYNC_ENABLED == 'true'
+        continue-on-error: true
         env:
           COS_SECRET_ID: ${{ secrets.COS_SECRET_ID }}
           COS_SECRET_KEY: ${{ secrets.COS_SECRET_KEY }}
@@ -37,9 +46,6 @@ jobs:
           CDN_DOMAIN: ${{ vars.CDN_DOMAIN }}
           CDN_PURGE_URLS: ${{ secrets.CDN_PURGE_URLS }}
         run: npx tsx scripts/sync-cos-site.ts dist
-      - uses: actions/upload-pages-artifact@v4
-        with:
-          path: dist
 
   deploy:
     needs: build

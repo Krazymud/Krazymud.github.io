@@ -62,41 +62,52 @@ exports.main_handler = async (event) => {
     }
   }
 
+  let body
+  try {
+    body =
+      typeof event.body === 'string' ? JSON.parse(event.body || '{}') : event.body || {}
+  } catch {
+    return jsonResponse(400, { error: 'body' })
+  }
+
+  if (body.gate !== process.env.STS_GATE) {
+    return jsonResponse(401, { error: 'gate' })
+  }
+
   const ip = clientIp(event)
   if (rateLimited(ip)) {
     return jsonResponse(429, { error: 'rate' })
   }
 
-  const body =
-    typeof event.body === 'string' ? JSON.parse(event.body || '{}') : event.body || {}
-  if (body.gate !== process.env.STS_GATE) {
-    return jsonResponse(401, { error: 'gate' })
-  }
-
-  const credential = await new Promise((resolve, reject) => {
-    STS.getCredential(
-      {
-        secretId: process.env.COS_SECRET_ID,
-        secretKey: process.env.COS_SECRET_KEY,
-        durationSeconds: 1800,
-        policy: {
-          version: '2.0',
-          statement: [
-            {
-              action: [
-                'name/cos:GetObject',
-                'name/cos:PutObject',
-                'name/cos:HeadObject',
-              ],
-              effect: 'allow',
-              resource: [process.env.STS_RESOURCE],
-            },
-          ],
+  let credential
+  try {
+    credential = await new Promise((resolve, reject) => {
+      STS.getCredential(
+        {
+          secretId: process.env.COS_SECRET_ID,
+          secretKey: process.env.COS_SECRET_KEY,
+          durationSeconds: 1800,
+          policy: {
+            version: '2.0',
+            statement: [
+              {
+                action: [
+                  'name/cos:GetObject',
+                  'name/cos:PutObject',
+                  'name/cos:HeadObject',
+                ],
+                effect: 'allow',
+                resource: [process.env.STS_RESOURCE],
+              },
+            ],
+          },
         },
-      },
-      (err, data) => (err ? reject(err) : resolve(data)),
-    )
-  })
+        (err, data) => (err ? reject(err) : resolve(data)),
+      )
+    })
+  } catch {
+    return jsonResponse(500, { error: 'sts' })
+  }
 
   return jsonResponse(200, {
     secretId: credential.credentials.tmpSecretId,

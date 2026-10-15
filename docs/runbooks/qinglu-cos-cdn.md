@@ -37,11 +37,16 @@ Create a CAM sub-user or use API keys scoped for GitHub Actions:
 
 ## 6. GitHub Actions (dual deploy)
 
-COS sync is **off by default** so Pages deploy never depends on Tencent credentials.
+COS sync is **off by default**. When enabled, the workflow uploads the Pages artifact **first**, then runs COS sync with `continue-on-error: true`—a failed Tencent sync does **not** block GitHub Pages deploy; check the Actions log for the sync step if CDN is stale.
+
+**Production vault sync on the deployed site** requires `VITE_COS_BUCKET`, `VITE_COS_REGION`, and `VITE_STS_ISSUER_URL` at **build** time (injected in the Deploy workflow from GitHub **variables**). Deploying without them produces a bundle with no COS vault client config; vault mutate/sync on the live site will not work after COS cutover.
 
 | Type | Name | Purpose |
 |------|------|---------|
-| **Variable** | `COS_SYNC_ENABLED` | Set to `true` to run the `Sync dist to COS` step after build. GitHub does not allow `secrets` in step `if:`; use this flag instead. |
+| **Variable** | `COS_SYNC_ENABLED` | Set to `true` to run the `Sync dist to COS` step after the Pages artifact upload. GitHub does not allow `secrets` in step `if:`; use this flag instead. |
+| **Variable** | `VITE_COS_BUCKET` | Bucket name baked into the static bundle for browser vault transport |
+| **Variable** | `VITE_COS_REGION` | Region (e.g. `ap-guangzhou`) baked into the bundle |
+| **Variable** | `VITE_STS_ISSUER_URL` | HTTPS STS issuer URL baked into the bundle |
 | Secret | `COS_SECRET_ID` | CAM SecretId (required when sync enabled) |
 | Secret | `COS_SECRET_KEY` | CAM SecretKey |
 | Secret | `COS_BUCKET` | Bucket name |
@@ -102,7 +107,7 @@ COS is the live vault authority; GitHub keeps an encrypted mirror for history an
 
 CAM for backup (separate from site-sync user): allow `cos:GetObject` and `cos:ListBucket` on `vault/*` (and list prefix `vault/`). Do not grant write to `site/*` on the same keys if you split users.
 
-The job runs `npm run vault:backup-cos`, then commits `public/vault/` only when `git diff` shows changes (`content(vault): backup from cos`). Failed COS access fails the workflow (Actions email on failure).
+The workflow uses `concurrency: vault-backup` (no cancel-in-progress) so overlapping hourly runs do not fight over commits. The job runs `npm run vault:backup-cos`, then commits `public/vault/` when `git status --porcelain public/vault` is non-empty (includes new untracked blobs). Failed COS access fails the workflow (Actions email on failure).
 
 Local pull (same env vars as migration):
 
@@ -162,14 +167,27 @@ Upload `scf/sts-issuer.zip` to a **Node.js** SCF function (handler `index.main_h
 | Status | Body | Meaning |
 |--------|------|---------|
 | 200 | `{ secretId, secretKey, sessionToken, startTime, expiredTime }` | Temp creds (30 min default) |
+| 400 | `{ "error": "body" }` | Invalid JSON body |
 | 401 | `{ "error": "gate" }` | Wrong or missing gate |
-| 429 | `{ "error": "rate" }` | Per-IP in-memory rate limit (resets per instance) |
+| 429 | `{ "error": "rate" }` | Per-IP in-memory rate limit (after gate passes; resets per instance) |
+| 500 | `{ "error": "sts" }` | STS credential mint failed (check SCF env and CAM) |
 
 After deploy, verify with curl (replace URL and gate):
 
 ```bash
 curl -sS -X POST "$STS_ISSUER_URL" -H 'Content-Type: application/json' -d '{"gate":"YOUR_GATE"}'
 ```
+
+## Release sequencing (COS vault cutover)
+
+Before relying on vault sync on the **deployed** site (not just local `.env`):
+
+1. Set GitHub **variables** `VITE_COS_BUCKET`, `VITE_COS_REGION`, `VITE_STS_ISSUER_URL` and redeploy so the bundle includes COS config.
+2. Deploy and verify the **SCF STS issuer** (`STS_GATE`, CAM, `STS_RESOURCE`, CORS).
+3. Run **one-shot** `vault:migrate-cos` so `vault/` exists on COS.
+4. Enable hourly **vault backup** (COS → `public/vault/`) and confirm a test edit syncs across devices.
+
+Skipping step 1 breaks browser vault transport after cutover even if COS and SCF are healthy.
 
 ## 11. Acceptance checklist (live cutover)
 
