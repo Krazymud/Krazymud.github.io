@@ -2,6 +2,7 @@ import { useState, type ChangeEvent } from 'react'
 import { copy } from '../config/copy'
 import { useProgress } from '../progress/ProgressProvider'
 import { parseProgress, serializeProgress, type ProgressData } from '../progress/store'
+import { progressFilename } from '../progress/export'
 import { studyDay } from '../trial/day'
 
 export function SettingsPage() {
@@ -15,7 +16,7 @@ export function SettingsPage() {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `midnight-garage-progress-${studyDay(new Date())}.json`
+    link.download = progressFilename(studyDay(new Date()))
     link.click()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
   }

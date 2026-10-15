@@ -43,10 +43,10 @@ describe('HomePage', () => {
     expect(within(hero).getByText(copy.home.hello(site.nickname))).toBeInTheDocument()
     expect(within(hero).queryByText(copy.home.eyebrow)).toBeNull()
     expect(within(hero).getByRole('link', { name: /出发|看结算/ })).toBeInTheDocument()
-    expect(within(hero).queryByRole('group', { name: '青庐仪表' })).toBeNull()
+    expect(within(hero).queryByRole('group', { name: '学习进度' })).toBeNull()
     expect(stage).toHaveAttribute('data-home-stage')
     expect(stage.className).toMatch(/aspect-video/)
-    expect(within(below).getByRole('group', { name: '青庐仪表' })).toBeInTheDocument()
+    expect(within(below).getByRole('group', { name: '学习进度' })).toBeInTheDocument()
     expect(within(below).getByRole('link', { name: copy.home.vaultLink })).toBeInTheDocument()
     expect(hero.compareDocumentPosition(stage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(stage.compareDocumentPosition(below) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
@@ -77,7 +77,7 @@ describe('HomePage', () => {
 
   it('shows the garage dashboard', () => {
     renderHome()
-    expect(screen.getByRole('group', { name: '青庐仪表' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: '学习进度' })).toBeInTheDocument()
   })
 
   it('folds due reviews into the trial card', () => {
