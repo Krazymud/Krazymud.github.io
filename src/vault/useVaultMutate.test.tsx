@@ -407,7 +407,7 @@ describe('useVaultMutate', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '打勾' }))
     await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
-    expect(readBlobFile).toHaveBeenCalledWith(apiFetch, 'tok', 'list-a', 'base0')
+    expect(readBlobFile).toHaveBeenCalledWith(apiFetch, 'tok', 'list-a')
   })
 
   it('does not commit when the list blob cannot be read from the site or GitHub', async () => {

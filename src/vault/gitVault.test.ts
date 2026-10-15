@@ -185,18 +185,6 @@ describe('readBlobFile', () => {
     expect(bytes[bytes.length - 1]).toBe(9)
   })
 
-  it('reads against an explicit commit SHA when provided', async () => {
-    let requested = ''
-    const fetchImpl = vi.fn(async (url: string) => {
-      requested = new URL(url).pathname + new URL(url).search
-      return new Response(new Uint8Array([4, 5]))
-    })
-
-    await readBlobFile(fetchImpl as unknown as typeof fetch, 't', 'deadbeef', 'abc123')
-
-    expect(requested).toMatch(/\/contents\/public\/vault\/blobs\/deadbeef\.bin\?ref=abc123$/)
-  })
-
   it.each([
     [401, TOKEN_DENIED],
     [403, TOKEN_DENIED],

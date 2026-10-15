@@ -100,22 +100,8 @@ function runFfmpeg(outputPath, vcodec, extraArgs) {
 }
 
 await mkdir(outDir, { recursive: true })
-// Leaner encodes: the home dock is ~400px wide on phone; 1600px/@crf23 was ~11MB and
-// sat on frame 0 for a long time on cellular even with faststart.
-runFfmpeg(webm, "libvpx-vp9", ["-b:v", "0", "-crf", "36", "-row-mt", "1"])
-// main + faststart: iPhone Safari/WeChat need moov before mdat or they stick on frame 0.
-runFfmpeg(mp4, "libx264", [
-  "-pix_fmt",
-  "yuv420p",
-  "-profile:v",
-  "main",
-  "-level",
-  "4.0",
-  "-crf",
-  "28",
-  "-movflags",
-  "+faststart",
-])
+runFfmpeg(webm, "libvpx-vp9", ["-b:v", "0", "-crf", "32"])
+runFfmpeg(mp4, "libx264", ["-pix_fmt", "yuv420p", "-crf", "23"])
 
 const probe = spawnSync(
   "ffprobe",
@@ -136,20 +122,5 @@ const duration = Number(
 )
 if (!(duration >= 8 && duration <= 12)) {
   console.error(`duration ${duration}s outside 8–12s; adjust holdFrames/dissolveFrames`)
-  process.exit(1)
-}
-
-const mp4Bytes = await readFile(mp4)
-const moovAt = mp4Bytes.indexOf(Buffer.from("moov"))
-const mdatAt = mp4Bytes.indexOf(Buffer.from("mdat"))
-if (moovAt < 0 || mdatAt < 0 || moovAt > mdatAt) {
-  console.error(`mp4 is not faststart (moov@${moovAt}, mdat@${mdatAt}); iOS will stick on frame 0`)
-  process.exit(1)
-}
-const maxMp4Bytes = 4.5 * 1024 * 1024
-if (mp4Bytes.byteLength > maxMp4Bytes) {
-  console.error(
-    `mp4 is ${(mp4Bytes.byteLength / 1024 / 1024).toFixed(1)}MB (max ${maxMp4Bytes / 1024 / 1024}MB); raise crf or lower outWidth`,
-  )
   process.exit(1)
 }

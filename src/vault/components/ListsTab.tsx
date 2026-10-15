@@ -244,7 +244,7 @@ export function ListsTab({
               </li>
             ) : (
               <ListCard
-                key={`${list.source}:${list.blob}`}
+                key={list.source}
                 list={list}
                 read={read}
                 canEdit={canEdit}

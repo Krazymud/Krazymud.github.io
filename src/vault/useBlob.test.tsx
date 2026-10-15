@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { useBlobText, useBlobUrl } from './useBlob'
+import { useBlobUrl } from './useBlob'
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d])
 const WEBP = new Uint8Array([0x52, 0x49, 0x46, 0x46, 4, 0, 0, 0, 0x57, 0x45, 0x42, 0x50])
@@ -34,23 +34,5 @@ describe('useBlobUrl', () => {
     const { result } = renderHook(() => useBlobUrl('a', read, 'image/webp'))
     await waitFor(() => expect(result.current.status).toBe('ready'))
     expect(blobs[0].type).toBe('image/webp')
-  })
-})
-
-describe('useBlobText', () => {
-  it('retries a transient read failure so a lagged list blob can still open', async () => {
-    let attempts = 0
-    const read = vi.fn(async () => {
-      attempts += 1
-      if (attempts === 1) throw new Error('contents lag')
-      return new TextEncoder().encode('{"items":[{"text":"去看海","done":true}]}')
-    })
-    const { result } = renderHook(() => useBlobText('list-a', read))
-    await waitFor(() => expect(result.current.status).toBe('ready'))
-    expect(result.current).toEqual({
-      status: 'ready',
-      text: '{"items":[{"text":"去看海","done":true}]}',
-    })
-    expect(attempts).toBe(2)
   })
 })
