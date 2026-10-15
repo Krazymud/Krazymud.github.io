@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { progressFilename } from '../progress/export'
+import { studyDay } from '../trial/day'
 import { resetPrefsCache } from '../prefs/prefs'
 import { ProgressProvider } from '../progress/ProgressProvider'
 import { emptyProgress, STORAGE_KEY } from '../progress/store'
@@ -23,6 +25,23 @@ describe('SettingsPage', () => {
   beforeEach(() => {
     localStorage.clear()
     resetPrefsCache()
+  })
+
+  it('exports progress with a qinglu filename', () => {
+    const day = studyDay(new Date('2026-10-15T12:00:00Z'))
+    vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-10-15T12:00:00Z').getTime())
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:progress')
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    renderSettings()
+    fireEvent.click(screen.getByRole('button', { name: '导出进度文件' }))
+    expect(createObjectURL).toHaveBeenCalled()
+    expect(click.mock.contexts[0]).toBeInstanceOf(HTMLAnchorElement)
+    expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe(progressFilename(day))
+    createObjectURL.mockRestore()
+    revokeObjectURL.mockRestore()
+    click.mockRestore()
+    vi.spyOn(Date, 'now').mockRestore()
   })
 
   it('uses the rebranded page title', () => {

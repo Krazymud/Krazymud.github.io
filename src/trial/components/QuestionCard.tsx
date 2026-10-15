@@ -4,10 +4,10 @@ import { SpeakButton } from './SpeakButton'
 type OptionState = 'idle' | 'right' | 'wrong' | 'dim'
 
 const OPTION_CLASS: Record<OptionState, string> = {
-  idle: 'border-line bg-panel/90 hover:border-accent',
-  right: 'border-accent-hi bg-accent/25 text-white',
-  wrong: 'border-line bg-panel/90 line-through opacity-60',
-  dim: 'border-line bg-panel/90 opacity-40',
+  idle: 'border-line panel-ink hover:border-accent',
+  right: 'border-accent-hi bg-accent/20 text-fg',
+  wrong: 'border-line panel-ink line-through opacity-60',
+  dim: 'border-line panel-ink opacity-40',
 }
 
 interface QuestionCardProps {
@@ -28,7 +28,7 @@ export function QuestionCard({ question, picked, onPick }: QuestionCardProps) {
         {showWord && (
           <>
             <div className="mt-2 flex items-center justify-center gap-2">
-              <h2 className="font-display text-4xl font-bold tracking-wide">{word.w}</h2>
+              <h2 className="font-latin text-4xl font-bold">{word.w}</h2>
               <SpeakButton text={word.w} />
             </div>
             {word.p && <p className="mt-1 text-sm text-muted">/{word.p}/</p>}
@@ -44,7 +44,7 @@ export function QuestionCard({ question, picked, onPick }: QuestionCardProps) {
                 type="button"
                 disabled={revealed}
                 onClick={() => onPick(i)}
-                className={`w-full border px-4 py-3 text-left text-sm transition-colors ${OPTION_CLASS[state]}`}
+                className={`min-h-12 w-full px-4 py-3 text-left text-base transition-colors ${OPTION_CLASS[state]}`}
               >
                 <span className="mr-3 font-display text-muted">{i + 1}</span>
                 {direction === 'en2zh' ? option.m : option.w}

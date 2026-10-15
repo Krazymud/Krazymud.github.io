@@ -9,7 +9,7 @@ const base: GarageStats = { streak: 9, week: [true, true, false, true, true, tru
 describe('Dashboard', () => {
   it('reads out the streak, the week and the mastered words', () => {
     render(<Dashboard stats={base} />)
-    const panel = within(screen.getByRole('group', { name: '青庐仪表' }))
+    const panel = within(screen.getByRole('group', { name: '学习进度' }))
     expect(panel.getByRole('meter', { name: '连续打卡 9 天' })).toHaveAttribute('aria-valuenow', '9')
     expect(panel.getByRole('meter', { name: '已掌握 128 个词' })).toHaveAttribute('aria-valuenow', '128')
     expect(panel.getByRole('img', { name: '最近 7 天打卡 5 天' })).toBeInTheDocument()

@@ -45,7 +45,7 @@ export function Gauge({ value, total, combo, boost }: GaugeProps) {
           </tspan>
         </text>
       </svg>
-      <p className="-mt-1 font-display text-xs tracking-wide text-accent-hi">{copy.trial.combo(combo)}</p>
+      <p className="-mt-1 text-xs text-accent-hi">{copy.trial.combo(combo)}</p>
     </div>
   )
 }
