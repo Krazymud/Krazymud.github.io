@@ -506,6 +506,20 @@ describe('useVaultMutate', () => {
     expect(screen.getByText('晚安')).toBeInTheDocument()
   })
 
+  it('reports a bad gate from the STS issuer on hydrate and after saveToken', async () => {
+    fetchStsTicket.mockRejectedValue(new GitHubWriteError(GATE_DENIED))
+    mount()
+    expect(await screen.findByRole('alert')).toHaveTextContent(GATE_DENIED)
+    expect(readVaultFile).not.toHaveBeenCalled()
+
+    await store.forgetToken()
+    fetchStsTicket.mockClear()
+    fetchStsTicket.mockRejectedValue(new GitHubWriteError(GATE_DENIED))
+    fireEvent.click(screen.getByRole('button', { name: '保存令牌' }))
+    await waitFor(() => expect(fetchStsTicket).toHaveBeenCalled())
+    expect(await screen.findByRole('alert')).toHaveTextContent(GATE_DENIED)
+  })
+
   it('reaches ready read-only when IndexedDB cannot load the token', async () => {
     const brokenStore: WebStore = {
       ...store,

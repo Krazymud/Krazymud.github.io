@@ -329,7 +329,7 @@ describe('VaultContent published edits', () => {
   })
 
   it('shows 正在同步… and locks editing until the commit finishes', async () => {
-    const gate = deferred<string>()
+    const gate = deferred<{ etag: string }>()
     putVaultUpdate.mockReturnValue(gate.promise)
     renderVault('/vault?tab=notes')
     const remove = await screen.findByRole('button', { name: '删除' })
@@ -341,7 +341,7 @@ describe('VaultContent published edits', () => {
     expect(screen.getByRole('button', { name: '新笔记' })).toBeDisabled()
 
     await act(async () => {
-      gate.resolve('commit1')
+      gate.resolve({ etag: 'commit1' })
       await gate.promise
     })
     await waitFor(() => expect(screen.queryByText('正在同步…')).not.toBeInTheDocument())

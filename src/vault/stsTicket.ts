@@ -1,4 +1,6 @@
 import type { CosCreds } from './cosAuth'
+import { GitHubWriteError } from './github'
+import { GATE_DENIED } from './vaultErrors'
 
 export type StsCreds = CosCreds & { expiredTime: number }
 
@@ -15,6 +17,7 @@ export async function fetchStsTicket(options: {
   })
   const data = (await res.json()) as Record<string, unknown>
   if (!res.ok) {
+    if (res.status === 401 || res.status === 403) throw new GitHubWriteError(GATE_DENIED)
     const err = typeof data.error === 'string' ? data.error : 'sts'
     throw new Error(`STS issuer ${res.status}: ${err}`)
   }

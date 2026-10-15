@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
+import { GitHubWriteError } from './github'
 import { fetchStsTicket, ticketValid } from './stsTicket'
+import { GATE_DENIED } from './vaultErrors'
 
 describe('fetchStsTicket', () => {
   it('returns temp creds on 200', async () => {
@@ -22,6 +24,17 @@ describe('fetchStsTicket', () => {
       'https://example.com/sts',
       expect.objectContaining({ method: 'POST' }),
     )
+  })
+
+  it('maps issuer 401/403 to GATE_DENIED', async () => {
+    const fetchImpl = vi.fn(async () => Response.json({ error: 'bad gate' }, { status: 403 }))
+    await expect(
+      fetchStsTicket({
+        fetch: fetchImpl as unknown as typeof fetch,
+        issuerUrl: 'https://example.com/sts',
+        gate: 'wrong',
+      }),
+    ).rejects.toEqual(new GitHubWriteError(GATE_DENIED))
   })
 })
 
