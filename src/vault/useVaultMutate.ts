@@ -1,11 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { CosCreds } from './cosAuth'
+import { COS_VAULT_CONFIG, STS_ISSUER_URL } from './cosConfig'
+import {
+  CosConflictError,
+  CosNotFoundError,
+  putVaultUpdate,
+  readBlobFile,
+  readVaultFile,
+} from './cosVault'
 import { decryptBytes, decryptJson, type VaultKey } from './crypto'
-import { GitHubWriteError, SYNC_PENDING, TOKEN_DENIED } from './github'
-import { commitVaultUpdate, GitHubRefNotFastForwardError, readBlobFile, readVaultFile, readWebFileText } from './gitVault'
+import { GitHubWriteError, SYNC_PENDING } from './github'
 import type { FetchBytes } from './repo'
+import { fetchStsTicket, ticketValid, type StsCreds } from './stsTicket'
 import type { VaultFile, VaultManifest } from './types'
+import { GATE_DENIED } from './vaultErrors'
 import { loadPendingDoc, type WebStore } from './webStore'
-import { openWebFile, mergeWebDocs, type WebDoc } from './web'
+import { mergeWebDocs, openWebFile, type WebDoc } from './web'
 import {
   absorbWebDoc,
   addPhoto as addWorkingPhoto,
@@ -25,8 +35,6 @@ import {
   type WorkingVault,
 } from './working'
 
-export const VAULT_COMMIT_MESSAGE = 'content(vault): update vault'
-
 export interface VaultClock {
   now(): number
   uuid(): string
@@ -39,7 +47,7 @@ type Phase = 'loading' | 'ready'
 type Apply = (working: WorkingVault) => Promise<WorkingVault>
 
 function isDenied(error: unknown): boolean {
-  return error instanceof GitHubWriteError && error.message === TOKEN_DENIED
+  return error instanceof GitHubWriteError && error.message === GATE_DENIED
 }
 
 // Records the working vault never touched come from an older snapshot; sending them would revive
@@ -89,12 +97,11 @@ export function useVaultMutate(options: {
 
   const workingRef = useRef(working)
   const fileRef = useRef(file)
-  // The commit fileRef was read from or last written as; null until the repository has been read.
-  const baseShaRef = useRef<string | null>(null)
+  const baseEtagRef = useRef<string | null>(null)
   const phaseRef = useRef<Phase>('loading')
-  const tokenRef = useRef<string | null>(null)
+  const gateRef = useRef<string | null>(null)
+  const ticketRef = useRef<{ gate: string; creds: StsCreds } | null>(null)
   const syncingRef = useRef(false)
-  const webJsonRef = useRef(false)
   const webMigratedRef = useRef(false)
   const unsyncedRef = useRef(false)
   const depth = useRef(0)
@@ -150,39 +157,61 @@ export function useVaultMutate(options: {
     })
   }
 
-  async function rebase(local: WorkingVault, saved: string): Promise<WorkingVault> {
-    const remote = await readVaultFile(fetchRef.current, saved)
-    const remoteManifest = await decryptJson<VaultManifest>(dekRef.current, remote.file.manifest)
-    const merged = mergeWorking(emptyWorking(remoteManifest), onlyEdits(local))
-    fileRef.current = remote.file
-    baseShaRef.current = remote.commitSha
-    return merged
+  async function ensureTicket(gate: string): Promise<StsCreds> {
+    const nowSec = Math.floor(Date.now() / 1000)
+    const cached = ticketRef.current
+    if (cached?.gate === gate && ticketValid(cached.creds, nowSec)) return cached.creds
+    const creds = await fetchStsTicket({ fetch: fetchRef.current, issuerUrl: STS_ISSUER_URL, gate })
+    ticketRef.current = { gate, creds }
+    return creds
   }
 
-  async function push(start: WorkingVault, saved: string): Promise<WorkingVault> {
+  async function rebaseFromCos(local: WorkingVault, creds: CosCreds): Promise<WorkingVault> {
+    try {
+      const remote = await readVaultFile({ fetch: fetchRef.current, creds, config: COS_VAULT_CONFIG })
+      const remoteManifest = await decryptJson<VaultManifest>(dekRef.current, remote.file.manifest)
+      const merged = mergeWorking(emptyWorking(remoteManifest), onlyEdits(local))
+      fileRef.current = remote.file
+      baseEtagRef.current = remote.etag
+      return merged
+    } catch (error) {
+      if (error instanceof CosNotFoundError) {
+        const remoteManifest = await decryptJson<VaultManifest>(dekRef.current, fileRef.current.manifest)
+        baseEtagRef.current = null
+        return mergeWorking(emptyWorking(remoteManifest), onlyEdits(local))
+      }
+      throw error
+    }
+  }
+
+  async function rebase(local: WorkingVault, gate: string): Promise<WorkingVault> {
+    const creds = await ensureTicket(gate)
+    return rebaseFromCos(local, creds)
+  }
+
+  async function push(start: WorkingVault, gate: string): Promise<WorkingVault> {
+    const creds = await ensureTicket(gate)
     let local = start
-    if (baseShaRef.current === null) {
-      local = await rebase(local, saved)
+    if (baseEtagRef.current === null) {
+      local = await rebaseFromCos(local, creds)
       adopt(local)
     }
     let retried = false
     for (;;) {
       const vaultFile = await sealVaultFile(dekRef.current, local, fileRef.current)
       try {
-        const committed = await commitVaultUpdate({
+        const { etag } = await putVaultUpdate({
           fetch: fetchRef.current,
-          token: saved,
-          message: VAULT_COMMIT_MESSAGE,
+          creds,
+          config: COS_VAULT_CONFIG,
           vaultFile,
-          parentSha: baseShaRef.current!,
+          etag: baseEtagRef.current,
           blobs: referencedBlobs(local),
-          ...(webJsonRef.current ? { deleteWebJson: true } : {}),
         })
         fileRef.current = vaultFile
-        baseShaRef.current = committed
+        baseEtagRef.current = etag
         if (webMigratedRef.current) {
           webMigratedRef.current = false
-          webJsonRef.current = false
           try {
             await storeRef.current?.clearPending()
             await storeRef.current?.clearSynced()
@@ -190,18 +219,15 @@ export function useVaultMutate(options: {
             // Absorbing the same web.json again later is harmless.
           }
         }
-        // Keep committed blobs in memory: the static site only serves them after the
-        // next Pages deploy, and GitHub Contents can lag the commit that just wrote them.
-        // Remounted cards (list/note after the edit form closes) still decrypt here.
         return {
           ...emptyWorking(local.manifest),
           dirtyBlobs: referencedBlobs(local),
         }
       } catch (error) {
-        if (!(error instanceof GitHubRefNotFastForwardError)) throw error
+        if (!(error instanceof CosConflictError)) throw error
         if (retried) throw new GitHubWriteError(SYNC_PENDING)
         retried = true
-        local = await rebase(local, saved)
+        local = await rebaseFromCos(local, creds)
         adopt(local)
         await persist(local)
       }
@@ -209,7 +235,7 @@ export function useVaultMutate(options: {
   }
 
   async function syncPending(): Promise<void> {
-    const saved = tokenRef.current
+    const saved = gateRef.current
     if (!saved) {
       markUnsynced(true)
       return
@@ -225,25 +251,40 @@ export function useVaultMutate(options: {
       }
     } catch (error) {
       markUnsynced(true)
-      if (alive.current) setTokenError(isDenied(error) ? TOKEN_DENIED : null)
+      if (alive.current) setTokenError(isDenied(error) ? GATE_DENIED : null)
+    }
+  }
+
+  async function readCosBlob(name: string): Promise<Uint8Array | null> {
+    const gate = gateRef.current
+    if (!gate) return null
+    try {
+      const creds = await ensureTicket(gate)
+      return await readBlobFile({
+        fetch: fetchRef.current,
+        creds,
+        config: COS_VAULT_CONFIG,
+        blobName: name,
+      })
+    } catch (error) {
+      if (error instanceof GitHubWriteError) throw error
+      if (error instanceof CosNotFoundError) return null
+      return null
     }
   }
 
   async function hydrateList(current: WorkingVault, source: string): Promise<WorkingVault> {
     const entry = current.manifest.lists.find((item) => item.source === source)
     if (!entry || current.dirtyBlobs[entry.blob]) return current
-    // Same order as readBlob: site first (list UI already loaded it), then GitHub.
-    // Token holders used to hit GitHub only — Contents lag/denial blocked toggles while the card still opened.
     let bytes: Uint8Array | null = null
     try {
       bytes = await bytesRef.current(`blobs/${entry.blob}.bin`)
     } catch {
       bytes = null
     }
-    const saved = tokenRef.current
-    if (bytes === null && saved) {
+    if (bytes === null) {
       try {
-        bytes = await readBlobFile(fetchRef.current, saved, entry.blob)
+        bytes = await readCosBlob(entry.blob)
       } catch (error) {
         if (error instanceof GitHubWriteError) throw error
         throw new WorkingBlobError()
@@ -254,7 +295,7 @@ export function useVaultMutate(options: {
   }
 
   function mutate(apply: Apply): Promise<MutateResult> {
-    if (phaseRef.current !== 'ready' || tokenRef.current === null || syncingRef.current) {
+    if (phaseRef.current !== 'ready' || gateRef.current === null || syncingRef.current) {
       return Promise.resolve({ ok: false, reason: 'locked' })
     }
     return exclusive(async (): Promise<MutateResult> => {
@@ -264,7 +305,7 @@ export function useVaultMutate(options: {
       } catch (error) {
         if (error instanceof WorkingValidationError) return { ok: false, reason: error.reason }
         if (error instanceof WorkingBlobError || error instanceof GitHubWriteError) {
-          if (alive.current && isDenied(error)) setTokenError(TOKEN_DENIED)
+          if (alive.current && isDenied(error)) setTokenError(GATE_DENIED)
           return { ok: false, reason: 'blob' }
         }
         throw error
@@ -288,28 +329,37 @@ export function useVaultMutate(options: {
     const id = ++generation.current
     void (async () => {
       const current = store
-      let savedToken: string | null = null
+      let savedGate: string | null = null
       if (current) {
         try {
-          savedToken = await current.loadToken()
+          savedGate = await current.loadToken()
         } catch {
-          savedToken = null
+          savedGate = null
         }
       }
       if (generation.current !== id) return
 
       let latestFile = file
       let latestManifest = manifest
-      let baseSha: string | null = null
+      let baseEtag: string | null = null
       let denied = false
-      if (savedToken) {
+      if (savedGate) {
         try {
-          const remote = await readVaultFile(fetchRef.current, savedToken)
+          const creds = await ensureTicket(savedGate)
+          const remote = await readVaultFile({
+            fetch: fetchRef.current,
+            creds,
+            config: COS_VAULT_CONFIG,
+          })
           latestManifest = await decryptJson<VaultManifest>(dek, remote.file.manifest)
           latestFile = remote.file
-          baseSha = remote.commitSha
+          baseEtag = remote.etag
         } catch (error) {
-          denied = isDenied(error)
+          if (error instanceof CosNotFoundError) {
+            baseEtag = null
+          } else {
+            denied = isDenied(error)
+          }
         }
       }
       if (generation.current !== id) return
@@ -336,9 +386,15 @@ export function useVaultMutate(options: {
       let next = emptyWorking(latestManifest)
       if (pending) next = mergeWorking(next, onlyEdits(pending))
       let migrated = false
-      if (savedToken) {
+      if (savedGate) {
         try {
-          const remoteText = await readWebFileText(fetchRef.current, savedToken)
+          let remoteText: string | null = null
+          try {
+            const bytes = await bytesRef.current('web.json')
+            if (bytes) remoteText = new TextDecoder().decode(bytes)
+          } catch {
+            remoteText = null
+          }
           let webDoc: WebDoc | null = null
           if (remoteText !== null) webDoc = await openWebFile(dek, remoteText)
           if (current) {
@@ -348,14 +404,13 @@ export function useVaultMutate(options: {
           if (webDoc !== null) {
             next = await absorbWebDoc(next, webDoc, dek, clockRef.current, async (name) => {
               try {
-                return await readBlobFile(fetchRef.current, savedToken, name)
+                return await readCosBlob(name)
               } catch {
                 return null
               }
             })
             migrated = true
             webMigratedRef.current = true
-            webJsonRef.current = remoteText !== null
           }
         } catch {
           migrated = false
@@ -364,17 +419,17 @@ export function useVaultMutate(options: {
       if (generation.current !== id) return
 
       fileRef.current = latestFile
-      baseShaRef.current = baseSha
-      tokenRef.current = savedToken
+      baseEtagRef.current = baseEtag
+      gateRef.current = savedGate
       workingRef.current = next
       phaseRef.current = 'ready'
       setWorking(next)
-      setToken(savedToken)
-      setTokenError(denied ? TOKEN_DENIED : null)
+      setToken(savedGate)
+      setTokenError(denied ? GATE_DENIED : null)
       setPhase('ready')
       if (pending !== null || migrated) markUnsynced(true)
       if (migrated) await persist(next)
-      if ((pending !== null || migrated) && savedToken !== null) await exclusive(syncPending)
+      if ((pending !== null || migrated) && savedGate !== null) await exclusive(syncPending)
     })()
     return () => {
       generation.current += 1
@@ -383,8 +438,6 @@ export function useVaultMutate(options: {
 
   const canEdit = phase === 'ready' && token !== null && !syncing
 
-  // Prefer in-memory dirty blobs (kept after a successful push). Fall back to the static
-  // site, then GitHub Contents when a token is saved (Pages deploy lag / cold reload).
   const readBlob = useCallback(async (name: string): Promise<Uint8Array<ArrayBuffer>> => {
     const local = workingRef.current.dirtyBlobs[name]
     if (local) return decryptBytes(dekRef.current, local)
@@ -395,8 +448,13 @@ export function useVaultMutate(options: {
     } catch (error) {
       failure = error
     }
-    const saved = tokenRef.current
-    if (bytes === null && saved) bytes = await readBlobFile(fetchRef.current, saved, name)
+    if (bytes === null) {
+      try {
+        bytes = await readCosBlob(name)
+      } catch (error) {
+        failure = error
+      }
+    }
     if (bytes === null) throw failure ?? new Error(`missing blob ${name}`)
     return decryptBytes(dekRef.current, bytes)
   }, [])
@@ -416,7 +474,8 @@ export function useVaultMutate(options: {
       const next = value.trim()
       if (!current || next === '' || phaseRef.current === 'loading') return
       await current.saveToken(next)
-      tokenRef.current = next
+      gateRef.current = next
+      ticketRef.current = null
       setToken(next)
       setTokenError(null)
       await exclusive(async () => {
@@ -427,20 +486,21 @@ export function useVaultMutate(options: {
         try {
           adopt(await rebase(workingRef.current, next))
         } catch (error) {
-          if (alive.current) setTokenError(isDenied(error) ? TOKEN_DENIED : null)
+          if (alive.current) setTokenError(isDenied(error) ? GATE_DENIED : null)
         }
       })
     },
     forgetToken: async () => {
       const current = storeRef.current
       if (!current) return
-      tokenRef.current = null
+      gateRef.current = null
+      ticketRef.current = null
       setToken(null)
       setTokenError(null)
       await current.forgetToken()
     },
     retrySync: () => {
-      if (phaseRef.current !== 'ready' || tokenRef.current === null || syncingRef.current) return Promise.resolve()
+      if (phaseRef.current !== 'ready' || gateRef.current === null || syncingRef.current) return Promise.resolve()
       return exclusive(syncPending)
     },
     saveNote: (input: { source?: string; title: string; date: string; body: string }) =>

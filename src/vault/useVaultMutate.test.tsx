@@ -2,8 +2,11 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { IDBFactory } from 'fake-indexeddb'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { decryptBytes, decryptJson, type VaultKey } from './crypto'
-import { GitHubWriteError, SYNC_PENDING, TOKEN_DENIED } from './github'
-import * as gitVault from './gitVault'
+import { CosConflictError } from './cosVault'
+import * as cosVault from './cosVault'
+import { GitHubWriteError, SYNC_PENDING } from './github'
+import * as stsTicket from './stsTicket'
+import { GATE_DENIED } from './vaultErrors'
 import type { FetchBytes } from './repo'
 import { makeTestVault, type TestVault } from './testVault'
 import type { ListContent, VaultFile, VaultManifest } from './types'
@@ -12,20 +15,26 @@ import { emptyWorking, openWorking, saveNote, sealWorking, sealVaultFile } from 
 import { sealWebFile, type WebDoc } from './web'
 import { createWebStore, type WebStore } from './webStore'
 
-vi.mock('./gitVault', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./gitVault')>()),
-  commitVaultUpdate: vi.fn(),
+vi.mock('./cosVault', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./cosVault')>()),
+  putVaultUpdate: vi.fn(),
   readVaultFile: vi.fn(),
   readBlobFile: vi.fn(),
-  readWebFileText: vi.fn(),
 }))
 
-const commitVaultUpdate = vi.mocked(gitVault.commitVaultUpdate)
-const readVaultFile = vi.mocked(gitVault.readVaultFile)
-const readBlobFile = vi.mocked(gitVault.readBlobFile)
-const readWebFileText = vi.mocked(gitVault.readWebFileText)
+vi.mock('./stsTicket', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./stsTicket')>()),
+  fetchStsTicket: vi.fn(),
+}))
 
-type Commit = Parameters<typeof gitVault.commitVaultUpdate>[0]
+const putVaultUpdate = vi.mocked(cosVault.putVaultUpdate)
+const readVaultFile = vi.mocked(cosVault.readVaultFile)
+const readBlobFile = vi.mocked(cosVault.readBlobFile)
+const fetchStsTicket = vi.mocked(stsTicket.fetchStsTicket)
+
+const mockCreds = { secretId: 'id', secretKey: 'key', sessionToken: 'tok', expiredTime: 9_999_999_999 }
+
+type PutCall = Parameters<typeof cosVault.putVaultUpdate>[0]
 
 const SYNCING = '正在同步…'
 const apiFetch = vi.fn() as unknown as typeof fetch
@@ -98,7 +107,7 @@ async function ready() {
   await waitFor(() => expect(screen.getByText('ready')).toBeInTheDocument())
 }
 
-async function committedManifest(call: Commit): Promise<VaultManifest> {
+async function committedManifest(call: PutCall): Promise<VaultManifest> {
   return decryptJson<VaultManifest>(vault.dek, call.vaultFile.manifest)
 }
 
@@ -118,13 +127,13 @@ beforeEach(async () => {
   manifest = await decryptJson<VaultManifest>(vault.dek, vault.file.manifest)
   store = createWebStore(new IDBFactory())!
   await store.saveToken('tok')
-  commitVaultUpdate.mockReset()
+  putVaultUpdate.mockReset()
   readVaultFile.mockReset()
   readBlobFile.mockReset()
-  readWebFileText.mockReset()
-  readWebFileText.mockResolvedValue(null)
-  readVaultFile.mockResolvedValue({ file: vault.file, commitSha: 'base0' })
-  commitVaultUpdate.mockResolvedValue('commit1')
+  fetchStsTicket.mockReset()
+  fetchStsTicket.mockResolvedValue(mockCreds)
+  readVaultFile.mockResolvedValue({ file: vault.file, etag: 'base0' })
+  putVaultUpdate.mockResolvedValue({ etag: 'commit1' })
 })
 
 afterEach(() => {
@@ -133,8 +142,8 @@ afterEach(() => {
 
 describe('useVaultMutate', () => {
   it('locks edits with the syncing message until the commit finishes', async () => {
-    const gate = deferred<string>()
-    commitVaultUpdate.mockReturnValue(gate.promise)
+    const gate = deferred<{ etag: string }>()
+    putVaultUpdate.mockReturnValue(gate.promise)
     mount()
     await ready()
     await waitFor(() => expect(saveButton()).toBeEnabled())
@@ -146,11 +155,11 @@ describe('useVaultMutate', () => {
     expect(saveButton()).toBeDisabled()
     expect(screen.getByRole('button', { name: '打勾' })).toBeDisabled()
     expect(screen.getByRole('button', { name: '删除晚安' })).toBeDisabled()
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(1))
     expect(screen.getByText('新笔记')).toBeInTheDocument()
 
     await act(async () => {
-      gate.resolve('commit1')
+      gate.resolve({ etag: 'commit1' })
       await gate.promise
     })
 
@@ -158,12 +167,11 @@ describe('useVaultMutate', () => {
     expect(saveButton()).toBeEnabled()
     expect(screen.queryByText('还没同步')).toBeNull()
     expect(screen.queryByRole('alert')).toBeNull()
-    expect(commitVaultUpdate).toHaveBeenCalledTimes(1)
+    expect(putVaultUpdate).toHaveBeenCalledTimes(1)
     await waitFor(async () => expect(await store.loadVaultPending()).toBeNull())
 
-    const call = commitVaultUpdate.mock.calls[0][0]
-    expect(call.token).toBe('tok')
-    expect(call.deleteWebJson).toBeUndefined()
+    const call = putVaultUpdate.mock.calls[0][0]
+    expect(fetchStsTicket).toHaveBeenCalled()
     const sent = await committedManifest(call)
     expect(sent.notes.map((n) => n.title).sort()).toEqual(['新笔记', '晚安'])
     const added = sent.notes.find((n) => n.title === '新笔记')!
@@ -172,14 +180,14 @@ describe('useVaultMutate', () => {
   })
 
   it('shows the token error and keeps the edit pending when GitHub answers 401', async () => {
-    commitVaultUpdate.mockRejectedValue(new GitHubWriteError(TOKEN_DENIED))
+    putVaultUpdate.mockRejectedValue(new GitHubWriteError(GATE_DENIED))
     mount()
     await ready()
     await waitFor(() => expect(saveButton()).toBeEnabled())
 
     fireEvent.click(saveButton())
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(TOKEN_DENIED)
+    expect(await screen.findByRole('alert')).toHaveTextContent(GATE_DENIED)
     await waitFor(() => expect(screen.queryByText(SYNCING)).toBeNull())
     expect(screen.getByText('还没同步')).toBeInTheDocument()
     expect(screen.getByText('新笔记')).toBeInTheDocument()
@@ -192,7 +200,7 @@ describe('useVaultMutate', () => {
   })
 
   it('shows 还没同步 without a token error for a network failure', async () => {
-    commitVaultUpdate.mockRejectedValue(new GitHubWriteError(SYNC_PENDING))
+    putVaultUpdate.mockRejectedValue(new GitHubWriteError(SYNC_PENDING))
     mount()
     await ready()
     await waitFor(() => expect(saveButton()).toBeEnabled())
@@ -212,7 +220,7 @@ describe('useVaultMutate', () => {
     fireEvent.click(screen.getByRole('button', { name: '保存空标题' }))
 
     await waitFor(() => expect(screen.queryByText(SYNCING)).toBeNull())
-    expect(commitVaultUpdate).not.toHaveBeenCalled()
+    expect(putVaultUpdate).not.toHaveBeenCalled()
     expect(screen.queryByText('空')).toBeNull()
     expect(saveButton()).toBeEnabled()
     expect(await store.loadVaultPending()).toBeNull()
@@ -227,7 +235,7 @@ describe('useVaultMutate', () => {
     expect(saveButton()).toBeDisabled()
     expect(screen.getByRole('button', { name: '打勾' })).toBeDisabled()
     expect(readVaultFile).not.toHaveBeenCalled()
-    expect(commitVaultUpdate).not.toHaveBeenCalled()
+    expect(putVaultUpdate).not.toHaveBeenCalled()
     expect(screen.getByText('晚安')).toBeInTheDocument()
   })
 
@@ -241,12 +249,12 @@ describe('useVaultMutate', () => {
 
     await waitFor(() => expect(saveButton()).toBeEnabled())
     expect(await store.loadToken()).toBe('late-token')
-    expect(readVaultFile).toHaveBeenCalledWith(apiFetch, 'late-token')
-    expect(commitVaultUpdate).not.toHaveBeenCalled()
+    expect(readVaultFile).toHaveBeenCalled()
+    expect(fetchStsTicket).toHaveBeenCalledWith(expect.objectContaining({ gate: 'late-token' }))
+    expect(putVaultUpdate).not.toHaveBeenCalled()
 
     fireEvent.click(saveButton())
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
-    expect(commitVaultUpdate.mock.calls[0][0].token).toBe('late-token')
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(1))
 
     fireEvent.click(screen.getByRole('button', { name: '忘记令牌' }))
     await waitFor(() => expect(saveButton()).toBeDisabled())
@@ -260,7 +268,7 @@ describe('useVaultMutate', () => {
     }
     readVaultFile.mockResolvedValue({
       file: await sealVaultFile(vault.dek, emptyWorking(remoteManifest), vault.file),
-      commitSha: 'remote1',
+      etag: 'remote1',
     })
     mount()
     expect(await screen.findByText('别处写的')).toBeInTheDocument()
@@ -272,22 +280,22 @@ describe('useVaultMutate', () => {
       notes: [...manifest.notes, { title: '别处写的', date: '2026-10-12', blob: 'remote-note', source: 'web/notes/remote', hash: 'r' }],
     }
     const remoteFile = await sealVaultFile(vault.dek, emptyWorking(remoteManifest), vault.file)
-    commitVaultUpdate.mockRejectedValueOnce(new gitVault.GitHubRefNotFastForwardError())
+    putVaultUpdate.mockRejectedValueOnce(new CosConflictError())
     mount()
     await ready()
     await waitFor(() => expect(saveButton()).toBeEnabled())
-    readVaultFile.mockResolvedValue({ file: remoteFile, commitSha: 'remote1' })
+    readVaultFile.mockResolvedValue({ file: remoteFile, etag: 'remote1' })
 
     fireEvent.click(saveButton())
 
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(2))
     await waitFor(() => expect(screen.queryByText(SYNCING)).toBeNull())
     expect(screen.queryByText('还没同步')).toBeNull()
     expect(screen.queryByRole('alert')).toBeNull()
 
-    expect(commitVaultUpdate.mock.calls[0][0].parentSha).toBe('base0')
-    const retry = commitVaultUpdate.mock.calls[1][0]
-    expect(retry.parentSha).toBe('remote1')
+    expect(putVaultUpdate.mock.calls[0][0].etag).toBe('base0')
+    const retry = putVaultUpdate.mock.calls[1][0]
+    expect(retry.etag).toBe('remote1')
     const sent = await committedManifest(retry)
     expect(sent.notes.map((n) => n.title).sort()).toEqual(['别处写的', '新笔记', '晚安'])
     const added = sent.notes.find((n) => n.title === '新笔记')!
@@ -298,12 +306,12 @@ describe('useVaultMutate', () => {
 
   it('never overwrites a commit another device pushed after unlock', async () => {
     const remote = { tip: 'base0', file: vault.file, commits: 0 }
-    readVaultFile.mockImplementation(async () => ({ file: remote.file, commitSha: remote.tip }))
-    commitVaultUpdate.mockImplementation(async (call) => {
-      if (call.parentSha !== remote.tip) throw new gitVault.GitHubRefNotFastForwardError()
+    readVaultFile.mockImplementation(async () => ({ file: remote.file, etag: remote.tip }))
+    putVaultUpdate.mockImplementation(async (call) => {
+      if (call.etag !== remote.tip) throw new CosConflictError()
       remote.tip = `mine${++remote.commits}`
       remote.file = call.vaultFile
-      return remote.tip
+      return { etag: remote.tip }
     })
     mount()
     await ready()
@@ -319,9 +327,9 @@ describe('useVaultMutate', () => {
 
     fireEvent.click(saveButton())
 
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(2))
     await waitFor(() => expect(screen.queryByText(SYNCING)).toBeNull())
-    expect(commitVaultUpdate.mock.calls.map(([call]) => call.parentSha)).toEqual(['base0', 'other1'])
+    expect(putVaultUpdate.mock.calls.map(([call]) => call.etag)).toEqual(['base0', 'other1'])
     expect(remote.tip).toBe('mine1')
     const published = await decryptJson<VaultManifest>(vault.dek, remote.file.manifest)
     expect(published.notes.map((n) => n.title).sort()).toEqual(['别处写的', '新笔记', '晚安'])
@@ -330,22 +338,22 @@ describe('useVaultMutate', () => {
 
     const reads = readVaultFile.mock.calls.length
     fireEvent.click(screen.getByRole('button', { name: '删除晚安' }))
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(3))
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(3))
     await waitFor(() => expect(screen.queryByText(SYNCING)).toBeNull())
-    expect(commitVaultUpdate.mock.calls[2][0].parentSha).toBe('mine1')
+    expect(putVaultUpdate.mock.calls[2][0].etag).toBe('mine1')
     expect(readVaultFile).toHaveBeenCalledTimes(reads)
     expect(remote.tip).toBe('mine2')
   })
 
   it('gives up after a second non-fast-forward and keeps the edit', async () => {
-    commitVaultUpdate.mockRejectedValue(new gitVault.GitHubRefNotFastForwardError())
+    putVaultUpdate.mockRejectedValue(new CosConflictError())
     mount()
     await ready()
     await waitFor(() => expect(saveButton()).toBeEnabled())
 
     fireEvent.click(saveButton())
 
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(2))
     expect(await screen.findByText('还没同步')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText(SYNCING)).toBeNull())
     expect(screen.queryByRole('alert')).toBeNull()
@@ -359,17 +367,17 @@ describe('useVaultMutate', () => {
     await waitFor(() => expect(saveButton()).toBeEnabled())
 
     fireEvent.click(screen.getByRole('button', { name: '删除晚安' }))
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(screen.queryByText(SYNCING)).toBeNull())
 
-    const call = commitVaultUpdate.mock.calls[0][0]
+    const call = putVaultUpdate.mock.calls[0][0]
     expect((await committedManifest(call)).notes).toEqual([])
     expect(call.blobs).toEqual({})
     expect(screen.queryByText('晚安')).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: '删除照片' }))
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(2))
-    const second = await committedManifest(commitVaultUpdate.mock.calls[1][0])
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(2))
+    const second = await committedManifest(putVaultUpdate.mock.calls[1][0])
     expect(second.photos.map((p) => p.source)).toEqual(['photos/a.jpg'])
     expect(second.notes).toEqual([])
   })
@@ -381,11 +389,11 @@ describe('useVaultMutate', () => {
     await waitFor(() => expect(saveButton()).toBeEnabled())
 
     fireEvent.click(screen.getByRole('button', { name: '打勾' }))
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(screen.queryByText(SYNCING)).toBeNull())
 
     expect(readBlobFile).not.toHaveBeenCalled()
-    const call = commitVaultUpdate.mock.calls[0][0]
+    const call = putVaultUpdate.mock.calls[0][0]
     const sent = await committedManifest(call)
     const list = sent.lists.find((l) => l.source === 'lists/a.md')!
     expect(list.blob).not.toBe('list-a')
@@ -406,27 +414,27 @@ describe('useVaultMutate', () => {
     await waitFor(() => expect(saveButton()).toBeEnabled())
 
     fireEvent.click(screen.getByRole('button', { name: '打勾' }))
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
-    expect(readBlobFile).toHaveBeenCalledWith(apiFetch, 'tok', 'list-a')
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(1))
+    expect(readBlobFile).toHaveBeenCalledWith(expect.objectContaining({ blobName: 'list-a' }))
   })
 
   it('does not commit when the list blob cannot be read from the site or GitHub', async () => {
     const siteMiss: FetchBytes = async (path) => (path === 'blobs/list-a.bin' ? null : vault.fetchBytes(path))
-    readBlobFile.mockRejectedValue(new GitHubWriteError(TOKEN_DENIED))
+    readBlobFile.mockRejectedValue(new GitHubWriteError(GATE_DENIED))
     mount({ fetchBytes: siteMiss })
     await ready()
     await waitFor(() => expect(saveButton()).toBeEnabled())
 
     fireEvent.click(screen.getByRole('button', { name: '打勾' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(TOKEN_DENIED)
+    expect(await screen.findByRole('alert')).toHaveTextContent(GATE_DENIED)
     await waitFor(() => expect(screen.queryByText(SYNCING)).toBeNull())
-    expect(commitVaultUpdate).not.toHaveBeenCalled()
+    expect(putVaultUpdate).not.toHaveBeenCalled()
     expect(await store.loadVaultPending()).toBeNull()
   })
 
   it('replays a pending edit from an earlier visit once a token is available', async () => {
-    commitVaultUpdate.mockRejectedValueOnce(new GitHubWriteError(SYNC_PENDING))
+    putVaultUpdate.mockRejectedValueOnce(new GitHubWriteError(SYNC_PENDING))
     const first = mount()
     await ready()
     await waitFor(() => expect(saveButton()).toBeEnabled())
@@ -434,15 +442,15 @@ describe('useVaultMutate', () => {
     expect(await screen.findByText('还没同步')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText(SYNCING)).toBeNull())
     first.unmount()
-    expect(commitVaultUpdate).toHaveBeenCalledTimes(1)
+    expect(putVaultUpdate).toHaveBeenCalledTimes(1)
 
     mount()
 
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(2))
     await waitFor(() => expect(screen.queryByText(SYNCING)).toBeNull())
     expect(screen.getByText('新笔记')).toBeInTheDocument()
     expect(screen.queryByText('还没同步')).toBeNull()
-    const call = commitVaultUpdate.mock.calls[1][0]
+    const call = putVaultUpdate.mock.calls[1][0]
     const sent = await committedManifest(call)
     const added = sent.notes.find((n) => n.title === '新笔记')!
     expect(Object.keys(call.blobs)).toEqual([added.blob])
@@ -464,7 +472,7 @@ describe('useVaultMutate', () => {
     expect(await screen.findByText('离线写的')).toBeInTheDocument()
     expect(screen.getByText('还没同步')).toBeInTheDocument()
     expect(saveButton()).toBeDisabled()
-    expect(commitVaultUpdate).not.toHaveBeenCalled()
+    expect(putVaultUpdate).not.toHaveBeenCalled()
   })
 
   it('drops an unreadable pending seal and starts from the vault', async () => {
@@ -472,7 +480,7 @@ describe('useVaultMutate', () => {
     mount()
     await ready()
     await waitFor(() => expect(saveButton()).toBeEnabled())
-    expect(commitVaultUpdate).not.toHaveBeenCalled()
+    expect(putVaultUpdate).not.toHaveBeenCalled()
     expect(await store.loadVaultPending()).toBeNull()
     expect(screen.queryByText('还没同步')).toBeNull()
   })
@@ -487,15 +495,29 @@ describe('useVaultMutate', () => {
 
     fireEvent.click(saveButton())
 
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(1))
     expect(readVaultFile).toHaveBeenCalledTimes(2)
   })
 
   it('reports a rejected token while loading the repository vault', async () => {
-    readVaultFile.mockRejectedValue(new GitHubWriteError(TOKEN_DENIED))
+    readVaultFile.mockRejectedValue(new GitHubWriteError(GATE_DENIED))
     mount()
-    expect(await screen.findByRole('alert')).toHaveTextContent(TOKEN_DENIED)
+    expect(await screen.findByRole('alert')).toHaveTextContent(GATE_DENIED)
     expect(screen.getByText('晚安')).toBeInTheDocument()
+  })
+
+  it('reports a bad gate from the STS issuer on hydrate and after saveToken', async () => {
+    fetchStsTicket.mockRejectedValue(new GitHubWriteError(GATE_DENIED))
+    mount()
+    expect(await screen.findByRole('alert')).toHaveTextContent(GATE_DENIED)
+    expect(readVaultFile).not.toHaveBeenCalled()
+
+    await store.forgetToken()
+    fetchStsTicket.mockClear()
+    fetchStsTicket.mockRejectedValue(new GitHubWriteError(GATE_DENIED))
+    fireEvent.click(screen.getByRole('button', { name: '保存令牌' }))
+    await waitFor(() => expect(fetchStsTicket).toHaveBeenCalled())
+    expect(await screen.findByRole('alert')).toHaveTextContent(GATE_DENIED)
   })
 
   it('reaches ready read-only when IndexedDB cannot load the token', async () => {
@@ -510,7 +532,7 @@ describe('useVaultMutate', () => {
     expect(screen.getByText('晚安')).toBeInTheDocument()
     expect(saveButton()).toBeDisabled()
     expect(readVaultFile).not.toHaveBeenCalled()
-    expect(commitVaultUpdate).not.toHaveBeenCalled()
+    expect(putVaultUpdate).not.toHaveBeenCalled()
   })
 
   it('does not commit when list hydration hits a network TypeError on GitHub and the site misses the blob', async () => {
@@ -523,28 +545,29 @@ describe('useVaultMutate', () => {
     fireEvent.click(screen.getByRole('button', { name: '打勾' }))
 
     await waitFor(() => expect(screen.queryByText(SYNCING)).toBeNull())
-    expect(commitVaultUpdate).not.toHaveBeenCalled()
+    expect(putVaultUpdate).not.toHaveBeenCalled()
     expect(screen.queryByRole('alert')).toBeNull()
     expect(await store.loadVaultPending()).toBeNull()
   })
 
-  it('absorbs web.json into the vault, deletes it on commit, and clears old web pending keys', async () => {
+  it('absorbs site web.json into the vault on unlock and clears old web pending keys', async () => {
     const doc: WebDoc = {
       notes: [{ id: 'n1', title: '网页笔记', date: '2024-06-01', body: '正文', updatedAt: 50 }],
       lists: [],
       checks: {},
       tombstones: { notes: [], lists: [] },
     }
-    readWebFileText.mockResolvedValue(await sealWebFile(vault.dek, doc))
-    await store.savePending(await sealWebFile(vault.dek, doc))
-    await store.saveSynced(await sealWebFile(vault.dek, doc))
+    const webText = await sealWebFile(vault.dek, doc)
+    const fetchWithWeb: FetchBytes = async (path) =>
+      path === 'web.json' ? new TextEncoder().encode(webText) : vault.fetchBytes(path)
+    await store.savePending(webText)
+    await store.saveSynced(webText)
 
-    mount()
+    mount({ fetchBytes: fetchWithWeb })
 
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(screen.queryByText(SYNCING)).toBeNull())
-    const call = commitVaultUpdate.mock.calls[0][0]
-    expect(call.deleteWebJson).toBe(true)
+    const call = putVaultUpdate.mock.calls[0][0]
     const sent = await committedManifest(call)
     expect(sent.notes.find((n) => n.source === 'web/notes/n1')?.title).toBe('网页笔记')
     expect(screen.getByText('网页笔记')).toBeInTheDocument()
@@ -552,32 +575,21 @@ describe('useVaultMutate', () => {
     expect(await store.loadSynced()).toBeNull()
   })
 
-  it('does not delete web.json when none exists', async () => {
-    mount()
-    await ready()
-    await waitFor(() => expect(saveButton()).toBeEnabled())
-    fireEvent.click(saveButton())
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
-    expect(commitVaultUpdate.mock.calls[0][0].deleteWebJson).toBeUndefined()
-  })
-
-  it('clears IDB web pending after absorbing legacy pending with no remote web.json', async () => {
+  it('clears IDB web pending after absorbing legacy pending with no site web.json', async () => {
     const doc: WebDoc = {
       notes: [{ id: 'n-idb', title: '本地遗留', date: '2024-06-01', body: '正文', updatedAt: 50 }],
       lists: [],
       checks: {},
       tombstones: { notes: [], lists: [] },
     }
-    readWebFileText.mockResolvedValue(null)
     await store.savePending(await sealWebFile(vault.dek, doc))
     await store.saveSynced(await sealWebFile(vault.dek, doc))
 
     mount()
 
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(screen.queryByText(SYNCING)).toBeNull())
-    const call = commitVaultUpdate.mock.calls[0][0]
-    expect(call.deleteWebJson).toBeUndefined()
+    const call = putVaultUpdate.mock.calls[0][0]
     const sent = await committedManifest(call)
     expect(sent.notes.find((n) => n.source === 'web/notes/n-idb')?.title).toBe('本地遗留')
     expect(screen.getByText('本地遗留')).toBeInTheDocument()

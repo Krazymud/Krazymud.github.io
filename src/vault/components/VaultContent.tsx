@@ -93,7 +93,7 @@ export function VaultContent({ session, file, fetchBytes, onLock, webStore, webF
           }}
           className="mt-4 border border-line px-3 py-1 text-xs text-muted hover:text-fg"
         >
-          忘记令牌
+          忘记口令
         </button>
       ) : (
         <form
@@ -105,7 +105,7 @@ export function VaultContent({ session, file, fetchBytes, onLock, webStore, webF
         >
           <input
             type="password"
-            aria-label="令牌"
+            aria-label="同步口令"
             value={tokenInput}
             onChange={(event) => setTokenInput(event.target.value)}
             className="min-w-0 flex-1 border border-line bg-bg px-3 py-1 text-xs"
@@ -115,7 +115,7 @@ export function VaultContent({ session, file, fetchBytes, onLock, webStore, webF
             disabled={vault.loading}
             className="border border-line px-3 py-1 text-xs text-muted hover:text-fg disabled:opacity-40"
           >
-            保存令牌
+            保存口令
           </button>
         </form>
       )}

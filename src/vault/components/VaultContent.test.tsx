@@ -3,8 +3,10 @@ import { IDBFactory } from 'fake-indexeddb'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { decryptBytes, decryptJson } from '../crypto'
-import { GitHubWriteError, SYNC_PENDING, TOKEN_DENIED } from '../github'
-import * as gitVault from '../gitVault'
+import * as cosVault from '../cosVault'
+import { GitHubWriteError, SYNC_PENDING } from '../github'
+import * as stsTicket from '../stsTicket'
+import { GATE_DENIED } from '../vaultErrors'
 import * as photoProcess from '../photoProcess'
 import type { VaultSession } from '../repo'
 import { makeTestVault, type TestVault } from '../testVault'
@@ -13,12 +15,16 @@ import type { WebClock } from '../web'
 import { createWebStore, type WebStore } from '../webStore'
 import { VaultContent } from './VaultContent'
 
-vi.mock('../gitVault', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../gitVault')>()),
-  commitVaultUpdate: vi.fn(),
+vi.mock('../cosVault', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../cosVault')>()),
+  putVaultUpdate: vi.fn(),
   readVaultFile: vi.fn(),
   readBlobFile: vi.fn(),
-  readWebFileText: vi.fn(),
+}))
+
+vi.mock('../stsTicket', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../stsTicket')>()),
+  fetchStsTicket: vi.fn(),
 }))
 
 vi.mock('../photoProcess', async (importOriginal) => ({
@@ -26,20 +32,22 @@ vi.mock('../photoProcess', async (importOriginal) => ({
   processVaultPhoto: vi.fn(),
 }))
 
-const commitVaultUpdate = vi.mocked(gitVault.commitVaultUpdate)
-const readVaultFile = vi.mocked(gitVault.readVaultFile)
-const readBlobFile = vi.mocked(gitVault.readBlobFile)
-const readWebFileText = vi.mocked(gitVault.readWebFileText)
+const putVaultUpdate = vi.mocked(cosVault.putVaultUpdate)
+const readVaultFile = vi.mocked(cosVault.readVaultFile)
+const readBlobFile = vi.mocked(cosVault.readBlobFile)
+const fetchStsTicket = vi.mocked(stsTicket.fetchStsTicket)
+
+const mockCreds = { secretId: 'id', secretKey: 'key', sessionToken: 'tok', expiredTime: 9_999_999_999 }
 const processVaultPhoto = vi.mocked(photoProcess.processVaultPhoto)
 
-/** Site + GitHub only know the published vault — new commit blobs are invisible (Pages lag). */
-async function rejectUnpublishedBlobs(_fetch: typeof fetch, _token: string, name: string) {
-  const bytes = await vault.fetchBytes(`blobs/${name}.bin`)
+/** Site only knows the published vault — new commit blobs are invisible (Pages lag). */
+async function rejectUnpublishedBlobs(options: { blobName: string }) {
+  const bytes = await vault.fetchBytes(`blobs/${options.blobName}.bin`)
   if (!bytes) throw new GitHubWriteError(SYNC_PENDING)
   return bytes
 }
 
-type Commit = Parameters<typeof gitVault.commitVaultUpdate>[0]
+type PutCall = Parameters<typeof cosVault.putVaultUpdate>[0]
 
 let counter = 0
 const clock: WebClock = {
@@ -77,7 +85,7 @@ function renderVault(path = '/vault') {
   return render(<RouterProvider router={router} />)
 }
 
-async function committed(call: Commit): Promise<VaultManifest> {
+async function committed(call: PutCall): Promise<VaultManifest> {
   return decryptJson<VaultManifest>(vault.dek, call.vaultFile.manifest)
 }
 
@@ -95,19 +103,20 @@ beforeEach(async () => {
   session = { dek: vault.dek, manifest: await decryptJson<VaultManifest>(vault.dek, vault.file.manifest) }
   store = createWebStore(new IDBFactory())!
   await store.saveToken('tok')
-  commitVaultUpdate.mockReset()
+  putVaultUpdate.mockReset()
   readVaultFile.mockReset()
   readBlobFile.mockReset()
-  readWebFileText.mockReset()
+  fetchStsTicket.mockReset()
   processVaultPhoto.mockReset()
-  readWebFileText.mockResolvedValue(null)
-  readVaultFile.mockResolvedValue({ file: vault.file, commitSha: 'base0' })
+  fetchStsTicket.mockResolvedValue(mockCreds)
+  readVaultFile.mockResolvedValue({ file: vault.file, etag: 'base0' })
   remote.clear()
-  commitVaultUpdate.mockImplementation(async (call) => {
+  putVaultUpdate.mockImplementation(async (call) => {
     for (const [name, bytes] of Object.entries(call.blobs)) remote.set(name, bytes)
-    return 'commit1'
+    return { etag: 'commit1' }
   })
-  readBlobFile.mockImplementation(async (_fetch, _token, name) => {
+  readBlobFile.mockImplementation(async (options) => {
+    const name = options.blobName
     const bytes = remote.get(name) ?? (await vault.fetchBytes(`blobs/${name}.bin`))
     if (!bytes) throw new GitHubWriteError(SYNC_PENDING)
     return bytes
@@ -131,11 +140,11 @@ describe('VaultContent published edits', () => {
     await store.forgetToken()
     renderVault('/vault?tab=notes')
     expect(await screen.findByText('晚安')).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByRole('button', { name: '保存令牌' })).toBeEnabled())
+    await waitFor(() => expect(screen.getByRole('button', { name: '保存口令' })).toBeEnabled())
     expect(screen.queryByRole('button', { name: '编辑' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '删除' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '新笔记' })).toBeDisabled()
-    expect(commitVaultUpdate).not.toHaveBeenCalled()
+    expect(putVaultUpdate).not.toHaveBeenCalled()
   })
 
   it('loads the body into the form and commits the edit under the same source', async () => {
@@ -151,11 +160,11 @@ describe('VaultContent published edits', () => {
     fireEvent.change(screen.getByRole('textbox', { name: '正文' }), { target: { value: '改过的正文' } })
     fireEvent.click(screen.getByRole('button', { name: '保存' }))
 
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
-    const sent = await committed(commitVaultUpdate.mock.calls[0][0])
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(1))
+    const sent = await committed(putVaultUpdate.mock.calls[0][0])
     expect(sent.notes).toHaveLength(1)
     expect(sent.notes[0]).toMatchObject({ title: '晚安啦', source: 'notes/a.md', date: '2024-05-21' })
-    const blob = commitVaultUpdate.mock.calls[0][0].blobs[sent.notes[0].blob]
+    const blob = putVaultUpdate.mock.calls[0][0].blobs[sent.notes[0].blob]
     expect(new TextDecoder().decode(await decryptBytes(vault.dek, blob))).toBe('改过的正文')
 
     expect(await screen.findByText('晚安啦')).toBeInTheDocument()
@@ -172,7 +181,7 @@ describe('VaultContent published edits', () => {
     fireEvent.change(screen.getByRole('textbox', { name: '标题' }), { target: { value: '新写的' } })
     fireEvent.change(screen.getByRole('textbox', { name: '正文' }), { target: { value: '刚写好' } })
     fireEvent.click(screen.getByRole('button', { name: '保存' }))
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(1))
     expect(await screen.findByText('刚写好')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText('正在同步…')).not.toBeInTheDocument())
     fireEvent.click(screen.getByRole('tab', { name: '清单' }))
@@ -191,7 +200,7 @@ describe('VaultContent published edits', () => {
     fireEvent.change(screen.getByRole('textbox', { name: '正文' }), { target: { value: '改完立刻看' } })
     fireEvent.click(screen.getByRole('button', { name: '保存' }))
 
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(screen.queryByText('正在同步…')).not.toBeInTheDocument())
     expect(screen.queryByText('这篇笔记打不开')).not.toBeInTheDocument()
     expect(await screen.findByText('改完立刻看')).toBeInTheDocument()
@@ -207,7 +216,7 @@ describe('VaultContent published edits', () => {
     fireEvent.change(screen.getByLabelText('条目 2'), { target: { value: '去北海道' } })
     fireEvent.click(screen.getByRole('button', { name: '保存' }))
 
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(screen.queryByText('正在同步…')).not.toBeInTheDocument())
     expect(screen.queryByText('这个清单打不开')).not.toBeInTheDocument()
     expect(await screen.findByText('已完成 1 / 2')).toBeInTheDocument()
@@ -233,7 +242,7 @@ describe('VaultContent published edits', () => {
     fireEvent.change(await screen.findByLabelText('照片说明'), { target: { value: '刚拍的' } })
     fireEvent.click(screen.getByRole('button', { name: '存入' }))
 
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(screen.queryByText('正在同步…')).not.toBeInTheDocument())
     const tile = await screen.findByRole('button', { name: '查看照片 刚拍的' })
     expect(within(tile).queryByText('打不开')).not.toBeInTheDocument()
@@ -245,11 +254,11 @@ describe('VaultContent published edits', () => {
     const remove = await screen.findByRole('button', { name: '删除' })
     await waitFor(() => expect(remove).toBeEnabled())
     fireEvent.click(remove)
-    expect(commitVaultUpdate).not.toHaveBeenCalled()
+    expect(putVaultUpdate).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
 
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
-    const sent = await committed(commitVaultUpdate.mock.calls[0][0])
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(1))
+    const sent = await committed(putVaultUpdate.mock.calls[0][0])
     expect(sent.notes).toEqual([])
     expect(await screen.findByText('还没有笔记')).toBeInTheDocument()
   })
@@ -264,7 +273,7 @@ describe('VaultContent published edits', () => {
     await waitFor(() => expect(row).toBeEnabled())
     fireEvent.click(row)
 
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(1))
     expect(await screen.findByText('已完成 2 / 2')).toBeInTheDocument()
     expect(screen.queryByText('没能保存，请再试一次')).not.toBeInTheDocument()
   })
@@ -278,8 +287,8 @@ describe('VaultContent published edits', () => {
     await waitFor(() => expect(row).toBeEnabled())
     fireEvent.click(row)
 
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
-    const call = commitVaultUpdate.mock.calls[0][0]
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(1))
+    const call = putVaultUpdate.mock.calls[0][0]
     expect(call.deleteWebJson).toBeUndefined()
     const sent = await committed(call)
     expect(sent.lists[0].source).toBe('lists/a.md')
@@ -300,8 +309,8 @@ describe('VaultContent published edits', () => {
     fireEvent.change(screen.getByLabelText('条目 2'), { target: { value: '去北海道' } })
     fireEvent.click(screen.getByRole('button', { name: '保存' }))
 
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(1))
-    const call = commitVaultUpdate.mock.calls[0][0]
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(1))
+    const call = putVaultUpdate.mock.calls[0][0]
     const sent = await committed(call)
     expect(sent.lists[0]).toMatchObject({ source: 'lists/a.md', title: '一起去的地方' })
     const content = JSON.parse(
@@ -315,13 +324,13 @@ describe('VaultContent published edits', () => {
     await waitFor(() => expect(screen.queryByText('正在同步…')).not.toBeInTheDocument())
     fireEvent.click(await screen.findByRole('button', { name: '删除' }))
     fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
-    await waitFor(() => expect(commitVaultUpdate).toHaveBeenCalledTimes(2))
-    expect((await committed(commitVaultUpdate.mock.calls[1][0])).lists).toEqual([])
+    await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(2))
+    expect((await committed(putVaultUpdate.mock.calls[1][0])).lists).toEqual([])
   })
 
   it('shows 正在同步… and locks editing until the commit finishes', async () => {
-    const gate = deferred<string>()
-    commitVaultUpdate.mockReturnValue(gate.promise)
+    const gate = deferred<{ etag: string }>()
+    putVaultUpdate.mockReturnValue(gate.promise)
     renderVault('/vault?tab=notes')
     const remove = await screen.findByRole('button', { name: '删除' })
     await waitFor(() => expect(remove).toBeEnabled())
@@ -332,7 +341,7 @@ describe('VaultContent published edits', () => {
     expect(screen.getByRole('button', { name: '新笔记' })).toBeDisabled()
 
     await act(async () => {
-      gate.resolve('commit1')
+      gate.resolve({ etag: 'commit1' })
       await gate.promise
     })
     await waitFor(() => expect(screen.queryByText('正在同步…')).not.toBeInTheDocument())
@@ -341,7 +350,7 @@ describe('VaultContent published edits', () => {
   })
 
   it('keeps the edit and shows the pending and token messages when GitHub rejects the token', async () => {
-    commitVaultUpdate.mockRejectedValue(new GitHubWriteError(TOKEN_DENIED))
+    putVaultUpdate.mockRejectedValue(new GitHubWriteError(GATE_DENIED))
     renderVault('/vault?tab=notes')
     const remove = await screen.findByRole('button', { name: '删除' })
     await waitFor(() => expect(remove).toBeEnabled())
@@ -349,13 +358,13 @@ describe('VaultContent published edits', () => {
     fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
 
     expect(await screen.findByText('还没同步')).toBeInTheDocument()
-    expect(await screen.findByText(TOKEN_DENIED)).toBeInTheDocument()
+    expect(await screen.findByText(GATE_DENIED)).toBeInTheDocument()
     expect(screen.getByText('还没有笔记')).toBeInTheDocument()
     expect(await store.loadVaultPending()).not.toBeNull()
   })
 
   it('shows 还没同步 without a token message for a network failure', async () => {
-    commitVaultUpdate.mockRejectedValue(new GitHubWriteError(SYNC_PENDING))
+    putVaultUpdate.mockRejectedValue(new GitHubWriteError(SYNC_PENDING))
     renderVault('/vault?tab=notes')
     const remove = await screen.findByRole('button', { name: '删除' })
     await waitFor(() => expect(remove).toBeEnabled())
@@ -363,7 +372,7 @@ describe('VaultContent published edits', () => {
     fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
 
     expect(await screen.findByText('还没同步')).toBeInTheDocument()
-    expect(screen.queryByText(TOKEN_DENIED)).not.toBeInTheDocument()
+    expect(screen.queryByText(GATE_DENIED)).not.toBeInTheDocument()
   })
 
   it('does not commit a note with an empty title', async () => {
@@ -373,7 +382,7 @@ describe('VaultContent published edits', () => {
     fireEvent.click(create)
     fireEvent.click(screen.getByRole('button', { name: '保存' }))
     expect(screen.getByRole('textbox', { name: '标题' })).toHaveAttribute('aria-invalid', 'true')
-    expect(commitVaultUpdate).not.toHaveBeenCalled()
+    expect(putVaultUpdate).not.toHaveBeenCalled()
   })
 })
 
@@ -381,12 +390,13 @@ describe('VaultContent token', () => {
   it('saves a token, syncs, and enables editing', async () => {
     await store.forgetToken()
     renderVault('/vault?tab=notes')
-    await waitFor(() => expect(screen.getByRole('button', { name: '保存令牌' })).toBeEnabled())
-    fireEvent.change(screen.getByLabelText('令牌'), { target: { value: '  token-1  ' } })
-    fireEvent.click(screen.getByRole('button', { name: '保存令牌' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: '保存口令' })).toBeEnabled())
+    fireEvent.change(screen.getByLabelText('同步口令'), { target: { value: '  token-1  ' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存口令' }))
     await waitFor(() => expect(screen.getByRole('button', { name: '新笔记' })).toBeEnabled())
     expect(await store.loadToken()).toBe('token-1')
-    expect(readVaultFile).toHaveBeenCalledWith(apiFetch, 'token-1')
+    expect(fetchStsTicket).toHaveBeenCalledWith(expect.objectContaining({ gate: 'token-1' }))
+    expect(readVaultFile).toHaveBeenCalled()
   })
 
   it('forgets the token, closes the form and goes read-only', async () => {
@@ -395,13 +405,13 @@ describe('VaultContent token', () => {
     await waitFor(() => expect(create).toBeEnabled())
     fireEvent.click(create)
     fireEvent.change(screen.getByRole('textbox', { name: '标题' }), { target: { value: '不保存' } })
-    fireEvent.click(screen.getByRole('button', { name: '忘记令牌' }))
+    fireEvent.click(screen.getByRole('button', { name: '忘记口令' }))
     expect(screen.queryByDisplayValue('不保存')).not.toBeInTheDocument()
-    expect(await screen.findByRole('button', { name: '保存令牌' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '保存口令' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '新笔记' })).toBeDisabled()
     expect(screen.queryByRole('button', { name: '编辑' })).not.toBeInTheDocument()
     await waitFor(async () => expect(await store.loadToken()).toBeNull())
-    expect(commitVaultUpdate).not.toHaveBeenCalled()
+    expect(putVaultUpdate).not.toHaveBeenCalled()
   })
 
   it('still shows the photo grid', async () => {

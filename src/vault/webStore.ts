@@ -2,6 +2,7 @@ import { GARAGE_DB, GARAGE_DB_VERSION, upgradeGarageDb } from './db'
 import type { WebDoc } from './web'
 
 export interface WebStore {
+  /** IndexedDB key `token`; value is the COS sync gate secret (not a GitHub PAT). */
   loadToken(): Promise<string | null>
   saveToken(token: string): Promise<void>
   forgetToken(): Promise<void>
