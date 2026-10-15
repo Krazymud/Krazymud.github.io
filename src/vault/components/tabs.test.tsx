@@ -233,7 +233,8 @@ describe('published list editing', () => {
 
   it('offers no edit, delete or toggle without canEdit', async () => {
     render(<ListsTab lists={lists} read={reader({ l1: listJson })} onToggle={() => undefined} onBeginCreate={() => undefined} />)
-    fireEvent.click(await screen.findByRole('button', { name: /一起去的地方/ }))
+    expect(await screen.findByText('已完成 1 / 2')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /一起去的地方/ }))
     expect(screen.getByRole('button', { name: '新清单' })).toBeDisabled()
     expect(screen.getByRole('button', { name: /去看海/ })).toBeDisabled()
     expect(screen.queryByRole('button', { name: '编辑' })).not.toBeInTheDocument()
