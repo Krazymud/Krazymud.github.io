@@ -157,7 +157,12 @@ export async function backupVaultFromCos(options: { prune: boolean }): Promise<v
   const objectKeys = await listVaultObjectKeys(creds, bucket, region)
   const vaultJsonKey = `${VAULT_PREFIX}/vault.json`
   if (!objectKeys.includes(vaultJsonKey)) {
-    throw new Error(`Remote missing required object: ${vaultJsonKey}`)
+    // Site sync mirrors public/vault under site/vault/; authority vault/ is created by
+    // vault:migrate-cos. Until then, hourly backup should no-op instead of failing CI.
+    console.log(
+      `skip: remote has no ${vaultJsonKey} yet (run npm run vault:migrate-cos after SCF cutover)`,
+    )
+    return
   }
 
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'qinglu-vault-backup-'))

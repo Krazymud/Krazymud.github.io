@@ -109,6 +109,8 @@ CAM for backup (separate from site-sync user): allow `cos:GetObject` and `cos:Li
 
 The workflow uses `concurrency: vault-backup` (no cancel-in-progress) so overlapping hourly runs do not fight over commits. The job runs `npm run vault:backup-cos`, then commits `public/vault/` when `git status --porcelain public/vault` is non-empty (includes new untracked blobs). Failed COS access fails the workflow (Actions email on failure).
 
+**Before migration:** If COS has no `vault/vault.json` yet (site sync only wrote `site/vault/…`), the backup script **skips and exits 0** with a log line. Run `npm run vault:migrate-cos` after SCF cutover to create the authority prefix; hourly backup then starts mirroring for real.
+
 Local pull (same env vars as migration):
 
 ```bash
