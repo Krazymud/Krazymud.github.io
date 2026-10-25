@@ -12,7 +12,7 @@ const creds = { secretId: 'AKIDtest', secretKey: 'secret', sessionToken: 'tok' }
 
 const vaultFile = {
   version: 1 as const,
-  kdf: { alg: 'PBKDF2', hash: 'SHA-256', iterations: 1, salt: '' },
+  kdf: { name: 'PBKDF2' as const, hash: 'SHA-256' as const, iterations: 1, salt: '' },
   wrappedKey: '',
   manifest: '',
 }
@@ -34,7 +34,7 @@ describe('readVaultFile', () => {
   it('returns null etag object body as VaultFile', async () => {
     const file = {
       version: 1 as const,
-      kdf: { alg: 'PBKDF2', hash: 'SHA-256', iterations: 1, salt: '' },
+      kdf: { name: 'PBKDF2' as const, hash: 'SHA-256' as const, iterations: 1, salt: '' },
       wrappedKey: '',
       manifest: '',
     }
@@ -64,7 +64,8 @@ describe('readBlobFile', () => {
       blobName: 'note-1',
     })
     expect(bytes).toEqual(new Uint8Array([9, 8, 7]))
-    expect(String(fetchImpl.mock.calls[0]?.[0])).toContain('blobs/note-1.bin')
+    const firstCall = fetchImpl.mock.calls[0] as unknown as [string, RequestInit?]
+    expect(String(firstCall[0])).toContain('blobs/note-1.bin')
   })
 
   it('throws CosNotFoundError on 404', async () => {
