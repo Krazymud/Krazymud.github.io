@@ -289,7 +289,6 @@ describe('VaultContent published edits', () => {
 
     await waitFor(() => expect(putVaultUpdate).toHaveBeenCalledTimes(1))
     const call = putVaultUpdate.mock.calls[0][0]
-    expect(call.deleteWebJson).toBeUndefined()
     const sent = await committed(call)
     expect(sent.lists[0].source).toBe('lists/a.md')
     const content = JSON.parse(

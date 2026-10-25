@@ -149,8 +149,9 @@ function formatAmzDate(date: Date): string {
   return iso
 }
 
-function toBytes(data: string | Uint8Array): Uint8Array {
-  return typeof data === 'string' ? textEncoder.encode(data) : data
+function toBytes(data: string | Uint8Array): Uint8Array<ArrayBuffer> {
+  if (typeof data === 'string') return textEncoder.encode(data)
+  return new Uint8Array(data)
 }
 
 function hex(bytes: Uint8Array): string {
@@ -162,8 +163,8 @@ async function sha256Hex(data: string | Uint8Array): Promise<string> {
   return hex(new Uint8Array(digest))
 }
 
-async function hmacSha256(key: Uint8Array | string, data: string | Uint8Array): Promise<Uint8Array> {
-  const keyBytes = typeof key === 'string' ? textEncoder.encode(key) : key
+async function hmacSha256(key: Uint8Array | string, data: string | Uint8Array): Promise<Uint8Array<ArrayBuffer>> {
+  const keyBytes = toBytes(typeof key === 'string' ? key : new Uint8Array(key))
   const cryptoKey = await crypto.subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: 'SHA-256' }, false, [
     'sign',
   ])

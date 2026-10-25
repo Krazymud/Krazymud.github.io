@@ -128,7 +128,11 @@ export async function putVaultUpdate(options: {
       body: bytes,
       headers: { 'content-type': 'application/octet-stream' },
     })
-    const response = await fetchImpl(url, { method: 'PUT', headers, body: bytes })
+    const response = await fetchImpl(url, {
+      method: 'PUT',
+      headers,
+      body: new Uint8Array(bytes),
+    })
     assertCosOk(response)
   }
 
