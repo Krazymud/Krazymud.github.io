@@ -28,8 +28,9 @@ describe('SettingsPage', () => {
   })
 
   it('exports progress with a qinglu filename', () => {
-    const day = studyDay(new Date('2026-10-15T12:00:00Z'))
-    vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-10-15T12:00:00Z').getTime())
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-15T12:00:00Z'))
+    const day = studyDay(new Date())
     const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:progress')
     const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
@@ -41,7 +42,7 @@ describe('SettingsPage', () => {
     createObjectURL.mockRestore()
     revokeObjectURL.mockRestore()
     click.mockRestore()
-    vi.spyOn(Date, 'now').mockRestore()
+    vi.useRealTimers()
   })
 
   it('uses the rebranded page title', () => {
