@@ -103,6 +103,13 @@ export function uploadOrder(relPaths: string[]): string[] {
   return [...relPaths].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
 }
 
+/** Large fonts already on COS must not block publishing a new index.html. */
+export function isOptionalUpload(rel: string): boolean {
+  const ext = path.posix.extname(rel).toLowerCase()
+  if (ext === '.woff' || ext === '.woff2') return true
+  return rel.startsWith('fonts/') || rel.includes('/fonts/')
+}
+
 export async function putWithRetries(
   put: () => Promise<{ ok: boolean; status: number; statusText: string; text: () => Promise<string> }>,
   key: string,
@@ -179,22 +186,28 @@ export async function syncCosSite(distDir: string): Promise<void> {
       console.log(`skip ${key} (same size)`)
       continue
     }
-    await putWithRetries(async () => {
-      const { url, headers } = await signedCosRequest({
-        method: 'PUT',
-        bucket,
-        region,
-        key,
-        creds,
-        headers: {
-          'cache-control': cacheControl(rel),
-          'content-type': contentType(rel),
-        },
-        body,
-      })
-      return fetch(url, { method: 'PUT', headers, body })
-    }, key)
-    console.log(`uploaded ${key}`)
+    try {
+      await putWithRetries(async () => {
+        const { url, headers } = await signedCosRequest({
+          method: 'PUT',
+          bucket,
+          region,
+          key,
+          creds,
+          headers: {
+            'cache-control': cacheControl(rel),
+            'content-type': contentType(rel),
+          },
+          body,
+        })
+        return fetch(url, { method: 'PUT', headers, body })
+      }, key)
+      console.log(`uploaded ${key}`)
+    } catch (error) {
+      if (!isOptionalUpload(rel)) throw error
+      const detail = error instanceof Error ? error.message : String(error)
+      console.warn(`skip optional ${key}: ${detail.slice(0, 160)}`)
+    }
   }
 
   await maybePurgeCdn(cdnDomain)

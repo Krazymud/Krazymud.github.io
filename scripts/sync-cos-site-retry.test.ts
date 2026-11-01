@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { putWithRetries } from './sync-cos-site.ts'
+import { isOptionalUpload, putWithRetries } from './sync-cos-site.ts'
 
 describe('putWithRetries', () => {
   it('retries UserNetworkTooSlow then succeeds', async () => {
@@ -49,5 +49,13 @@ describe('putWithRetries', () => {
 
     await putWithRetries(put, 'site/fonts/x.woff2', { retries: 3, delayMs: 0 })
     expect(put).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('isOptionalUpload', () => {
+  it('marks fonts optional and HTML/assets required', () => {
+    expect(isOptionalUpload('fonts/lxgw-wenkai-regular.woff2')).toBe(true)
+    expect(isOptionalUpload('assets/index-abc.js')).toBe(false)
+    expect(isOptionalUpload('index.html')).toBe(false)
   })
 })
