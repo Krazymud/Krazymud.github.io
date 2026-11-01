@@ -1,5 +1,6 @@
 import { readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { signedCosRequest, type CosCreds } from '../src/vault/cosAuth.ts'
 
 const MIME: Record<string, string> = {
@@ -81,6 +82,49 @@ async function maybePurgeCdn(domain: string | undefined): Promise<void> {
   console.log('CDN cache refresh: purge or refresh these URLs after deploy:', urls.join(', '))
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function isRetryablePut(status: number, body: string): boolean {
+  if (status >= 500 || status === 408 || status === 429) return true
+  if (status === 400 && body.includes('UserNetworkTooSlow')) return true
+  return false
+}
+
+/** Upload order: hashed assets first, HTML entrypoints last. */
+export function uploadOrder(relPaths: string[]): string[] {
+  const rank = (rel: string): number => {
+    const base = path.posix.basename(rel)
+    if (base === 'index.html' || base === '404.html') return 2
+    if (rel.includes('/assets/') || rel.startsWith('assets/')) return 0
+    return 1
+  }
+  return [...relPaths].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
+}
+
+export async function putWithRetries(
+  put: () => Promise<{ ok: boolean; status: number; statusText: string; text: () => Promise<string> }>,
+  key: string,
+  options?: { retries?: number; delayMs?: number },
+): Promise<void> {
+  const retries = options?.retries ?? 5
+  const delayMs = options?.delayMs ?? 1500
+  let lastError = `PUT ${key} failed`
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    const response = await put()
+    if (response.ok) return
+    const text = await response.text().catch(() => '')
+    lastError = `PUT ${key} failed: ${response.status} ${response.statusText}${text ? ` — ${text}` : ''}`
+    if (!isRetryablePut(response.status, text) || attempt === retries) {
+      throw new Error(lastError)
+    }
+    console.warn(`retry ${attempt}/${retries - 1} after ${lastError.slice(0, 120)}`)
+    await sleep(delayMs * attempt)
+  }
+  throw new Error(lastError)
+}
+
 export async function syncCosSite(distDir: string): Promise<void> {
   const bucket = mustEnv('COS_BUCKET')
   const region = mustEnv('COS_REGION')
@@ -97,28 +141,27 @@ export async function syncCosSite(distDir: string): Promise<void> {
     throw new Error(`No files under ${absDist}`)
   }
 
-  for (const filePath of files) {
-    const rel = posixRel(absDist, filePath)
+  const rels = uploadOrder(files.map((filePath) => posixRel(absDist, filePath)))
+
+  for (const rel of rels) {
+    const filePath = path.join(absDist, ...rel.split('/'))
     const key = `${prefix}/${rel}`
     const body = await readFile(filePath)
-    const { url, headers } = await signedCosRequest({
-      method: 'PUT',
-      bucket,
-      region,
-      key,
-      creds,
-      headers: {
-        'cache-control': cacheControl(rel),
-        'content-type': contentType(rel),
-      },
-      body,
-    })
-
-    const response = await fetch(url, { method: 'PUT', headers, body })
-    if (!response.ok) {
-      const text = await response.text().catch(() => '')
-      throw new Error(`PUT ${key} failed: ${response.status} ${response.statusText}${text ? ` — ${text}` : ''}`)
-    }
+    await putWithRetries(async () => {
+      const { url, headers } = await signedCosRequest({
+        method: 'PUT',
+        bucket,
+        region,
+        key,
+        creds,
+        headers: {
+          'cache-control': cacheControl(rel),
+          'content-type': contentType(rel),
+        },
+        body,
+      })
+      return fetch(url, { method: 'PUT', headers, body })
+    }, key)
     console.log(`uploaded ${key}`)
   }
 
@@ -130,7 +173,10 @@ async function main(): Promise<void> {
   await syncCosSite(dist)
 }
 
-main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : error)
-  process.exit(1)
-})
+const entry = process.argv[1]
+if (entry && import.meta.url === pathToFileURL(path.resolve(entry)).href) {
+  main().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : error)
+    process.exit(1)
+  })
+}
