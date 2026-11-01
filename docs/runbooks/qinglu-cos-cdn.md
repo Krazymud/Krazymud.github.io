@@ -162,7 +162,23 @@ Upload `scf/sts-issuer.zip` to a **Node.js** SCF function (handler `index.main_h
 | `COS_SECRET_ID` | Parent CAM SecretId for STS |
 | `COS_SECRET_KEY` | Parent CAM SecretKey |
 | `STS_RESOURCE` | Full CAM resource ARN for `vault/*`, e.g. `qcs::cos:ap-guangzhou:uid/<APPID>:<bucket>/vault/*` |
-| `CORS_ORIGIN` | Site origin allowed by CORS (e.g. `https://your.cdn.domain`); use `*` only for smoke tests |
+| `CORS_ORIGIN` | Allowed browser origin(s) for the **STS Function URL**: one URL or comma-separated (e.g. `https://erinamae.site,https://krazymud.github.io`); `*` only for smoke tests |
+
+### COS bucket CORS (required for browser sync)
+
+STS CORS alone is not enough. The browser then calls `https://<bucket>.cos.<region>.myqcloud.com/vault/...` with temporary keys. The **bucket** must allow the same site origins.
+
+COS console → bucket → Security Management → CORS：
+
+| Field | Value |
+|-------|--------|
+| Allowed Origin | `https://erinamae.site` and `https://krazymud.github.io` (separate rules or two origins) |
+| Allowed Method | `GET`, `PUT`, `HEAD`, `POST` |
+| Allowed Header | `*` |
+| Expose Header | `ETag`, `x-cos-request-id` |
+| Max Age | `600` |
+
+Without this, saving「同步口令」can succeed at STS while COS reads/writes fail in the browser → UI stays on「还没同步」(not「同步口令不对」). IndexedDB is **per origin**, so Pages and the CDN domain do not share pending/token state.
 
 ### Responses
 
