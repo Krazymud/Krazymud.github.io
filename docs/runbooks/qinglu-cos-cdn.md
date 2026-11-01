@@ -161,7 +161,8 @@ Upload `scf/sts-issuer.zip` to a **Node.js** SCF function (handler `index.main_h
 | `STS_GATE` | Shared sync gate secret; must match the value users enter in the vault UI |
 | `COS_SECRET_ID` | Parent CAM SecretId for STS |
 | `COS_SECRET_KEY` | Parent CAM SecretKey |
-| `STS_RESOURCE` | Full CAM resource ARN for `vault/*`, e.g. `qcs::cos:ap-guangzhou:uid/<APPID>:<bucket>/vault/*` |
+| `STS_RESOURCE` | Full CAM resource ARN for `vault/*`, e.g. `qcs::cos:ap-guangzhou:uid/<APPID>:<bucket-APPID>/vault/*` (bucket name usually ends with `-<APPID>`) |
+| `COS_REGION` | Optional; STS API region (defaults to `ap-guangzhou`) |
 | `CORS_ORIGIN` | Site origin allowed by CORS (e.g. `https://your.cdn.domain`); use `*` only for smoke tests |
 
 ### Responses
@@ -172,7 +173,9 @@ Upload `scf/sts-issuer.zip` to a **Node.js** SCF function (handler `index.main_h
 | 400 | `{ "error": "body" }` | Invalid JSON body |
 | 401 | `{ "error": "gate" }` | Wrong or missing gate |
 | 429 | `{ "error": "rate" }` | Per-IP in-memory rate limit (after gate passes; resets per instance) |
-| 500 | `{ "error": "sts" }` | STS credential mint failed (check SCF env and CAM) |
+| 500 | `{ "error": "sts", "detail": "…" }` | STS mint failed; `detail` is missing env, CAM `Code: Message`, or network error |
+
+Common `detail` causes: wrong `STS_RESOURCE` shape; parent CAM lacks `name/sts:GetFederationToken` (and cos actions on `vault/*`); bad `COS_SECRET_*`.
 
 After deploy, verify with curl (replace URL and gate):
 
