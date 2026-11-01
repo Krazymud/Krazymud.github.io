@@ -112,17 +112,43 @@ export async function putWithRetries(
   const delayMs = options?.delayMs ?? 1500
   let lastError = `PUT ${key} failed`
   for (let attempt = 1; attempt <= retries; attempt++) {
-    const response = await put()
-    if (response.ok) return
-    const text = await response.text().catch(() => '')
-    lastError = `PUT ${key} failed: ${response.status} ${response.statusText}${text ? ` — ${text}` : ''}`
-    if (!isRetryablePut(response.status, text) || attempt === retries) {
-      throw new Error(lastError)
+    let retryable = false
+    try {
+      const response = await put()
+      if (response.ok) return
+      const text = await response.text().catch(() => '')
+      lastError = `PUT ${key} failed: ${response.status} ${response.statusText}${text ? ` — ${text}` : ''}`
+      retryable = isRetryablePut(response.status, text)
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      lastError = `PUT ${key} failed: ${detail}`
+      retryable = true
     }
+    if (!retryable || attempt === retries) throw new Error(lastError)
     console.warn(`retry ${attempt}/${retries - 1} after ${lastError.slice(0, 120)}`)
     await sleep(delayMs * attempt)
   }
   throw new Error(lastError)
+}
+
+async function remoteMatchesLocal(
+  creds: CosCreds,
+  bucket: string,
+  region: string,
+  key: string,
+  localBytes: number,
+): Promise<boolean> {
+  const { url, headers } = await signedCosRequest({
+    method: 'HEAD',
+    bucket,
+    region,
+    key,
+    creds,
+  })
+  const response = await fetch(url, { method: 'HEAD', headers })
+  if (!response.ok) return false
+  const remoteLen = response.headers.get('content-length')
+  return remoteLen !== null && Number(remoteLen) === localBytes
 }
 
 export async function syncCosSite(distDir: string): Promise<void> {
@@ -147,6 +173,12 @@ export async function syncCosSite(distDir: string): Promise<void> {
     const filePath = path.join(absDist, ...rel.split('/'))
     const key = `${prefix}/${rel}`
     const body = await readFile(filePath)
+    const base = path.posix.basename(rel)
+    const mustPut = base === 'index.html' || base === '404.html'
+    if (!mustPut && (await remoteMatchesLocal(creds, bucket, region, key, body.byteLength))) {
+      console.log(`skip ${key} (same size)`)
+      continue
+    }
     await putWithRetries(async () => {
       const { url, headers } = await signedCosRequest({
         method: 'PUT',

@@ -35,4 +35,19 @@ describe('putWithRetries', () => {
     )
     expect(put).toHaveBeenCalledTimes(2)
   })
+
+  it('retries thrown fetch failures then succeeds', async () => {
+    const put = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError('fetch failed'))
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: async () => '',
+      })
+
+    await putWithRetries(put, 'site/fonts/x.woff2', { retries: 3, delayMs: 0 })
+    expect(put).toHaveBeenCalledTimes(2)
+  })
 })
