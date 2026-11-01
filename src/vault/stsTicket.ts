@@ -10,6 +10,9 @@ export async function fetchStsTicket(options: {
   gate: string
 }): Promise<StsCreds> {
   const { fetch: fetchImpl, issuerUrl, gate } = options
+  if (!issuerUrl || issuerUrl === 'undefined') {
+    throw new Error('STS issuer not configured')
+  }
   const res = await fetchImpl(issuerUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

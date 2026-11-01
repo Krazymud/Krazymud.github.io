@@ -6,7 +6,7 @@ import { CosConflictError } from './cosVault'
 import * as cosVault from './cosVault'
 import { GitHubWriteError, SYNC_PENDING } from './github'
 import * as stsTicket from './stsTicket'
-import { GATE_DENIED } from './vaultErrors'
+import { GATE_DENIED, SYNC_UNAVAILABLE } from './vaultErrors'
 import type { FetchBytes } from './repo'
 import { makeTestVault, type TestVault } from './testVault'
 import type { ListContent, VaultFile, VaultManifest } from './types'
@@ -518,6 +518,19 @@ describe('useVaultMutate', () => {
     fireEvent.click(screen.getByRole('button', { name: '保存令牌' }))
     await waitFor(() => expect(fetchStsTicket).toHaveBeenCalled())
     expect(await screen.findByRole('alert')).toHaveTextContent(GATE_DENIED)
+  })
+
+  it('reports SYNC_UNAVAILABLE after saveToken when the STS issuer is unreachable', async () => {
+    await store.forgetToken()
+    fetchStsTicket.mockRejectedValue(new TypeError('Failed to fetch'))
+    mount()
+    await ready()
+    expect(screen.getByText('no-token')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '保存令牌' }))
+    await waitFor(() => expect(fetchStsTicket).toHaveBeenCalled())
+    expect(await screen.findByRole('alert')).toHaveTextContent(SYNC_UNAVAILABLE)
+    expect(await screen.findByText('还没同步')).toBeInTheDocument()
   })
 
   it('reaches ready read-only when IndexedDB cannot load the token', async () => {

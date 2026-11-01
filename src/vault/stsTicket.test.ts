@@ -36,6 +36,18 @@ describe('fetchStsTicket', () => {
       }),
     ).rejects.toEqual(new GitHubWriteError(GATE_DENIED))
   })
+
+  it('rejects a missing issuer URL before calling fetch', async () => {
+    const fetchImpl = vi.fn()
+    await expect(
+      fetchStsTicket({
+        fetch: fetchImpl as unknown as typeof fetch,
+        issuerUrl: '',
+        gate: 'secret',
+      }),
+    ).rejects.toThrow(/not configured/)
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
 })
 
 describe('ticketValid', () => {

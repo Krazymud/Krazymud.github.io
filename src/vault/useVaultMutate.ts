@@ -13,7 +13,7 @@ import { GitHubWriteError, SYNC_PENDING } from './github'
 import type { FetchBytes } from './repo'
 import { fetchStsTicket, ticketValid, type StsCreds } from './stsTicket'
 import type { VaultFile, VaultManifest } from './types'
-import { GATE_DENIED } from './vaultErrors'
+import { GATE_DENIED, SYNC_UNAVAILABLE } from './vaultErrors'
 import { loadPendingDoc, type WebStore } from './webStore'
 import { mergeWebDocs, openWebFile, type WebDoc } from './web'
 import {
@@ -48,6 +48,17 @@ type Apply = (working: WorkingVault) => Promise<WorkingVault>
 
 function isDenied(error: unknown): boolean {
   return error instanceof GitHubWriteError && error.message === GATE_DENIED
+}
+
+function isPendingSync(error: unknown): boolean {
+  return error instanceof GitHubWriteError && error.message === SYNC_PENDING
+}
+
+function tokenErrorFor(error: unknown): string | null {
+  if (isDenied(error)) return GATE_DENIED
+  // Soft conflict / generic write pending: keep the banner as「还没同步」only.
+  if (isPendingSync(error)) return null
+  return SYNC_UNAVAILABLE
 }
 
 // Records the working vault never touched come from an older snapshot; sending them would revive
@@ -251,7 +262,7 @@ export function useVaultMutate(options: {
       }
     } catch (error) {
       markUnsynced(true)
-      if (alive.current) setTokenError(isDenied(error) ? GATE_DENIED : null)
+      if (alive.current) setTokenError(tokenErrorFor(error))
     }
   }
 
@@ -342,7 +353,7 @@ export function useVaultMutate(options: {
       let latestFile = file
       let latestManifest = manifest
       let baseEtag: string | null = null
-      let denied = false
+      let bootTokenError: string | null = null
       if (savedGate) {
         try {
           const creds = await ensureTicket(savedGate)
@@ -358,7 +369,7 @@ export function useVaultMutate(options: {
           if (error instanceof CosNotFoundError) {
             baseEtag = null
           } else {
-            denied = isDenied(error)
+            bootTokenError = tokenErrorFor(error)
           }
         }
       }
@@ -425,9 +436,9 @@ export function useVaultMutate(options: {
       phaseRef.current = 'ready'
       setWorking(next)
       setToken(savedGate)
-      setTokenError(denied ? GATE_DENIED : null)
+      setTokenError(bootTokenError)
       setPhase('ready')
-      if (pending !== null || migrated) markUnsynced(true)
+      if (pending !== null || migrated || bootTokenError !== null) markUnsynced(true)
       if (migrated) await persist(next)
       if ((pending !== null || migrated) && savedGate !== null) await exclusive(syncPending)
     })()
@@ -486,7 +497,8 @@ export function useVaultMutate(options: {
         try {
           adopt(await rebase(workingRef.current, next))
         } catch (error) {
-          if (alive.current) setTokenError(isDenied(error) ? GATE_DENIED : null)
+          markUnsynced(true)
+          if (alive.current) setTokenError(tokenErrorFor(error))
         }
       })
     },
