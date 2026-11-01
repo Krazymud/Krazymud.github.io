@@ -31,15 +31,33 @@ function rateLimited(ip) {
   return entry.count > RATE_MAX_PER_WINDOW
 }
 
-function jsonResponse(statusCode, body, extraHeaders = {}) {
-  const cors = process.env.CORS_ORIGIN || '*'
+function requestOrigin(event) {
+  const headers = event.headers || event.headerParameters || {}
+  return headers.origin || headers.Origin || ''
+}
+
+/** CORS_ORIGIN: `*`, one origin, or comma-separated allowlist. */
+function corsHeaders(event) {
+  const configured = (process.env.CORS_ORIGIN || '*').trim()
+  const origin = String(requestOrigin(event) || '')
+  let allow = configured
+  if (configured !== '*') {
+    const allowed = configured.split(',').map((part) => part.trim()).filter(Boolean)
+    allow = allowed.includes(origin) ? origin : allowed[0] || '*'
+  }
+  return {
+    'Access-Control-Allow-Origin': allow,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  }
+}
+
+function jsonResponse(event, statusCode, body, extraHeaders = {}) {
   return {
     statusCode,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': cors,
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      ...corsHeaders(event),
       ...extraHeaders,
     },
     body: JSON.stringify(body),
@@ -50,14 +68,9 @@ exports.main_handler = async (event) => {
   const method =
     event.httpMethod || event.requestContext?.http?.method || event.method || 'POST'
   if (method === 'OPTIONS') {
-    const cors = process.env.CORS_ORIGIN || '*'
     return {
       statusCode: 204,
-      headers: {
-        'Access-Control-Allow-Origin': cors,
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
+      headers: corsHeaders(event),
       body: '',
     }
   }
@@ -67,16 +80,16 @@ exports.main_handler = async (event) => {
     body =
       typeof event.body === 'string' ? JSON.parse(event.body || '{}') : event.body || {}
   } catch {
-    return jsonResponse(400, { error: 'body' })
+    return jsonResponse(event, 400, { error: 'body' })
   }
 
   if (body.gate !== process.env.STS_GATE) {
-    return jsonResponse(401, { error: 'gate' })
+    return jsonResponse(event, 401, { error: 'gate' })
   }
 
   const ip = clientIp(event)
   if (rateLimited(ip)) {
-    return jsonResponse(429, { error: 'rate' })
+    return jsonResponse(event, 429, { error: 'rate' })
   }
 
   let credential
@@ -106,10 +119,10 @@ exports.main_handler = async (event) => {
       )
     })
   } catch {
-    return jsonResponse(500, { error: 'sts' })
+    return jsonResponse(event, 500, { error: 'sts' })
   }
 
-  return jsonResponse(200, {
+  return jsonResponse(event, 200, {
     secretId: credential.credentials.tmpSecretId,
     secretKey: credential.credentials.tmpSecretKey,
     sessionToken: credential.credentials.sessionToken,

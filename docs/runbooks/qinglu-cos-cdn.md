@@ -162,7 +162,7 @@ Upload `scf/sts-issuer.zip` to a **Node.js** SCF function (handler `index.main_h
 | `COS_SECRET_ID` | Parent CAM SecretId for STS |
 | `COS_SECRET_KEY` | Parent CAM SecretKey |
 | `STS_RESOURCE` | Full CAM resource ARN for `vault/*`, e.g. `qcs::cos:ap-guangzhou:uid/<APPID>:<bucket>/vault/*` |
-| `CORS_ORIGIN` | Site origin allowed by CORS (e.g. `https://your.cdn.domain`); use `*` only for smoke tests |
+| `CORS_ORIGIN` | Allowed browser origin(s): one URL, or comma-separated (e.g. `https://erinamae.site,https://krazymud.github.io`); `*` only for smoke tests |
 
 ### Responses
 
