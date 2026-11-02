@@ -16,11 +16,11 @@ function Ring({ id, fill, value, max, caption, label }: { id: string; fill: numb
       aria-valuemin={0}
       aria-valuemax={max}
       aria-valuetext={label}
-      className="flex flex-col items-center gap-1"
+      className="flex flex-col items-center gap-1.5"
     >
       <div className="relative h-16 w-16">
         <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90" aria-hidden>
-          <circle cx="32" cy="32" r={RADIUS} fill="none" stroke="var(--color-line)" strokeWidth="3" />
+          <circle cx="32" cy="32" r={RADIUS} fill="none" stroke="var(--color-line)" strokeWidth="2.5" />
           <circle
             data-testid={`ring-${id}`}
             data-fill={String(fill)}
@@ -28,16 +28,18 @@ function Ring({ id, fill, value, max, caption, label }: { id: string; fill: numb
             cy="32"
             r={RADIUS}
             fill="none"
-            stroke="var(--color-accent-hi)"
-            strokeWidth="3"
+            stroke="var(--color-glaze)"
+            strokeWidth="2.5"
             strokeLinecap="round"
             strokeDasharray={CIRCUMFERENCE}
             strokeDashoffset={CIRCUMFERENCE * (1 - fill)}
           />
         </svg>
-        <span className="absolute inset-0 flex items-center justify-center font-display text-xl font-bold tabular-nums">{value}</span>
+        <span className="absolute inset-0 flex items-center justify-center font-display text-xl font-bold tabular-nums">
+          {value}
+        </span>
       </div>
-      <span className="text-[10px] text-muted">{caption}</span>
+      <span className="text-[10px] tracking-[0.14em] text-muted">{caption}</span>
     </div>
   )
 }
@@ -47,25 +49,25 @@ export function Dashboard({ stats }: { stats: GarageStats }) {
   const masteredFill = stats.mastered === 0 ? 0 : stats.mastered % 100 === 0 ? 1 : (stats.mastered % 100) / 100
   const lit = stats.week.filter(Boolean).length
   return (
-    <div role="group" aria-label="学习进度" className="panel-ink flex items-center justify-between px-4 py-3">
+    <div role="group" aria-label="学习进度" className="panel-ink flex items-center justify-between px-4 py-4">
       <Ring id="streak" fill={streakFill} value={stats.streak} max={ceilTo(stats.streak, 7)} caption="连续" label={`连续打卡 ${stats.streak} 天`} />
-      <div className="flex flex-col items-center gap-2">
-        <div role="img" aria-label={`最近 7 天打卡 ${lit} 天`} className="flex gap-2">
+      <div className="flex flex-col items-center gap-2.5">
+        <div role="img" aria-label={`最近 7 天打卡 ${lit} 天`} className="flex items-center gap-1.5">
           {stats.week.map((done, i) => (
             <span
               key={i}
               data-testid={`day-${i}`}
               className={
                 done
-                  ? 'h-2.5 w-2.5 rounded-full bg-accent-hi'
+                  ? 'tea-ring tea-ring-lit'
                   : i === 6
-                    ? 'h-2.5 w-2.5 rounded-full border border-accent-hi animate-breathe'
-                    : 'h-2.5 w-2.5 rounded-full border border-line'
+                    ? 'tea-ring tea-ring-today animate-breathe'
+                    : 'tea-ring'
               }
             />
           ))}
         </div>
-        <span className="text-[10px] text-muted">本周</span>
+        <span className="text-[10px] tracking-[0.14em] text-muted">本周</span>
       </div>
       <Ring id="mastered" fill={masteredFill} value={stats.mastered} max={ceilTo(stats.mastered, 100)} caption="掌握" label={`已掌握 ${stats.mastered} 个词`} />
     </div>
