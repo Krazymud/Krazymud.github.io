@@ -17,33 +17,54 @@
     U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+/* Celadon tea-tray world: glaze ground, iron rim, porcelain panels. */
 @theme {
-  --color-ink: #eef1f5;
-  --color-panel: rgba(245, 248, 252, 0.5);
-  --color-line: #c5ccd6;
-  --color-fg: #1a2433;
-  --color-muted: #5c6570;
+  --color-ink: #d8e4dc;
+  --color-panel: rgba(244, 247, 243, 0.92);
+  --color-line: #8fa396;
+  --color-fg: #1a2420;
+  --color-muted: #4a5a52;
   --font-paper: 'LXGW WenKai', 'Songti SC', 'STSong', 'Noto Serif SC', ui-serif, serif;
   --font-latin: 'Source Serif 4', 'LXGW WenKai', ui-serif, serif;
   --font-display: var(--font-paper);
 }
 
 :root {
-  --accent: #1a2433;
-  --accent-hi: #243044;
+  --accent: #3a4840;
+  --accent-hi: #6b8f7e;
+  --porcelain: #f4f7f3;
+  --glaze: #6b8f7e;
+  --iron: #1a2420;
+  --selection: color-mix(in srgb, var(--glaze) 35%, white);
 }
 
 @theme inline {
   --color-accent: var(--accent);
   --color-accent-hi: var(--accent-hi);
+  --color-porcelain: var(--porcelain);
+  --color-glaze: var(--glaze);
+  --color-iron: var(--iron);
 }
 
 html,
 body {
-  background: var(--color-ink);
+  background:
+    radial-gradient(120% 80% at 12% 0%, #eef5ef 0%, transparent 55%),
+    radial-gradient(90% 70% at 100% 8%, #c5d4c8 0%, transparent 50%),
+    var(--color-ink);
   color: var(--color-fg);
   font-family: var(--font-paper);
   -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: var(--selection);
+  color: var(--color-fg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-hi);
+  outline-offset: 3px;
 }
 
 .vault-markdown p + p,
@@ -87,6 +108,7 @@ body {
 
 .vault-markdown a {
   text-decoration: underline;
+  text-underline-offset: 0.18em;
 }
 
 @theme {
@@ -122,6 +144,15 @@ body {
   }
 }
 
+@keyframes glaze-rise {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
 @utility animate-breathe {
   animation: breathe 2.4s ease-in-out infinite;
   @media (prefers-reduced-motion: reduce) {
@@ -134,10 +165,11 @@ body {
 }
 
 @utility btn-primary {
-  border: 1px solid var(--color-accent-hi);
-  background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+  border: 1px solid var(--color-accent);
+  background: color-mix(in srgb, var(--color-glaze) 22%, var(--porcelain));
+  color: var(--color-fg);
   min-height: 2.75rem;
-  border-radius: 0.5rem;
+  border-radius: 0.35rem;
   padding-inline: 1rem;
 }
 
@@ -146,40 +178,97 @@ body {
   background: transparent;
   color: var(--color-muted);
   min-height: 2.75rem;
-  border-radius: 0.5rem;
+  border-radius: 0.35rem;
 }
 
 @utility panel-ink {
-  border: 1px solid var(--color-line);
-  background: color-mix(in srgb, var(--color-panel) 90%, transparent);
-  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--color-line) 70%, transparent);
+  background: color-mix(in srgb, var(--porcelain) 88%, transparent);
+  border-radius: 0.35rem;
 }
 
+/* Porcelain work surface — keeps legacy class names for component compatibility. */
 .glass-panel {
-  background: rgba(245, 248, 252, 0.48);
-  border: 1px solid rgba(255, 255, 255, 0.75);
-  box-shadow:
-    0 8px 28px rgba(20, 20, 20, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(18px) saturate(1.15);
-  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  background: color-mix(in srgb, var(--porcelain) 86%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-line) 55%, transparent);
+  box-shadow: 0 10px 28px rgba(26, 36, 32, 0.06);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .glass-panel-solid {
-  background: rgba(238, 241, 245, 0.9);
+  background: color-mix(in srgb, var(--porcelain) 97%, var(--color-ink));
 }
 
 .glass-panel-nav {
-  background: rgba(245, 248, 252, 0.42);
+  background: color-mix(in srgb, var(--porcelain) 72%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-line) 65%, transparent);
+  box-shadow: none;
 }
 
 .home-hero-fade {
   background: linear-gradient(
     180deg,
-    #eef1f51f 0%,
-    #eef1f559 45%,
-    #eef1f5d1 100%
+    #d8e4dc1f 0%,
+    #d8e4dc59 45%,
+    #d8e4dcd1 100%
   );
+}
+
+/* Signature move: rising celadon glaze behind the daily CTA. */
+.glaze-cta {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.glaze-cta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  transform-origin: bottom;
+  transform: scaleY(var(--glaze-fill, 0));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--glaze) 18%, transparent) 0%,
+    color-mix(in srgb, var(--glaze) 42%, transparent) 100%
+  );
+  transition: transform 0.55s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glaze-cta::before {
+    transition: none;
+  }
+}
+
+.tea-ring {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 9999px;
+  border: 1.5px solid color-mix(in srgb, var(--glaze) 55%, var(--color-line));
+  background: transparent;
+}
+
+.tea-ring-lit {
+  border-color: var(--glaze);
+  background: color-mix(in srgb, var(--glaze) 55%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--glaze) 12%, transparent);
+}
+
+.tea-ring-today {
+  border-color: var(--accent-hi);
+}
+
+.brand-seal {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 9999px;
+  background: var(--glaze);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--glaze) 18%, transparent);
+  vertical-align: middle;
 }
 
 /* A 融边: ink bed + paper-tinted blur + eased dissolve on the 16:9 plate. */
@@ -187,12 +276,12 @@ body {
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: #eef1f5;
+  background: #d8e4dc;
 }
 
 .sketch-ambience {
   transform: scale(1.4);
-  filter: blur(80px) saturate(0.65) brightness(1.1);
+  filter: blur(80px) saturate(0.7) brightness(1.05);
   opacity: 0.55;
   will-change: filter, transform;
 }
@@ -252,15 +341,15 @@ body {
   position: absolute;
   inset: 0;
   z-index: 1;
-  opacity: 0.028;
+  opacity: 0.03;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
   mix-blend-mode: multiply;
 }
 
 html[data-sketch-fit='a'] .glass-panel {
-  background: rgba(245, 248, 252, 0.34);
+  background: color-mix(in srgb, var(--porcelain) 78%, transparent);
 }
 
 html[data-sketch-fit='a'] .glass-panel-nav {
-  background: rgba(245, 248, 252, 0.3);
+  background: color-mix(in srgb, var(--porcelain) 62%, transparent);
 }

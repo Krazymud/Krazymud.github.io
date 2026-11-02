@@ -27,7 +27,7 @@ function SpeakerIcon({ muted }: { muted: boolean }) {
 }
 
 const INNER_MAIN =
-  'glass-panel glass-panel-solid relative z-10 mx-auto mt-4 flex w-full max-w-md flex-col rounded-lg px-5 pt-6 pb-10'
+  'glass-panel glass-panel-solid relative z-10 mx-auto mt-5 flex w-full max-w-md flex-col rounded-md px-5 pt-7 pb-10'
 
 export function Layout() {
   const { pathname } = useLocation()
@@ -64,8 +64,11 @@ export function Layout() {
       }
     >
       <SceneHost scene={scene} />
-      <header className="glass-panel glass-panel-nav relative z-10 mx-5 mt-4 flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-xs">
-        <span className="font-display text-accent-hi">{copy.siteName}</span>
+      <header className="glass-panel glass-panel-nav relative z-10 mx-5 mt-4 flex items-center justify-between gap-3 rounded-md px-4 py-3 text-xs">
+        <span className="font-display text-base tracking-[0.22em] text-fg">
+          {copy.siteName}
+          <span className="brand-seal ml-2" aria-hidden />
+        </span>
         <nav className="flex items-center gap-4">
           {NAV.map((item) => (
             <NavLink
@@ -73,7 +76,11 @@ export function Layout() {
               to={item.to}
               end={item.end}
               onClick={() => void play('tap')}
-              className={({ isActive }) => (isActive ? 'border-b border-accent-hi text-fg' : 'text-muted hover:text-fg')}
+              className={({ isActive }) =>
+                isActive
+                  ? 'border-b border-glaze pb-0.5 text-fg'
+                  : 'text-muted hover:text-fg'
+              }
             >
               {item.label}
             </NavLink>
@@ -90,7 +97,7 @@ export function Layout() {
         </nav>
       </header>
       {saveFailed && (
-        <p role="alert" className="glass-panel relative z-10 mx-5 mt-3 rounded-lg px-3 py-2 text-xs">
+        <p role="alert" className="glass-panel relative z-10 mx-5 mt-3 rounded-md px-3 py-2 text-xs">
           {copy.layout.progressSaveFailed}
         </p>
       )}
@@ -106,9 +113,9 @@ export function Layout() {
         <motion.main
           key={pathname}
           className={INNER_MAIN}
-          initial={{ opacity: 0, y: 8 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.26, ease: 'easeOut' }}
+          transition={{ duration: 0.32, ease: [0.19, 1, 0.22, 1] }}
         >
           <Outlet />
         </motion.main>
