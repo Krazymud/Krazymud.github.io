@@ -22,11 +22,12 @@ describe('DarkroomApp', () => {
 
   it('shows unlock then ready after successful passphrase', async () => {
     const vault = await makeTestVault()
-    render(<DarkroomApp fetchBytes={vault.fetchBytes} keyStore={null} />)
+    render(<DarkroomApp fetchBytes={vault.fetchBytes} keyStore={null} webStore={null} />)
     expect(await screen.findByLabelText('口令')).toBeTruthy()
     expect(screen.queryByTestId('darkroom-ready')).toBeNull()
     await enter(TEST_PASSPHRASE)
     expect(await screen.findByTestId('darkroom-ready')).toBeInTheDocument()
+    expect(screen.getByTestId('note-count').textContent).toBe('1')
   })
 
   it('stays locked on a wrong passphrase', async () => {

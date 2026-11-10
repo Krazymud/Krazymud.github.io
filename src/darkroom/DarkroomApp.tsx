@@ -4,9 +4,11 @@ import { copy } from '../config/copy'
 import { DecryptError } from '../vault/crypto'
 import { defaultKeyStore, type KeyStore } from '../vault/keyStore'
 import { fetchVaultBytes, loadVaultFile, unlockWithKey, unlockWithPassphrase, type FetchBytes, type VaultSession } from '../vault/repo'
+import type { WebStore } from '../vault/webStore'
 import type { VaultFile } from '../vault/types'
 import { DarkroomCanvas } from './scene/DarkroomCanvas'
 import { UnlockGate } from './overlays/UnlockGate'
+import { DeskCounts, VaultBridge } from './VaultBridge'
 
 type DarkroomState =
   | { status: 'loading' }
@@ -18,6 +20,7 @@ type DarkroomState =
 interface DarkroomAppProps {
   fetchBytes?: FetchBytes
   keyStore?: KeyStore | null
+  webStore?: WebStore | null
 }
 
 function Notice({ children }: { children: ReactNode }) {
@@ -29,7 +32,7 @@ function Notice({ children }: { children: ReactNode }) {
   )
 }
 
-export function DarkroomApp({ fetchBytes = fetchVaultBytes, keyStore }: DarkroomAppProps) {
+export function DarkroomApp({ fetchBytes = fetchVaultBytes, keyStore, webStore }: DarkroomAppProps) {
   const [store] = useState(() => (keyStore === undefined ? defaultKeyStore() : keyStore))
   const [state, setState] = useState<DarkroomState>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
@@ -75,6 +78,11 @@ export function DarkroomApp({ fetchBytes = fetchVaultBytes, keyStore }: Darkroom
     [store],
   )
 
+  const lock = useCallback(() => {
+    void store?.clear().catch(() => undefined)
+    setState((prev) => (prev.status === 'ready' ? { status: 'locked', file: prev.file } : prev))
+  }, [store])
+
   switch (state.status) {
     case 'loading':
       return <p className="mt-10 text-center text-sm text-muted">{copy.darkroom.opening}</p>
@@ -100,9 +108,12 @@ export function DarkroomApp({ fetchBytes = fetchVaultBytes, keyStore }: Darkroom
       return <UnlockGate canRemember={store !== null} onUnlock={(passphrase, remember) => unlock(state.file, passphrase, remember)} />
     case 'ready':
       return (
-        <div data-testid="darkroom-ready">
-          <DarkroomCanvas />
-        </div>
+        <VaultBridge session={state.session} file={state.file} fetchBytes={fetchBytes} onLock={lock} webStore={webStore}>
+          <div data-testid="darkroom-ready" className="relative">
+            <DarkroomCanvas />
+            <DeskCounts />
+          </div>
+        </VaultBridge>
       )
   }
 }
