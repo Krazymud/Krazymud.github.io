@@ -12,6 +12,7 @@ import { DarkroomCanvas } from '../scene/DarkroomCanvas'
 import { CreditsScene } from './CreditsScene'
 import { LettersBeat } from './LettersBeat'
 import { OpeningScene } from './OpeningScene'
+import { BookCoverBeat } from './BookCoverScene'
 import { TorchComicBeat } from './TorchComicScene'
 import { TrayWallBeat } from './TrayWallBeat'
 import { REEL_ORDER, type ReelSceneId } from './types'
@@ -38,35 +39,6 @@ export function useReel(): ReelContextValue {
 
 interface ReelStageProps {
   children?: ReactNode
-}
-
-function sceneLabel(id: ReelSceneId): string {
-  const labels: Record<ReelSceneId, string> = {
-    opening: '片头',
-    letters: '书信',
-    desk: '暗房桌面',
-    trayWall: '显影墙',
-    torch: '火把',
-    book: '相册',
-    credits: '片尾',
-  }
-  return labels[id]
-}
-
-function PlaceholderBeat({ id, onContinue }: { id: ReelSceneId; onContinue: () => void }) {
-  return (
-    <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 p-8 text-fg">
-      <p className="font-display text-sm text-muted">{sceneLabel(id)}</p>
-      <p className="text-xs text-muted">（占位 · Task 7+）</p>
-      <button
-        type="button"
-        className="border border-accent-hi px-6 py-2 text-sm"
-        onClick={onContinue}
-      >
-        {id === 'opening' ? '启封卷轴' : '继续'}
-      </button>
-    </div>
-  )
 }
 
 function HeavySceneShell({ id, mounted, children }: { id: ReelSceneId; mounted: boolean; children: ReactNode }) {
@@ -183,7 +155,7 @@ export function ReelStage({ children }: ReelStageProps) {
         </HeavySceneShell>
 
         <HeavySceneShell id="book" mounted={bookMounted}>
-          {scene === 'book' ? <PlaceholderBeat id="book" onContinue={next} /> : null}
+          {scene === 'book' ? <BookCoverBeat /> : null}
         </HeavySceneShell>
 
         {children}
