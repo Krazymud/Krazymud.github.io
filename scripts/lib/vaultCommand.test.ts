@@ -42,6 +42,7 @@ let src = ''
 let out = ''
 
 beforeEach(async () => {
+  vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
   root = await mkdtemp(join(tmpdir(), 'vault-test-'))
   src = join(root, 'vault-src')
   out = join(root, 'public', 'vault')
@@ -53,6 +54,7 @@ beforeEach(async () => {
 })
 
 afterEach(async () => {
+  vi.restoreAllMocks()
   rmFault.fails = null
   await rm(root, { recursive: true, force: true })
 })
