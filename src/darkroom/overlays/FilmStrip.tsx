@@ -8,7 +8,7 @@ import { useBlobUrl } from './useBlobUrl'
 function Thumb({ photo, onPick }: { photo: PhotoEntry; onPick: () => void }) {
   const url = useBlobUrl(photo.thumb)
   return (
-    <button type="button" data-testid="strip-frame" data-source={photo.source} onClick={onPick} className="h-16 w-20 shrink-0 border border-line bg-black/50">
+    <button type="button" data-testid="strip-frame" data-source={photo.source} onClick={onPick} className="dr-btn h-16 w-20 shrink-0 overflow-hidden p-0">
       {url && <img src={url} alt={photo.caption || '照片'} className="h-full w-full object-cover" />}
     </button>
   )
@@ -35,10 +35,10 @@ export function FilmOverlay({ mode, onClose }: { mode: 'rolls' | 'lightbox'; onC
     const bySource = new Map(photos.map((p) => [p.source, p]))
     return roll.photoSources.flatMap((s) => bySource.get(s) ?? [])
   }, [rolls, photos, activeRollId])
-  const frame = mode === 'lightbox' ? stripPhotos.find((p) => p.source === frameSource) ?? null : null
+  const frame = stripPhotos.find((p) => p.source === frameSource) ?? null
 
   return (
-    <section data-testid="film-overlay" role="dialog" aria-label={mode === 'rolls' ? '胶片卷' : '灯箱'} className="absolute inset-x-8 bottom-8 z-10 bg-black/60 p-3">
+    <section data-testid="film-overlay" role="dialog" aria-label={mode === 'rolls' ? '胶片卷' : '灯箱'} className="dr-panel absolute inset-x-3 bottom-3 z-10 p-3 sm:inset-x-8 sm:bottom-8">
       <div className="mb-2 flex items-start gap-2">
         <div className="flex-1">
           <RollSelect
@@ -50,11 +50,12 @@ export function FilmOverlay({ mode, onClose }: { mode: 'rolls' | 'lightbox'; onC
             }}
           />
         </div>
-        <button type="button" onClick={onClose} className="border border-line px-3 py-1 text-xs text-muted">
+        <button type="button" onClick={onClose} className="dr-btn px-3 py-2 text-xs">
           放回
         </button>
       </div>
       {activeRollId && <FilmStrip photos={stripPhotos} onPick={(p) => setFrameSource(p.source)} />}
+      {activeRollId && !frame && stripPhotos.length > 0 && <p className="dr-muted mt-2 text-xs">点帧看大图</p>}
       {frame && <FrameView photo={frame} onClose={() => setFrameSource(null)} />}
     </section>
   )

@@ -5,12 +5,7 @@ export function RollSelect({ rolls, activeRollId, onSelect }: { rolls: FilmRoll[
     <ul className="flex flex-wrap gap-2 text-xs">
       {rolls.map((roll) => (
         <li key={roll.id}>
-          <button
-            type="button"
-            aria-pressed={roll.id === activeRollId}
-            onClick={() => onSelect(roll.id)}
-            className="border border-line px-3 py-1 text-fg aria-pressed:bg-accent/30"
-          >
+          <button type="button" aria-pressed={roll.id === activeRollId} onClick={() => onSelect(roll.id)} className="dr-btn px-3 py-2">
             {roll.title}
           </button>
         </li>

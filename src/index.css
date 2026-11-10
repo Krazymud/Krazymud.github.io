@@ -173,6 +173,54 @@ body {
   background: rgba(245, 248, 252, 0.42);
 }
 
+/* Darkroom overlays sit on a near-black 3D scene; the global tokens above are the light theme. */
+.dr-panel {
+  background: rgba(16, 11, 8, 0.88);
+  border: 1px solid rgba(255, 232, 204, 0.22);
+  color: #f6ecdb;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.dr-muted {
+  color: #c4b39c;
+}
+
+.dr-warn {
+  color: #ffcf8f;
+}
+
+.dr-btn {
+  border: 1px solid rgba(255, 232, 204, 0.38);
+  background: rgba(255, 232, 204, 0.08);
+  color: #f6ecdb;
+}
+
+.dr-btn:hover:not(:disabled) {
+  background: rgba(255, 232, 204, 0.16);
+}
+
+.dr-btn[aria-pressed='true'] {
+  border-color: #ffb27a;
+  background: rgba(255, 150, 90, 0.3);
+}
+
+.dr-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.dr-input {
+  border: 1px solid rgba(255, 232, 204, 0.38);
+  background: rgba(0, 0, 0, 0.5);
+  color: #f6ecdb;
+}
+
+.dr-input::placeholder {
+  color: #a89782;
+}
+
 .home-hero-fade {
   background: linear-gradient(
     180deg,

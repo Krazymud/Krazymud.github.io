@@ -26,6 +26,10 @@ export type DarkroomVault = {
   saveToken: (gate: string) => Promise<void>
   forgetToken: () => Promise<void>
   unsynced: boolean
+  canEdit: boolean
+  tokenError: string | null
+  syncing: boolean
+  retrySync: () => Promise<void>
   lock: () => void
 }
 
@@ -85,6 +89,10 @@ export function VaultBridge({ session, file, fetchBytes, onLock, webStore, webFe
     saveToken: vault.saveToken,
     forgetToken: vault.forgetToken,
     unsynced: vault.unsynced,
+    canEdit: vault.canEdit,
+    tokenError: vault.tokenError,
+    syncing: vault.syncing,
+    retrySync: vault.retrySync,
     lock: onLock,
   }
   return <VaultBridgeContext.Provider value={value}>{children}</VaultBridgeContext.Provider>
@@ -99,7 +107,7 @@ export function useDarkroomVault(): DarkroomVault {
 export function DeskCounts() {
   const { rolls, notes } = useDarkroomVault()
   return (
-    <p data-testid="desk-counts" className="pointer-events-none absolute left-4 top-4 text-xs text-muted">
+    <p data-testid="desk-counts" className="dr-muted pointer-events-none absolute left-4 top-4 z-10 text-xs">
       <span data-testid="roll-count">{rolls.length}</span> 卷胶片 · <span data-testid="note-count">{notes.length}</span> 则笔记
     </p>
   )

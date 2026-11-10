@@ -52,4 +52,14 @@ describe('FilmOverlay', () => {
     await waitFor(() => expect(vault.readBlob).toHaveBeenCalledWith('f3'))
     expect(await screen.findByTestId('frame-view')).toBeTruthy()
   })
+
+  it('rolls mode opens the large frame when a strip frame is clicked', async () => {
+    render(<FilmOverlay mode="rolls" onClose={() => undefined} />)
+    fireEvent.click(screen.getByText('海滨'))
+    expect(await screen.findByText('点帧看大图')).toBeTruthy()
+    const frames = await screen.findAllByTestId('strip-frame')
+    fireEvent.click(frames[0])
+    await waitFor(() => expect(vault.readBlob).toHaveBeenCalledWith('f2'))
+    expect(await screen.findByTestId('frame-view')).toBeTruthy()
+  })
 })

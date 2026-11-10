@@ -33,4 +33,23 @@ describe('VaultBridge', () => {
     screen.getByRole('button').click()
     expect(onLock).toHaveBeenCalled()
   })
+
+  it('exposes the edit gate: no token means canEdit is false', async () => {
+    const vault = await makeTestVault()
+    const session = await unlockWithKey(vault.file, vault.dek)
+    function Gate() {
+      const v = useDarkroomVault()
+      return (
+        <p data-testid="gate">
+          {String(v.loading)}:{String(v.canEdit)}:{String(v.tokenSaved)}:{String(v.syncing)}:{String(v.tokenError)}:{typeof v.retrySync}
+        </p>
+      )
+    }
+    render(
+      <VaultBridge session={session} file={vault.file} fetchBytes={vault.fetchBytes} onLock={() => undefined} webStore={null}>
+        <Gate />
+      </VaultBridge>,
+    )
+    await waitFor(() => expect(screen.getByTestId('gate').textContent).toBe('false:false:false:false:null:function'))
+  })
 })

@@ -1,14 +1,25 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ListEntry, ListItem, NoteEntry } from '../../vault/types'
+import { copy } from '../../config/copy'
 import { localCalendarToday } from '../../vault/web'
+import { editBlockedMessage, failureMessage, gateOf } from '../mutateCopy'
 import { useDarkroomVault } from '../VaultBridge'
+import { EditNotice } from './EditNotice'
 
 type Mode = 'notes' | 'lists'
 
 const decoder = new TextDecoder()
 
-function NoteLetter({ note }: { note: NoteEntry | null }) {
-  const { readBlob, saveNote, deleteNote } = useDarkroomVault()
+interface LetterProps {
+  onCreated: () => void
+  onDeleted: () => void
+}
+
+function NoteLetter({ note, onCreated, onDeleted }: LetterProps & { note: NoteEntry | null }) {
+  const vault = useDarkroomVault()
+  const { readBlob, saveNote, deleteNote } = vault
+  const gate = gateOf(vault)
+  const blocked = editBlockedMessage(gate) !== null
   const [title, setTitle] = useState(note?.title ?? '')
   const [date, setDate] = useState(note?.date ?? localCalendarToday(new Date()))
   const [body, setBody] = useState('')
@@ -28,7 +39,15 @@ function NoteLetter({ note }: { note: NoteEntry | null }) {
 
   async function save() {
     const result = await saveNote({ source: note?.source, title, date, body })
-    setStatus(result.ok ? '已保存' : `保存失败：${result.reason}`)
+    setStatus(result.ok ? '已保存' : failureMessage(result, gate))
+    if (result.ok && !note) onCreated()
+  }
+
+  async function remove() {
+    if (!note) return
+    const result = await deleteNote(note.source)
+    if (result.ok) onDeleted()
+    else setStatus(failureMessage(result, gate))
   }
 
   return (
@@ -44,9 +63,9 @@ function NoteLetter({ note }: { note: NoteEntry | null }) {
       </label>
       <textarea aria-label="正文" value={body} onChange={(e) => setBody(e.target.value)} rows={8} className="mt-3 block w-full bg-transparent font-mono text-sm" />
       <div className="mt-2 flex items-center gap-3 text-xs">
-        <button type="button" onClick={save} className="border border-[#2a2218] px-3 py-1">保存</button>
+        <button type="button" disabled={blocked} onClick={() => void save()} className="border border-[#2a2218] px-3 py-2 disabled:opacity-40">保存</button>
         {note && (
-          <button type="button" onClick={() => void deleteNote(note.source)} className="border border-[#8a2a1f] px-3 py-1 text-[#8a2a1f]">
+          <button type="button" disabled={blocked} onClick={() => void remove()} className="border border-[#8a2a1f] px-3 py-2 text-[#8a2a1f] disabled:opacity-40">
             撕掉
           </button>
         )}
@@ -65,8 +84,11 @@ function parseItems(text: string): ListItem[] {
   }
 }
 
-function ListLetter({ list }: { list: ListEntry | null }) {
-  const { readBlob, saveList, deleteList, toggleListItem } = useDarkroomVault()
+function ListLetter({ list, onCreated, onDeleted }: LetterProps & { list: ListEntry | null }) {
+  const vault = useDarkroomVault()
+  const { readBlob, saveList, deleteList, toggleListItem } = vault
+  const gate = gateOf(vault)
+  const blocked = editBlockedMessage(gate) !== null
   const [title, setTitle] = useState(list?.title ?? '')
   const [items, setItems] = useState<ListItem[]>([])
   const [draft, setDraft] = useState('')
@@ -90,7 +112,7 @@ function ListLetter({ list }: { list: ListEntry | null }) {
     const result = await toggleListItem(list.source, index, done)
     if (!result.ok) {
       setItems((prev) => prev.map((item, i) => (i === index ? { ...item, done: !done } : item)))
-      setStatus(`保存失败：${result.reason}`)
+      setStatus(failureMessage(result, gate))
     }
   }
 
@@ -101,7 +123,15 @@ function ListLetter({ list }: { list: ListEntry | null }) {
       setItems(next)
       setDraft('')
     }
-    setStatus(result.ok ? '已保存' : `保存失败：${result.reason}`)
+    setStatus(result.ok ? '已保存' : failureMessage(result, gate))
+    if (result.ok && !list) onCreated()
+  }
+
+  async function remove() {
+    if (!list) return
+    const result = await deleteList(list.source)
+    if (result.ok) onDeleted()
+    else setStatus(failureMessage(result, gate))
   }
 
   return (
@@ -115,7 +145,7 @@ function ListLetter({ list }: { list: ListEntry | null }) {
         {items.map((item, i) => (
           <li key={i}>
             <label className="flex items-center gap-2">
-              <input type="checkbox" checked={item.done} onChange={(e) => void toggle(i, e.target.checked)} />
+              <input type="checkbox" checked={item.done} disabled={blocked || !list} onChange={(e) => void toggle(i, e.target.checked)} />
               <span className={item.done ? 'line-through opacity-60' : ''}>{item.text}</span>
             </label>
           </li>
@@ -126,9 +156,9 @@ function ListLetter({ list }: { list: ListEntry | null }) {
         <textarea aria-label="新增条目" value={draft} onChange={(e) => setDraft(e.target.value)} rows={3} className="mt-1 block w-full border border-[#2f5d4a] bg-white/60 px-1" />
       </label>
       <div className="mt-2 flex items-center gap-3 text-xs">
-        <button type="button" onClick={save} className="border border-[#2f5d4a] px-3 py-1">保存</button>
+        <button type="button" disabled={blocked} onClick={() => void save()} className="border border-[#2f5d4a] px-3 py-2 disabled:opacity-40">保存</button>
         {list && (
-          <button type="button" onClick={() => void deleteList(list.source)} className="border border-[#8a2a1f] px-3 py-1 text-[#8a2a1f]">
+          <button type="button" disabled={blocked} onClick={() => void remove()} className="border border-[#8a2a1f] px-3 py-2 text-[#8a2a1f] disabled:opacity-40">
             作废
           </button>
         )}
@@ -138,55 +168,116 @@ function ListLetter({ list }: { list: ListEntry | null }) {
   )
 }
 
-export function LetterOverlay({ onClose, initialMode = 'notes' }: { onClose: () => void; initialMode?: Mode }) {
-  const { notes, lists } = useDarkroomVault()
+export function LetterOverlay({ onClose, onNeedGate, initialMode = 'notes' }: { onClose: () => void; onNeedGate?: () => void; initialMode?: Mode }) {
+  const vault = useDarkroomVault()
+  const { notes, lists } = vault
+  const gate = gateOf(vault)
   const [mode, setMode] = useState<Mode>(initialMode)
   const [noteSource, setNoteSource] = useState<string | 'new' | null>(null)
   const [listSource, setListSource] = useState<string | 'new' | null>(null)
+  const [noteCreated, setNoteCreated] = useState(false)
+  const [listCreated, setListCreated] = useState(false)
+  const noteBase = useRef<Set<string>>(new Set())
+  const listBase = useRef<Set<string>>(new Set())
 
   const note = notes.find((n) => n.source === noteSource) ?? null
   const list = lists.find((l) => l.source === listSource) ?? null
 
+  useEffect(() => {
+    if (!noteCreated || noteSource !== 'new') return
+    const created = notes.find((n) => !noteBase.current.has(n.source))
+    if (created) {
+      setNoteSource(created.source)
+      setNoteCreated(false)
+    }
+  }, [noteCreated, noteSource, notes])
+
+  useEffect(() => {
+    if (!listCreated || listSource !== 'new') return
+    const created = lists.find((l) => !listBase.current.has(l.source))
+    if (created) {
+      setListSource(created.source)
+      setListCreated(false)
+    }
+  }, [listCreated, listSource, lists])
+
   return (
-    <section data-testid="letter-overlay" role="dialog" aria-label="信件" className="absolute inset-y-8 right-8 z-10 w-[min(26rem,90vw)] overflow-y-auto">
+    <section data-testid="letter-overlay" role="dialog" aria-label="信件" className="absolute bottom-3 right-3 top-20 z-10 w-[min(26rem,calc(100vw-1.5rem))] overflow-y-auto sm:bottom-8 sm:right-8">
       <div className="mb-2 flex gap-2 text-xs">
-        <button type="button" aria-pressed={mode === 'notes'} onClick={() => setMode('notes')} className="border border-line px-3 py-1 text-fg aria-pressed:bg-accent/30">
+        <button type="button" aria-pressed={mode === 'notes'} onClick={() => setMode('notes')} className="dr-btn dr-panel px-3 py-2">
           笔记
         </button>
-        <button type="button" aria-pressed={mode === 'lists'} onClick={() => setMode('lists')} className="border border-line px-3 py-1 text-fg aria-pressed:bg-accent/30">
+        <button type="button" aria-pressed={mode === 'lists'} onClick={() => setMode('lists')} className="dr-btn dr-panel px-3 py-2">
           清单
         </button>
-        <button type="button" onClick={onClose} className="ml-auto border border-line px-3 py-1 text-muted">
-          放回
+        <button type="button" onClick={onClose} className="dr-btn dr-panel ml-auto px-3 py-2">
+          {copy.darkroom.back}
         </button>
       </div>
+      <EditNotice message={editBlockedMessage(gate)} gate={gate} onNeedGate={onNeedGate} />
       {mode === 'notes' ? (
         <>
-          <ul className="mb-2 space-y-1 text-xs text-fg">
+          <ul className="dr-panel mb-2 space-y-1 p-2 text-xs">
             {notes.map((n) => (
               <li key={n.source}>
-                <button type="button" onClick={() => setNoteSource(n.source)}>{n.title}</button>
+                <button type="button" aria-current={n.source === noteSource} onClick={() => setNoteSource(n.source)} className="py-1 text-left aria-[current=true]:underline">
+                  {n.title}
+                </button>
               </li>
             ))}
+            {notes.length === 0 && <li className="dr-muted">还没有信</li>}
           </ul>
-          <button type="button" onClick={() => setNoteSource('new')} className="mb-2 border border-line px-3 py-1 text-xs text-fg">
+          <button
+            type="button"
+            onClick={() => {
+              noteBase.current = new Set(notes.map((n) => n.source))
+              setNoteCreated(false)
+              setNoteSource('new')
+            }}
+            className="dr-btn dr-panel mb-2 px-3 py-2 text-xs"
+          >
             空白信纸
           </button>
-          {noteSource !== null && <NoteLetter key={noteSource} note={note} />}
+          {noteSource !== null && (
+            <NoteLetter
+              key={noteSource}
+              note={note}
+              onCreated={() => setNoteCreated(true)}
+              onDeleted={() => setNoteSource(null)}
+            />
+          )}
         </>
       ) : (
         <>
-          <ul className="mb-2 space-y-1 text-xs text-fg">
+          <ul className="dr-panel mb-2 space-y-1 p-2 text-xs">
             {lists.map((l) => (
               <li key={l.source}>
-                <button type="button" onClick={() => setListSource(l.source)}>{l.title}</button>
+                <button type="button" aria-current={l.source === listSource} onClick={() => setListSource(l.source)} className="py-1 text-left aria-[current=true]:underline">
+                  {l.title}
+                </button>
               </li>
             ))}
+            {lists.length === 0 && <li className="dr-muted">还没有清单</li>}
           </ul>
-          <button type="button" onClick={() => setListSource('new')} className="mb-2 border border-line px-3 py-1 text-xs text-fg">
+          <button
+            type="button"
+            onClick={() => {
+              listBase.current = new Set(lists.map((l) => l.source))
+              setListCreated(false)
+              setListSource('new')
+            }}
+            className="dr-btn dr-panel mb-2 px-3 py-2 text-xs"
+          >
             空白表格
           </button>
-          {listSource !== null && <ListLetter key={listSource} list={list} />}
+          {listSource !== null && (
+            <ListLetter
+              key={listSource}
+              list={list}
+              onCreated={() => setListCreated(true)}
+              onDeleted={() => setListSource(null)}
+            />
+          )}
         </>
       )}
     </section>
