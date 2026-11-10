@@ -6,7 +6,7 @@ vi.mock('../scene/DarkroomCanvas', () => ({
   DarkroomCanvas: () => <div data-testid="darkroom-canvas" />,
 }))
 
-const cta = /启封卷轴|继续|roll/i
+const cta = /启封卷轴|启卷|继续|roll/i
 
 function stubReducedMotion(reduced: boolean) {
   const matchMedia = vi.fn().mockImplementation((query: string) => ({

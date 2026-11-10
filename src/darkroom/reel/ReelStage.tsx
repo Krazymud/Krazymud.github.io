@@ -9,6 +9,8 @@ import {
   type ReactNode,
 } from 'react'
 import { DarkroomCanvas } from '../scene/DarkroomCanvas'
+import { CreditsScene } from './CreditsScene'
+import { OpeningScene } from './OpeningScene'
 import { REEL_ORDER, type ReelSceneId } from './types'
 
 const HEAVY_SCENES = new Set<ReelSceneId>(['desk', 'trayWall', 'book'])
@@ -151,10 +153,10 @@ export function ReelStage({ children }: ReelStageProps) {
   return (
     <ReelContext.Provider value={value}>
       <div data-testid="reel-scene" data-scene={scene} className="relative">
-        {scene === 'opening' && <PlaceholderBeat id="opening" onContinue={next} />}
+        {scene === 'opening' && <OpeningScene onContinue={next} beltUrls={[]} />}
         {scene === 'letters' && <PlaceholderBeat id="letters" onContinue={next} />}
         {scene === 'torch' && <PlaceholderBeat id="torch" onContinue={next} />}
-        {scene === 'credits' && <PlaceholderBeat id="credits" onContinue={next} />}
+        {scene === 'credits' && <CreditsScene onContinue={next} stillUrls={[]} />}
 
         <HeavySceneShell id="desk" mounted={deskMounted}>
           <div className={scene === 'desk' ? undefined : 'hidden'} aria-hidden={scene !== 'desk'}>
