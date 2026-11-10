@@ -1,0 +1,14 @@
+Darkroom reel radio — music licensing
+========================================
+
+Tracks in this folder MUST be public-domain recordings or works you own the
+rights to distribute on the public web. Do not copy proprietary or CDN-hosted
+audio from third-party gift sites (e.g. roll.giadaserena.top).
+
+Current files (tone-a.mp3, tone-b.mp3, tone-c.mp3) are short synthetic
+placeholder tones generated locally with ffmpeg for UI wiring and automated
+tests only. They are labeled in the playlist as 「测试曲 A/B/C」.
+
+Before production deploy, replace these placeholders with properly licensed
+public-domain performances (see Musopen, IMSLP, or your own recordings) and
+update src/darkroom/reel/playlist.ts titles accordingly.

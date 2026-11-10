@@ -14,7 +14,9 @@ import { LettersBeat } from './LettersBeat'
 import { OpeningScene } from './OpeningScene'
 import { BookCoverBeat } from './BookCoverScene'
 import { TorchComicBeat } from './TorchComicScene'
+import { ApertureMenu } from './ApertureMenu'
 import { PolaroidTakeHomeProvider } from './PolaroidTakeHome'
+import { ReelRadioHud, ReelRadioProvider } from './ReelRadio'
 import { TrayWallBeat } from './TrayWallBeat'
 import { REEL_ORDER, type ReelSceneId } from './types'
 
@@ -128,6 +130,7 @@ export function ReelStage({ children }: ReelStageProps) {
 
   return (
     <PolaroidTakeHomeProvider>
+      <ReelRadioProvider>
       <ReelContext.Provider value={value}>
       <div data-testid="reel-scene" data-scene={scene} className="relative">
         {scene === 'opening' && <OpeningScene onContinue={next} beltUrls={[]} />}
@@ -162,6 +165,9 @@ export function ReelStage({ children }: ReelStageProps) {
 
         {children}
 
+        <ApertureMenu />
+        <ReelRadioHud />
+
         {veil && !reduced ? (
           <div
             data-testid="reel-veil"
@@ -176,6 +182,7 @@ export function ReelStage({ children }: ReelStageProps) {
         ) : null}
       </div>
     </ReelContext.Provider>
+      </ReelRadioProvider>
     </PolaroidTakeHomeProvider>
   )
 }

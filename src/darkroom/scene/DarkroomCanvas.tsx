@@ -1,5 +1,6 @@
 import { Canvas } from '@react-three/fiber'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { clarityToDpr, onClarityChange, onLightModeChange, readClarity, readLightMode } from '../reel/reelPrefs'
 import * as THREE from 'three'
 import { CAMERA_FOV, anchorForFocus, type FocusId } from './cameraFocus'
 import { CameraRig } from './CameraRig'
@@ -25,6 +26,12 @@ export function DarkroomCanvas() {
   const [syncOpen, setSyncOpen] = useState(false)
   const [lost, setLost] = useState(false)
   const [camera] = useState(initialCamera)
+  const [dpr, setDpr] = useState(() => clarityToDpr(readClarity()))
+  const [shadows, setShadows] = useState(() => readLightMode() === 'full')
+
+  useEffect(() => onClarityChange((level) => setDpr(clarityToDpr(level))), [])
+  useEffect(() => onLightModeChange((mode) => setShadows(mode === 'full')), [])
+
   const close = () => {
     setFocus('desk')
     setActiveRollId(null)
@@ -36,8 +43,8 @@ export function DarkroomCanvas() {
       <SceneErrorBoundary lost={lost}>
         <Canvas
           camera={camera}
-          dpr={[1, 2]}
-          shadows
+          dpr={dpr}
+          shadows={shadows}
           gl={{ antialias: true }}
           onCreated={({ gl }) => {
             gl.toneMapping = THREE.ACESFilmicToneMapping
