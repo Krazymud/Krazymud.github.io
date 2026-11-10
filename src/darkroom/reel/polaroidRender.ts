@@ -270,8 +270,8 @@ export async function downloadPolaroidsZip(frames: PolaroidFrameInput[], zipName
   }, 4000)
 }
 
-export async function openPrintSheet(frames: PolaroidFrameInput[]) {
-  const w = window.open('', '_blank')
+export async function openPrintSheet(frames: PolaroidFrameInput[], targetWindow?: Window | null) {
+  const w = targetWindow ?? window.open('', '_blank')
   if (!w) return
   w.document.write('<p style="font:14px monospace;padding:30px">正在准备打印页…</p>')
   const pairs = await Promise.all(

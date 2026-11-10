@@ -65,9 +65,9 @@ export function Canister({ roll, styleIndex, position, yaw = 0 }: CanisterProps)
 }
 
 export const CANISTER_LAYOUT: Array<{ position: [number, number, number]; yaw: number }> = [
-  { position: [-0.38, R, -0.12], yaw: 0.15 },
-  { position: [-0.06, R, 0.16], yaw: -0.08 },
-  { position: [0.28, R, -0.06], yaw: 0.22 },
-  { position: [0.52, R, 0.14], yaw: -0.18 },
-  { position: [-0.22, R, -0.28], yaw: 0.05 },
+  { position: [-0.52, R, -0.22], yaw: 0.15 },
+  { position: [-0.12, R, 0.2], yaw: -0.08 },
+  { position: [0.22, R, -0.16], yaw: 0.22 },
+  { position: [0.56, R, 0.08], yaw: -0.18 },
+  { position: [-0.34, R, -0.42], yaw: 0.05 },
 ]

@@ -13,9 +13,23 @@ vi.mock('./PolaroidTakeHome', () => ({
 vi.mock('../VaultBridge', () => ({
   useDarkroomVault: () => ({
     photos: [
-      { source: 's1', thumb: 't1', caption: '测试', date: '2020-01-01', width: 1, height: 1 },
+      {
+        source: 's1',
+        thumb: 't1',
+        full: 'f1',
+        caption: '测试',
+        date: '2020-01-01',
+        width: 1,
+        height: 1,
+        hash: 'h',
+      },
     ],
     readBlob,
+    lock: vi.fn(),
+    unsynced: false,
+    syncing: false,
+    tokenSaved: false,
+    retrySync: vi.fn(),
   }),
 }))
 

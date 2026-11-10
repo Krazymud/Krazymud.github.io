@@ -32,6 +32,16 @@ export function useReelRadio(): ReelRadioContextValue {
 
 const FADE_MS = 900
 
+function playAudio(audio: HTMLAudioElement): Promise<void> {
+  try {
+    const result = audio.play()
+    if (result && typeof (result as Promise<void>).then === 'function') return result as Promise<void>
+    return Promise.resolve()
+  } catch {
+    return Promise.reject(new Error('play failed'))
+  }
+}
+
 export function ReelRadioProvider({ children }: { children: ReactNode }) {
   const [muted, setMuted] = useState(false)
   const [volume, setVolumeState] = useState(0.45)
@@ -39,68 +49,100 @@ export function ReelRadioProvider({ children }: { children: ReactNode }) {
   const [armed, setArmed] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const fadeRef = useRef<number | null>(null)
+  const loadedIndexRef = useRef<number | null>(null)
+  const mutedRef = useRef(muted)
+  const volumeRef = useRef(volume)
+  const armedRef = useRef(armed)
+  mutedRef.current = muted
+  volumeRef.current = volume
+  armedRef.current = armed
 
   const track = DEFAULT_PLAYLIST[trackIndex % DEFAULT_PLAYLIST.length]
 
-  const loadTrack = useCallback(
-    (index: number, autoplay: boolean) => {
-      const entry = DEFAULT_PLAYLIST[index % DEFAULT_PLAYLIST.length]
-      if (!entry) return
-      let audio = audioRef.current
-      if (!audio) {
-        audio = new Audio()
-        audio.loop = false
-        audioRef.current = audio
-        audio.addEventListener('ended', () => {
-          setTrackIndex((i) => (i + 1) % DEFAULT_PLAYLIST.length)
-        })
-      }
-      audio.pause()
-      audio.src = entry.src
-      audio.muted = muted
-      audio.volume = muted ? 0 : volume
-      if (autoplay && armed) {
-        void audio.play().catch(() => undefined)
-      }
-    },
-    [armed, muted, volume],
-  )
+  const ensureAudio = useCallback(() => {
+    let audio = audioRef.current
+    if (!audio) {
+      audio = new Audio()
+      audio.loop = false
+      audioRef.current = audio
+      audio.addEventListener('ended', () => {
+        setTrackIndex((i) => (i + 1) % DEFAULT_PLAYLIST.length)
+      })
+    }
+    return audio
+  }, [])
+
+  const applyLevels = useCallback((audio: HTMLAudioElement) => {
+    audio.muted = mutedRef.current
+    audio.volume = mutedRef.current ? 0 : volumeRef.current
+  }, [])
+
+  const fadeIn = useCallback((el: HTMLAudioElement) => {
+    if (fadeRef.current) cancelAnimationFrame(fadeRef.current)
+    const start = performance.now()
+    const tick = () => {
+      const t = Math.min(1, (performance.now() - start) / FADE_MS)
+      if (!mutedRef.current) el.volume = volumeRef.current * t
+      if (t < 1) fadeRef.current = requestAnimationFrame(tick)
+      else fadeRef.current = null
+    }
+    fadeRef.current = requestAnimationFrame(tick)
+  }, [])
 
   useEffect(() => {
-    loadTrack(trackIndex, true)
-  }, [trackIndex, loadTrack])
+    const entry = DEFAULT_PLAYLIST[trackIndex % DEFAULT_PLAYLIST.length]
+    if (!entry) return
+    const audio = ensureAudio()
+    if (loadedIndexRef.current !== trackIndex) {
+      audio.pause()
+      audio.src = entry.src
+      loadedIndexRef.current = trackIndex
+    }
+    applyLevels(audio)
+    if (armedRef.current) {
+      void playAudio(audio).catch(() => setArmed(false))
+    }
+  }, [trackIndex, applyLevels, ensureAudio])
 
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
-    audio.muted = muted
-    audio.volume = muted ? 0 : volume
-  }, [muted, volume])
+    applyLevels(audio)
+  }, [muted, volume, applyLevels])
 
   useEffect(() => {
     if (armed) return
     const kick = () => {
-      setArmed(true)
-      const audio = audioRef.current
-      if (!audio) {
-        loadTrack(trackIndex, false)
+      if (armedRef.current) return
+      const entry = DEFAULT_PLAYLIST[trackIndex % DEFAULT_PLAYLIST.length]
+      if (!entry) return
+      const audio = ensureAudio()
+      if (loadedIndexRef.current !== trackIndex) {
+        audio.pause()
+        audio.src = entry.src
+        loadedIndexRef.current = trackIndex
       }
-      const el = audioRef.current
-      if (!el) return
-      el.volume = 0
-      el.muted = muted
-      void el.play().catch(() => undefined)
-      const start = performance.now()
-      const tick = () => {
-        const t = Math.min(1, (performance.now() - start) / FADE_MS)
-        if (!muted) el.volume = volume * t
-        if (t < 1) fadeRef.current = requestAnimationFrame(tick)
-      }
-      fadeRef.current = requestAnimationFrame(tick)
+      applyLevels(audio)
+      audio.volume = 0
+      void playAudio(audio)
+        .then(() => {
+          setArmed(true)
+          fadeIn(audio)
+        })
+        .catch(() => {
+          setArmed(false)
+        })
     }
-    window.addEventListener('pointerdown', kick, { once: true })
-    return () => window.removeEventListener('pointerdown', kick)
-  }, [armed, loadTrack, muted, trackIndex, volume])
+    const opts: AddEventListenerOptions = { capture: true, passive: true }
+    window.addEventListener('pointerup', kick, opts)
+    window.addEventListener('click', kick, opts)
+    window.addEventListener('touchend', kick, opts)
+    return () => {
+      window.removeEventListener('pointerup', kick, opts)
+      window.removeEventListener('click', kick, opts)
+      window.removeEventListener('touchend', kick, opts)
+    }
+  }, [armed, trackIndex, applyLevels, ensureAudio, fadeIn])
 
   useEffect(() => {
     return () => {
@@ -146,7 +188,7 @@ export function ReelRadioHud() {
   return (
     <div
       data-testid="reel-radio-hud"
-      className="pointer-events-auto fixed bottom-4 left-4 z-[180] flex items-center gap-2 rounded-full border border-white/15 bg-black/55 px-3 py-1.5 text-xs text-fg backdrop-blur-sm"
+      className="pointer-events-auto fixed bottom-20 right-4 z-[170] flex items-center gap-2 rounded-full border border-white/15 bg-black/55 px-3 py-1.5 text-xs text-fg backdrop-blur-sm"
       aria-live="polite"
     >
       <span className="max-w-[10rem] truncate text-muted">{muted ? '静音' : trackTitle}</span>

@@ -105,18 +105,35 @@ function PolaroidModal({
 
   if (!open) return null
 
-  const run = async (kind: 'download' | 'print') => {
+  const runDownload = async () => {
     if (frames.length === 0 || busy) return
-    setBusy(kind)
+    setBusy('download')
     try {
       const inputs = await wallFramesToInputs(frames)
-      if (kind === 'download') await downloadPolaroidsZip(inputs)
-      else await openPrintSheet(inputs)
+      await downloadPolaroidsZip(inputs)
     } catch (e) {
       console.error(e)
     } finally {
       setBusy(null)
     }
+  }
+
+  const runPrint = () => {
+    if (frames.length === 0 || busy) return
+    const w = window.open('', '_blank')
+    if (!w) return
+    setBusy('print')
+    void (async () => {
+      try {
+        const inputs = await wallFramesToInputs(frames)
+        await openPrintSheet(inputs, w)
+      } catch (e) {
+        console.error(e)
+        w.close()
+      } finally {
+        setBusy(null)
+      }
+    })()
   }
 
   return (
@@ -156,7 +173,7 @@ function PolaroidModal({
             type="button"
             disabled={!!busy || frames.length === 0}
             className="rounded-full border border-white/30 px-5 py-2 text-xs uppercase tracking-wider disabled:opacity-40"
-            onClick={() => void run('download')}
+            onClick={() => void runDownload()}
           >
             {busy === 'download' ? '打包中…' : '下载 ZIP'}
           </button>
@@ -164,7 +181,7 @@ function PolaroidModal({
             type="button"
             disabled={!!busy || frames.length === 0}
             className="rounded-full border border-white/30 px-5 py-2 text-xs uppercase tracking-wider disabled:opacity-40"
-            onClick={() => void run('print')}
+            onClick={runPrint}
           >
             {busy === 'print' ? '准备中…' : '打印剪裁'}
           </button>
@@ -180,11 +197,28 @@ export function PolaroidTakeHomeProvider({ children }: { children: ReactNode }) 
     frames: [],
   })
 
-  const open = useCallback((frames: PolaroidWallFrame[]) => {
-    setState({ open: true, frames: frames.slice(0, 8) })
+  const revokePreviewUrls = useCallback((frames: PolaroidWallFrame[]) => {
+    for (const frame of frames) {
+      if (frame.previewUrl.startsWith('blob:')) URL.revokeObjectURL(frame.previewUrl)
+    }
   }, [])
 
-  const onClose = useCallback(() => setState((s) => ({ ...s, open: false })), [])
+  const open = useCallback(
+    (frames: PolaroidWallFrame[]) => {
+      setState((s) => {
+        if (s.frames.length) revokePreviewUrls(s.frames)
+        return { open: true, frames: frames.slice(0, 8) }
+      })
+    },
+    [revokePreviewUrls],
+  )
+
+  const onClose = useCallback(() => {
+    setState((s) => {
+      revokePreviewUrls(s.frames)
+      return { open: false, frames: [] }
+    })
+  }, [revokePreviewUrls])
 
   const api = useMemo(() => ({ open }), [open])
 

@@ -19,7 +19,9 @@ function initialCamera() {
   return { position, fov: CAMERA_FOV }
 }
 
-export function DarkroomCanvas() {
+type FrameLoop = 'always' | 'demand' | 'never'
+
+export function DarkroomCanvas({ frameloop = 'always' }: { frameloop?: FrameLoop }) {
   const { rolls } = useDarkroomVault()
   const [focus, setFocus] = useState<FocusId>('desk')
   const [activeRollId, setActiveRollId] = useState<string | null>(null)
@@ -42,6 +44,7 @@ export function DarkroomCanvas() {
     <div className="fixed inset-0 bg-[#050403]" data-focus={focus}>
       <SceneErrorBoundary lost={lost}>
         <Canvas
+          frameloop={frameloop}
           camera={camera}
           dpr={dpr}
           shadows={shadows}

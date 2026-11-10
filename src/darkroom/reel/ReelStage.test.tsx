@@ -9,8 +9,14 @@ vi.mock('../scene/DarkroomCanvas', () => ({
 vi.mock('../VaultBridge', () => ({
   useDarkroomVault: () => ({
     notes: [],
+    photos: [],
     readBlob: vi.fn(),
     loading: false,
+    lock: vi.fn(),
+    unsynced: false,
+    syncing: false,
+    tokenSaved: false,
+    retrySync: vi.fn(),
   }),
 }))
 

@@ -51,26 +51,34 @@ function BookMesh({
     return { coverMap: cover, bumpMap: bump }
   }, [title, byline, photo])
 
+  const materials = useMemo(() => {
+    return [
+      new THREE.MeshStandardMaterial({ color: '#5c3018', roughness: 0.82, metalness: 0.05 }),
+      new THREE.MeshStandardMaterial({ color: '#5c3018', roughness: 0.82, metalness: 0.05 }),
+      new THREE.MeshStandardMaterial({ color: '#3d2212', roughness: 0.88, metalness: 0.04 }),
+      new THREE.MeshStandardMaterial({ color: '#3d2212', roughness: 0.88, metalness: 0.04 }),
+      new THREE.MeshStandardMaterial({
+        map: coverMap,
+        bumpMap,
+        bumpScale: 0.018,
+        color: '#5c3018',
+        roughness: 0.78,
+        metalness: 0.06,
+      }),
+      new THREE.MeshStandardMaterial({ color: '#2a1208', roughness: 0.85, metalness: 0.08 }),
+    ]
+  }, [coverMap, bumpMap])
+
+  useEffect(() => () => materials.forEach((m) => m.dispose()), [materials])
+
   return (
-  <group position={[0, 0.1, 0]} rotation={[0, 0.42, 0]}>
-      <mesh castShadow receiveShadow position={[0, 0, 0]}>
+    <group position={[0, 0.1, 0]} rotation={[0, -0.35, 0]}>
+      <mesh castShadow receiveShadow position={[0, 0, 0]} material={materials}>
         <boxGeometry args={[0.58, 0.09, 0.78]} />
-        <meshStandardMaterial
-          map={coverMap}
-          bumpMap={bumpMap}
-          bumpScale={0.018}
-          color="#5c3018"
-          roughness={0.78}
-          metalness={0.06}
-        />
       </mesh>
       <mesh position={[-0.27, 0, 0]} castShadow>
         <boxGeometry args={[0.05, 0.1, 0.78]} />
         <meshStandardMaterial color="#2a1208" roughness={0.85} metalness={0.08} />
-      </mesh>
-      <mesh position={[0.02, 0.045, 0]} castShadow>
-        <boxGeometry args={[0.52, 0.08, 0.74]} />
-        <meshStandardMaterial color="#f2ece0" roughness={0.95} metalness={0} />
       </mesh>
     </group>
   )

@@ -47,7 +47,7 @@ interface ReelStageProps {
 function HeavySceneShell({ id, mounted, children }: { id: ReelSceneId; mounted: boolean; children: ReactNode }) {
   if (!mounted) return null
   return (
-    <div data-testid={`reel-heavy-${id}`} className={id === 'desk' ? 'relative min-h-[50vh]' : undefined}>
+    <div data-testid={`reel-heavy-${id}`}>
       {children}
     </div>
   )
@@ -136,13 +136,20 @@ export function ReelStage({ children }: ReelStageProps) {
         {scene === 'opening' && <OpeningScene onContinue={next} beltUrls={[]} />}
         {scene === 'letters' && <LettersBeat />}
         {scene === 'torch' && <TorchComicBeat />}
-        {scene === 'credits' && <CreditsScene onContinue={next} stillUrls={[]} />}
+        {scene === 'credits' && <CreditsScene onContinue={() => go('desk')} stillUrls={[]} />}
 
         <HeavySceneShell id="desk" mounted={deskMounted}>
-          <div className={scene === 'desk' ? undefined : 'hidden'} aria-hidden={scene !== 'desk'}>
-            <DarkroomCanvas />
+          <div
+            className={
+              scene === 'desk'
+                ? 'fixed inset-0 z-0'
+                : 'pointer-events-none fixed inset-0 z-0 invisible'
+            }
+            aria-hidden={scene !== 'desk'}
+          >
+            <DarkroomCanvas frameloop={scene === 'desk' ? 'always' : 'never'} />
             {scene === 'desk' && (
-              <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
+              <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex justify-center">
                 <button
                   type="button"
                   className="pointer-events-auto border border-accent-hi bg-black/60 px-4 py-2 text-sm text-fg"

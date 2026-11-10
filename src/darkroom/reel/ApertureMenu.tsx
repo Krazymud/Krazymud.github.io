@@ -27,6 +27,11 @@ export function ApertureMenu() {
   const vault = useDarkroomVault()
   const photos = vault.photos ?? []
   const readBlob = vault.readBlob
+  const lock = vault.lock
+  const unsynced = vault.unsynced
+  const syncing = vault.syncing
+  const tokenSaved = vault.tokenSaved
+  const retrySync = vault.retrySync
   const { open: openPolaroid } = usePolaroidTakeHome()
   const { muted, volume, setVolume, toggleMute } = useReelRadio()
 
@@ -54,7 +59,8 @@ export function ApertureMenu() {
     try {
       for (let i = 0; i < wall.length; i++) {
         const p = wall[i]
-        const bytes = await readBlob(p.thumb)
+        let bytes = await readBlob(p.full)
+        if (!bytes?.length) bytes = await readBlob(p.thumb)
         if (!bytes?.length) continue
         const blob = new Blob([bytes], { type: 'image/jpeg' })
         const previewUrl = URL.createObjectURL(blob)
@@ -85,7 +91,7 @@ export function ApertureMenu() {
   }
 
   return (
-    <div className="pointer-events-none fixed right-4 top-4 z-[190]">
+    <div className="pointer-events-none fixed left-4 top-14 z-[190]">
       <button
         type="button"
         className="pointer-events-auto rounded-full border border-white/20 bg-black/50 px-3 py-1.5 text-xs text-fg backdrop-blur-sm"
@@ -158,6 +164,23 @@ export function ApertureMenu() {
                 </button>
               </Row>
             ) : null}
+            <Row label="保险柜">
+              <div className="flex flex-col gap-1">
+                <button type="button" className="rounded border border-white/25 px-2 py-1" onClick={lock}>
+                  锁上
+                </button>
+                {unsynced && !syncing ? (
+                  <button
+                    type="button"
+                    className="rounded border border-accent-hi px-2 py-1 disabled:opacity-40"
+                    disabled={!tokenSaved}
+                    onClick={() => void retrySync()}
+                  >
+                    同步
+                  </button>
+                ) : null}
+              </div>
+            </Row>
           </div>
         </div>
       ) : null}
