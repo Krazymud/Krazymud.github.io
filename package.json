@@ -18,13 +18,16 @@
     "vault:backup-cos": "tsx scripts/backup-vault-from-cos.ts"
   },
   "dependencies": {
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.2",
     "exifr": "^7.1.3",
     "heic-decode": "^2.1.0",
     "motion": "^14.0.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-markdown": "^10.1.0",
-    "react-router": "^8.4.0"
+    "react-router": "^8.4.0",
+    "three": "^0.187.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -33,6 +36,7 @@
     "@types/node": "^24.13.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.2.7",
+    "@types/three": "^0.187.0",
     "@vitejs/plugin-react": "^6.1.2",
     "csv-parse": "^7.0.3",
     "fake-indexeddb": "^6.2.5",

@@ -11,6 +11,12 @@ async function enter(passphrase: string) {
   fireEvent.submit(screen.getByLabelText('口令').closest('form')!)
 }
 
+vi.mock('@react-three/fiber', () => ({
+  Canvas: () => <div data-testid="r3f-canvas" />,
+  useFrame: () => undefined,
+  useThree: () => undefined,
+}))
+
 describe('DarkroomApp', () => {
   afterEach(() => localStorage.clear())
 

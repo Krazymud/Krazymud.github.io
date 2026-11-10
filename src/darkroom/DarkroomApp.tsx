@@ -5,6 +5,7 @@ import { DecryptError } from '../vault/crypto'
 import { defaultKeyStore, type KeyStore } from '../vault/keyStore'
 import { fetchVaultBytes, loadVaultFile, unlockWithKey, unlockWithPassphrase, type FetchBytes, type VaultSession } from '../vault/repo'
 import type { VaultFile } from '../vault/types'
+import { DarkroomCanvas } from './scene/DarkroomCanvas'
 import { UnlockGate } from './overlays/UnlockGate'
 
 type DarkroomState =
@@ -100,8 +101,7 @@ export function DarkroomApp({ fetchBytes = fetchVaultBytes, keyStore }: Darkroom
     case 'ready':
       return (
         <div data-testid="darkroom-ready">
-          {/* Task 4 mounts Canvas here */}
-          <p>ready</p>
+          <DarkroomCanvas />
         </div>
       )
   }
