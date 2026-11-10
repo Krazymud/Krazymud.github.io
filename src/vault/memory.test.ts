@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addDays } from '../trial/day'
+import { addDays } from './day'
 import { dayHash, todaysMemory } from './memory'
 import type { NoteEntry, PhotoEntry, VaultManifest } from './types'
 

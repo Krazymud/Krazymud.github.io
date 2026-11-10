@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { play, stopAll, unlockAudio } from '../audio/sound'
 import { copy } from '../config/copy'
 import { getPrefs } from '../prefs/prefs'
-import { ProgressProvider } from '../progress/ProgressProvider'
 import { routes } from './routes'
 
 vi.mock('../audio/sound', () => ({
@@ -16,9 +15,7 @@ vi.mock('../audio/sound', () => ({
 function renderHome() {
   const router = createMemoryRouter(routes, { initialEntries: ['/'] })
   render(
-    <ProgressProvider>
-      <RouterProvider router={router} />
-    </ProgressProvider>,
+    <RouterProvider router={router} />,
   )
 }
 

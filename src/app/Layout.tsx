@@ -5,10 +5,7 @@ import { play, stopAll, unlockAudio } from '../audio/sound'
 import { perfEnabled } from '../perf/perf'
 import { PerfOverlay } from '../perf/PerfOverlay'
 import { setPrefs, usePrefs } from '../prefs/prefs'
-import { useProgress } from '../progress/ProgressProvider'
 import { copy } from '../config/copy'
-import { sceneFor } from '../scene/poses'
-import { SceneHost } from '../scene/SceneHost'
 
 const NAV = [{ to: '/', label: copy.nav.home, end: true }]
 
@@ -26,10 +23,8 @@ const INNER_MAIN =
 
 export function Layout() {
   const { pathname } = useLocation()
-  const { saveFailed } = useProgress()
   const { muted } = usePrefs()
   const reducedMotion = useReducedMotion() ?? false
-  const scene = sceneFor(pathname)
   const isHome = pathname === '/'
 
   useEffect(() => {
@@ -52,13 +47,8 @@ export function Layout() {
       onPointerDownCapture={unlockAudio}
       onClickCapture={unlockAudio}
       onKeyDownCapture={unlockAudio}
-      className={
-        scene === 'garage'
-          ? 'relative min-h-dvh bg-ink text-fg touch-pan-y touch-pinch-zoom select-none'
-          : 'relative min-h-dvh bg-ink text-fg'
-      }
+      className="relative min-h-dvh bg-ink text-fg"
     >
-      <SceneHost scene={scene} />
       <header className="glass-panel glass-panel-nav relative z-10 mx-5 mt-4 flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-xs">
         <span className="font-display text-accent-hi">{copy.siteName}</span>
         <nav className="flex items-center gap-4">
@@ -84,11 +74,6 @@ export function Layout() {
           </button>
         </nav>
       </header>
-      {saveFailed && (
-        <p role="alert" className="glass-panel relative z-10 mx-5 mt-3 rounded-lg px-3 py-2 text-xs">
-          进度暂时无法保存到这台设备。
-        </p>
-      )}
       {isHome ? (
         <main className="relative z-10 mx-auto w-full max-w-md px-5 pt-6 pb-10">
           <Outlet />

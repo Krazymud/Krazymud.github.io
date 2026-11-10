@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
+import { studyDay } from '../day'
 import { useSearchParams } from 'react-router'
 import { copy } from '../../config/copy'
-import { studyDay } from '../../trial/day'
 import { todaysMemory } from '../memory'
 import type { FetchBytes, VaultSession } from '../repo'
 import type { VaultFile } from '../types'

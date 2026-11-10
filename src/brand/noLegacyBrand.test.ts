@@ -13,6 +13,11 @@ const BANNED: { label: string; pattern: RegExp }[] = [
   { label: '一键启动', pattern: /一键启动/ },
   { label: '3D 车库', pattern: /3D 车库/ },
   { label: '车库仪表', pattern: /车库仪表/ },
+  { label: '日课', pattern: /日课/ },
+  { label: '青庐', pattern: /青庐/ },
+  { label: '锦匣', pattern: /锦匣/ },
+  { label: '案头', pattern: /案头/ },
+  { label: 'public/words', pattern: /public\/words/ },
 ]
 
 const SKIP_FILES = new Set<string>()

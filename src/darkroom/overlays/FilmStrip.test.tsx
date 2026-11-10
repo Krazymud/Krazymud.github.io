@@ -20,7 +20,7 @@ let n = 0
 const revoke = vi.fn()
 beforeEach(() => {
   n = 0
-  vault.readBlob.mockImplementation(async (name: string) => new Uint8Array([1]))
+  vault.readBlob.mockImplementation(async () => new Uint8Array([1]))
   URL.createObjectURL = vi.fn(() => `blob:${n++}`) as never
   URL.revokeObjectURL = revoke
 })

@@ -4,15 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetSound, setAudioContextFactory } from '../audio/sound'
 import { copy } from '../config/copy'
 import { PREFS_KEY, resetPrefsCache } from '../prefs/prefs'
-import { ProgressProvider } from '../progress/ProgressProvider'
 import { routes } from './routes'
 
 function renderAt(path: string) {
   const router = createMemoryRouter(routes, { initialEntries: [path] })
   render(
-    <ProgressProvider>
-      <RouterProvider router={router} />
-    </ProgressProvider>,
+    <RouterProvider router={router} />,
   )
 }
 
