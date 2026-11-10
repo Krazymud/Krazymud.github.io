@@ -25,9 +25,9 @@ describe('UnlockPanel', () => {
 
   it('shows vault copy without legacy English labels', () => {
     render(<UnlockPanel canRemember onUnlock={vi.fn(async () => true)} />)
-    expect(screen.getByText(copy.vault.title)).toBeInTheDocument()
+    expect(screen.getByText(copy.siteName)).toBeInTheDocument()
     expect(screen.queryByText('PRIVATE VAULT')).not.toBeInTheDocument()
-    expect(screen.getByText(copy.vault.unseal)).toBeInTheDocument()
+    expect(screen.getByText(copy.darkroom.unseal)).toBeInTheDocument()
   })
 
   it('does not offer to save the passphrase', () => {

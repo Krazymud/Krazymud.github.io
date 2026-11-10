@@ -3,6 +3,7 @@ import { IDBFactory } from 'fake-indexeddb'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { play } from '../audio/sound'
+import { copy } from '../config/copy'
 import { studyDay } from '../trial/day'
 import { HOLD_MS } from './components/UnlockPanel'
 import { toBase64 } from './crypto'
@@ -52,7 +53,7 @@ describe('VaultScreen', () => {
 
   it('shows an empty vault when vault.json is missing', async () => {
     renderVault(async () => null, null)
-    expect(await screen.findByText('锦匣还是空的。')).toBeInTheDocument()
+    expect(await screen.findByText(copy.darkroom.empty)).toBeInTheDocument()
   })
 
   it('offers a retry when vault.json cannot be loaded', async () => {
@@ -62,7 +63,7 @@ describe('VaultScreen', () => {
       if (offline) throw new Error('offline')
       return vault.fetchBytes(path)
     }, null)
-    expect(await screen.findByText('锦匣暂时打不开')).toBeInTheDocument()
+    expect(await screen.findByText(copy.darkroom.broken)).toBeInTheDocument()
     offline = false
     fireEvent.click(screen.getByRole('button', { name: '重试' }))
     expect(await screen.findByLabelText('口令')).toBeInTheDocument()

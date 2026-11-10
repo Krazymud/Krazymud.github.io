@@ -3,6 +3,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { play } from '../audio/sound'
 import { copy } from '../config/copy'
+import { homeCopy } from './homeCopy'
 import { site } from '../config/site'
 import { ProgressProvider } from '../progress/ProgressProvider'
 import { emptyProgress, serializeProgress, STORAGE_KEY } from '../progress/store'
@@ -40,14 +41,14 @@ describe('HomePage', () => {
     const stage = screen.getByTestId('home-stage')
     const below = screen.getByTestId('home-below')
     expect(within(hero).getByRole('heading', { level: 1 })).toHaveTextContent(copy.siteName)
-    expect(within(hero).getByText(copy.home.hello(site.nickname))).toBeInTheDocument()
-    expect(within(hero).queryByText(copy.home.eyebrow)).toBeNull()
+    expect(within(hero).getByText(homeCopy.hello(site.nickname))).toBeInTheDocument()
+    expect(within(hero).queryByText(homeCopy.eyebrow)).toBeNull()
     expect(within(hero).getByRole('link', { name: /出发|看结算/ })).toBeInTheDocument()
     expect(within(hero).queryByRole('group', { name: '学习进度' })).toBeNull()
     expect(stage).toHaveAttribute('data-home-stage')
     expect(stage.className).toMatch(/aspect-video/)
     expect(within(below).getByRole('group', { name: '学习进度' })).toBeInTheDocument()
-    expect(within(below).getByRole('link', { name: copy.home.vaultLink })).toBeInTheDocument()
+    expect(within(below).getByRole('link', { name: homeCopy.vaultLink })).toBeInTheDocument()
     expect(hero.compareDocumentPosition(stage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(stage.compareDocumentPosition(below) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })

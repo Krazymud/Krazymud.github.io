@@ -47,7 +47,7 @@ describe('SettingsPage', () => {
 
   it('uses the rebranded page title', () => {
     renderSettings()
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(copy.settings.title)
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('案头')
   })
 
   it('explains why an invalid file is rejected', async () => {

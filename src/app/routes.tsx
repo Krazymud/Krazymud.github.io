@@ -1,31 +1,29 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, type RouteObject } from 'react-router'
-import { HomePage } from '../pages/HomePage'
 import { copy } from '../config/copy'
-import { SettingsPage } from '../pages/SettingsPage'
-import { TrialPage } from '../pages/TrialPage'
 import { Layout } from './Layout'
 
-const VaultPage = lazy(() => import('../pages/VaultPage').then((m) => ({ default: m.VaultPage })))
-
-const vaultFallback = <p className="mt-10 text-center text-sm text-muted">{copy.vault.opening}</p>
+const DarkroomPage = lazy(() =>
+  import('../pages/DarkroomPage').then((m) => ({ default: m.DarkroomPage })),
+)
 
 export const routes: RouteObject[] = [
   {
     path: '/',
     element: <Layout />,
     children: [
-      { index: true, element: <HomePage /> },
-      { path: 'trial', element: <TrialPage /> },
       {
-        path: 'vault',
+        index: true,
         element: (
-          <Suspense fallback={vaultFallback}>
-            <VaultPage />
+          <Suspense
+            fallback={
+              <p className="mt-10 text-center text-sm text-muted">{copy.darkroom.opening}</p>
+            }
+          >
+            <DarkroomPage />
           </Suspense>
         ),
       },
-      { path: 'settings', element: <SettingsPage /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

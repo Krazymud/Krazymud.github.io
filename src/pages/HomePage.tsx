@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import { play } from '../audio/sound'
 import { copy } from '../config/copy'
+import { homeCopy } from './homeCopy'
 import { site } from '../config/site'
 import { Dashboard } from '../garage/Dashboard'
 import { garageStats } from '../garage/stats'
@@ -30,9 +31,9 @@ export function HomePage() {
         <div className="pointer-events-none absolute inset-0 -mx-5 home-hero-fade max-sm:hidden" aria-hidden />
         <div className="relative">
           <h1 className="font-display text-5xl font-bold tracking-[0.18em] text-fg">{copy.siteName}</h1>
-          <p className="mt-3 text-lg text-fg">{copy.home.hello(site.nickname)}</p>
+          <p className="mt-3 text-lg text-fg">{homeCopy.hello(site.nickname)}</p>
           {together !== null && (
-            <p className="mt-2 text-sm text-muted">{copy.home.together(together)}</p>
+            <p className="mt-2 text-sm text-muted">{homeCopy.together(together)}</p>
           )}
           <Link
             to="/trial"
@@ -42,7 +43,7 @@ export function HomePage() {
             className="glass-panel mt-6 inline-flex items-center gap-3 rounded-lg border border-fg/25 px-5 py-3"
           >
             <span className="text-sm">
-              {stats.due > 0 ? copy.home.trialTodayDue(stats.due) : copy.home.trialToday}
+              {stats.due > 0 ? homeCopy.trialTodayDue(stats.due) : homeCopy.trialToday}
               {' · '}
               {finished ? '看结算' : '出发'}
             </span>
@@ -66,7 +67,7 @@ export function HomePage() {
       >
         <Dashboard stats={stats} />
         <Link to="/vault" className="block border border-line px-5 py-3 text-sm text-muted hover:text-fg">
-          {copy.home.vaultLink}
+          {homeCopy.vaultLink}
         </Link>
       </div>
     </section>

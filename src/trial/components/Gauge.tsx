@@ -1,5 +1,5 @@
 import { motion } from 'motion/react'
-import { copy } from '../../config/copy'
+import { trialCopy } from '../trialCopy'
 
 const ARC = 'M20 105 A80 80 0 0 1 180 105'
 
@@ -45,7 +45,7 @@ export function Gauge({ value, total, combo, boost }: GaugeProps) {
           </tspan>
         </text>
       </svg>
-      <p className="-mt-1 text-xs text-accent-hi">{copy.trial.combo(combo)}</p>
+      <p className="-mt-1 text-xs text-accent-hi">{trialCopy.combo(combo)}</p>
     </div>
   )
 }

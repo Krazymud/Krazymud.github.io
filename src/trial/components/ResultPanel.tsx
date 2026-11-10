@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { copy } from '../../config/copy'
+import { trialCopy } from '../trialCopy'
 import type { DaySession } from '../../progress/store'
 
 function formatLap(ms: number): string {
@@ -21,7 +21,7 @@ export function ResultPanel({ session, dueTomorrow, mastered }: ResultPanelProps
 
   const newCount = session.items.filter((item) => item.kind === 'new').length
   const stats = [
-    { label: copy.trial.activeTime, value: formatLap(session.activeMs ?? 0) },
+    { label: trialCopy.activeTime, value: formatLap(session.activeMs ?? 0) },
     { label: '正确率', value: `${Math.round((session.correct / total) * 100)}%` },
     { label: '最高连击', value: `×${session.bestCombo}` },
     { label: '新词 / 复习', value: `${newCount} / ${total - newCount}` },
@@ -31,7 +31,7 @@ export function ResultPanel({ session, dueTomorrow, mastered }: ResultPanelProps
 
   return (
     <section className="mt-6">
-      <p className="text-center text-xs text-accent-hi">{copy.trial.completeEyebrow}</p>
+      <p className="text-center text-xs text-accent-hi">{trialCopy.completeEyebrow}</p>
       <dl className="mt-6 grid grid-cols-2 gap-3">
         {stats.map((stat) => (
           <div key={stat.label} className="panel-ink px-4 py-3">
@@ -41,7 +41,7 @@ export function ResultPanel({ session, dueTomorrow, mastered }: ResultPanelProps
         ))}
       </dl>
       <Link to="/" className="btn-primary mt-6 block w-full text-center">
-        {copy.trial.backHome}
+        {trialCopy.backHome}
       </Link>
     </section>
   )

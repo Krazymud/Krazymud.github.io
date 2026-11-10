@@ -10,12 +10,7 @@ import { copy } from '../config/copy'
 import { sceneFor } from '../scene/poses'
 import { SceneHost } from '../scene/SceneHost'
 
-const NAV = [
-  { to: '/', label: copy.nav.home, end: true },
-  { to: '/trial', label: copy.nav.trial, end: false },
-  { to: '/vault', label: copy.nav.vault, end: false },
-  { to: '/settings', label: copy.nav.settings, end: false },
-]
+const NAV = [{ to: '/', label: copy.nav.home, end: true }]
 
 function SpeakerIcon({ muted }: { muted: boolean }) {
   return (
@@ -91,7 +86,7 @@ export function Layout() {
       </header>
       {saveFailed && (
         <p role="alert" className="glass-panel relative z-10 mx-5 mt-3 rounded-lg px-3 py-2 text-xs">
-          {copy.layout.progressSaveFailed}
+          进度暂时无法保存到这台设备。
         </p>
       )}
       {isHome ? (

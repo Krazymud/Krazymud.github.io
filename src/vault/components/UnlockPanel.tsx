@@ -73,7 +73,7 @@ export function UnlockPanel({ canRemember, onUnlock }: UnlockPanelProps) {
       onAnimationEnd={() => setShaking(false)}
       className={`glass-panel mt-6 rounded-lg px-5 py-8 text-center ${shaking ? 'motion-safe:animate-vault-shake' : ''}`}
     >
-      <p className="font-display text-xs text-fg">{copy.vault.title}</p>
+      <p className="font-display text-xs text-fg">{copy.siteName}</p>
 
       <label className="mt-8 block text-left text-xs text-muted">
         口令
@@ -126,9 +126,9 @@ export function UnlockPanel({ canRemember, onUnlock }: UnlockPanelProps) {
             transition={{ duration: holding ? HOLD_MS / 1000 : 0.2, ease: 'linear' }}
           />
         </svg>
-        <span className="font-display text-sm">{busy ? copy.vault.unsealing : copy.vault.unseal}</span>
+        <span className="font-display text-sm">{busy ? copy.darkroom.unsealing : copy.darkroom.unseal}</span>
       </button>
-      <p className="mt-3 text-xs text-muted">{reduced ? copy.vault.tapHint : copy.vault.holdHint}</p>
+      <p className="mt-3 text-xs text-muted">{reduced ? copy.darkroom.tapHint : copy.darkroom.holdHint}</p>
 
       {message && (
         <p role="alert" className="mt-4 text-sm text-accent-hi">

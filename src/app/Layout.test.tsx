@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { play, stopAll, unlockAudio } from '../audio/sound'
+import { copy } from '../config/copy'
 import { getPrefs } from '../prefs/prefs'
 import { ProgressProvider } from '../progress/ProgressProvider'
 import { routes } from './routes'
@@ -12,9 +13,8 @@ vi.mock('../audio/sound', () => ({
   unlockAudio: vi.fn(),
 }))
 
-
-function renderSettings() {
-  const router = createMemoryRouter(routes, { initialEntries: ['/settings'] })
+function renderHome() {
+  const router = createMemoryRouter(routes, { initialEntries: ['/'] })
   render(
     <ProgressProvider>
       <RouterProvider router={router} />
@@ -38,7 +38,7 @@ describe('Layout', () => {
   })
 
   it('stops every sound when the page is hidden', () => {
-    renderSettings()
+    renderHome()
     setVisibility('visible')
     expect(stopAll).not.toHaveBeenCalled()
     setVisibility('hidden')
@@ -46,7 +46,7 @@ describe('Layout', () => {
   })
 
   it('stops every sound when muted and loads them again when unmuted', () => {
-    renderSettings()
+    renderHome()
     const mute = screen.getByRole('button', { name: '静音' })
     fireEvent.click(mute)
     expect(getPrefs().muted).toBe(true)
@@ -63,27 +63,27 @@ describe('Layout', () => {
     expect(mutedAtUnlock).toEqual([true, false])
   })
 
-  it('shows qinglu branding and nav labels in the header', () => {
-    renderSettings()
+  it('shows 暗房 branding without legacy nav links', () => {
+    renderHome()
     const header = document.querySelector('header')!
-    expect(header).toHaveTextContent('青庐')
-    expect(screen.getByRole('link', { name: '日课' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '锦匣' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '案头' })).toBeInTheDocument()
+    expect(header).toHaveTextContent(copy.siteName)
+    expect(screen.getByRole('link', { name: copy.nav.home })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: '日课' })).toBeNull()
+    expect(screen.queryByRole('link', { name: '锦匣' })).toBeNull()
+    expect(screen.queryByRole('link', { name: '案头' })).toBeNull()
     expect(screen.queryByText('MIDNIGHT GARAGE')).toBeNull()
   })
 
-  it('plays tap when navigating', () => {
-    renderSettings()
+  it('plays tap when navigating home', () => {
+    renderHome()
     vi.mocked(play).mockClear()
-    fireEvent.click(screen.getByRole('link', { name: '日课' }))
+    fireEvent.click(screen.getByRole('link', { name: copy.nav.home }))
     expect(play).toHaveBeenCalledWith('tap')
   })
 
-
   it('unlocks audio on any pointer, click or key press', () => {
-    renderSettings()
-    const page = screen.getByRole('link', { name: '案头' })
+    renderHome()
+    const page = screen.getByRole('link', { name: copy.nav.home })
     fireEvent.pointerDown(page)
     expect(unlockAudio).toHaveBeenCalledTimes(1)
     fireEvent.click(page)

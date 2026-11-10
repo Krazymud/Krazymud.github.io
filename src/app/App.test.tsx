@@ -1,9 +1,8 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetSound, setAudioContextFactory } from '../audio/sound'
 import { copy } from '../config/copy'
-import { site } from '../config/site'
 import { PREFS_KEY, resetPrefsCache } from '../prefs/prefs'
 import { ProgressProvider } from '../progress/ProgressProvider'
 import { routes } from './routes'
@@ -29,58 +28,36 @@ describe('app shell', () => {
     vi.restoreAllMocks()
   })
 
-  it('greets her in the garage with today\'s trial status', () => {
+  it('loads the Darkroom entry on /', async () => {
     renderAt('/')
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(copy.siteName)
-    expect(screen.getByText(copy.home.hello(site.nickname))).toBeInTheDocument()
-    expect(screen.getByText('0 / 20')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: new RegExp(copy.home.trialToday) })).toBeInTheDocument()
+    expect(screen.getByRole('banner')).toHaveTextContent(copy.siteName)
+    const main = screen.getByRole('main')
+    expect(await within(main).findByText('暗房')).toBeInTheDocument()
   })
 
-  it('does not set a vault data-theme on the layout shell', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 404 })))
-    renderAt('/vault')
-    expect(document.querySelector('[data-theme="vault"]')).toBeNull()
-    expect(await screen.findByText(copy.vault.empty, {}, { timeout: 5000 })).toBeInTheDocument()
+  it('redirects /trial to home', async () => {
+    renderAt('/trial')
+    const main = screen.getByRole('main')
+    expect(await within(main).findByText('暗房')).toBeInTheDocument()
+    expect(screen.queryByText(/日课/)).toBeNull()
   })
 
-  it('shows the sketch backdrop behind the garage page', () => {
-    renderAt('/')
-    expect(screen.getByTestId('sketch-stage')).toBeInTheDocument()
-  })
-
-  it('redirects unknown paths to the garage', async () => {
+  it('redirects unknown paths to the Darkroom entry', async () => {
     renderAt('/2018/09/05/leetcode05/')
-    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(copy.siteName)
-    expect(screen.getByText(copy.home.hello(site.nickname))).toBeInTheDocument()
+    const main = screen.getByRole('main')
+    expect(await within(main).findByText('暗房')).toBeInTheDocument()
   })
 
-  it('shows the garage greeting and sketch layer on a first visit', () => {
-    renderAt('/')
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(copy.siteName)
-    expect(screen.getByText(copy.home.hello(site.nickname))).toBeInTheDocument()
-    expect(screen.getByTestId('sketch-stage')).toBeInTheDocument()
-    expect(screen.queryByRole('dialog', { name: '点火开场' })).toBeNull()
-    expect(screen.queryByRole('status', { name: '引擎预热' })).toBeNull()
-    expect(document.querySelector('header')).not.toHaveAttribute('inert')
-    expect(document.querySelector('main')).not.toHaveAttribute('inert')
-  })
-
-  it('uses an open shell on home and a solid main on inner routes', () => {
+  it('uses an open shell on home', () => {
     renderAt('/')
     expect(document.querySelector('[data-shell="home"]')).toBeTruthy()
     expect(document.querySelector('main')?.className ?? '').not.toMatch(/glass-panel-solid/)
-
-    cleanup()
-    renderAt('/settings')
-    expect(document.querySelector('[data-shell="inner"]')).toBeTruthy()
-    expect(document.querySelector('main')).toHaveClass('glass-panel-solid')
   })
 
   it('mutes and unmutes from the top bar', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(new ArrayBuffer(8))))
     setAudioContextFactory(() => ({ state: 'running', decodeAudioData: async () => ({}) }) as unknown as AudioContext)
-    renderAt('/settings')
+    renderAt('/')
     const mute = screen.getByRole('button', { name: '静音' })
     expect(mute).toHaveAttribute('aria-pressed', 'false')
     fireEvent.click(mute)

@@ -37,7 +37,7 @@ function opened(file: VaultFile, session: VaultSession, manual: boolean): VaultS
 function Notice({ children }: { children: ReactNode }) {
   return (
     <section className="glass-panel mt-10 rounded-lg px-5 py-8 text-center">
-      <p className="font-display text-xs text-fg">{copy.vault.title}</p>
+      <p className="font-display text-xs text-fg">{copy.siteName}</p>
       <div className="mt-4 text-sm text-muted">{children}</div>
     </section>
   )
@@ -102,13 +102,13 @@ export function VaultScreen({ fetchBytes = fetchVaultBytes, keyStore }: VaultScr
 
   switch (state.status) {
     case 'loading':
-      return <p className="mt-10 text-center text-sm text-muted">{copy.vault.opening}</p>
+      return <p className="mt-10 text-center text-sm text-muted">{copy.darkroom.opening}</p>
     case 'empty':
-      return <Notice>{copy.vault.empty}</Notice>
+      return <Notice>{copy.darkroom.empty}</Notice>
     case 'error':
       return (
         <Notice>
-          <p>{copy.vault.broken}</p>
+          <p>{copy.darkroom.broken}</p>
           <button
             type="button"
             onClick={() => {

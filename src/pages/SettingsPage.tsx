@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent } from 'react'
-import { copy } from '../config/copy'
+const SETTINGS_TITLE = '案头'
 import { useProgress } from '../progress/ProgressProvider'
 import { parseProgress, serializeProgress, type ProgressData } from '../progress/store'
 import { progressFilename } from '../progress/export'
@@ -56,7 +56,7 @@ export function SettingsPage() {
 
   return (
     <section className="space-y-6">
-      <h1 className="font-display text-2xl font-bold tracking-wide">{copy.settings.title}</h1>
+      <h1 className="font-display text-2xl font-bold tracking-wide">{SETTINGS_TITLE}</h1>
 
       <div className="glass-panel rounded-lg p-4">
         <h2 className="text-sm font-bold">导出进度</h2>
