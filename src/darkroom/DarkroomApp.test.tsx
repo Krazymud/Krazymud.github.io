@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { copy } from '../config/copy'
 import { makeTestVault, TEST_PASSPHRASE } from '../vault/testVault'
 import { DarkroomApp } from './DarkroomApp'
@@ -16,6 +16,23 @@ vi.mock('@react-three/fiber', () => ({
   useFrame: () => undefined,
   useThree: () => undefined,
 }))
+
+beforeEach(() => {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  )
+})
+
+afterEach(() => vi.unstubAllGlobals())
 
 describe('DarkroomApp', () => {
   afterEach(() => localStorage.clear())
@@ -51,7 +68,9 @@ describe('DarkroomApp lock', () => {
     render(<DarkroomApp fetchBytes={vault.fetchBytes} keyStore={keyStore as never} webStore={null} />)
     await enter(TEST_PASSPHRASE)
     await screen.findByTestId('darkroom-ready')
-    fireEvent.click(screen.getByText('上锁'))
+    fireEvent.click(screen.getByRole('button', { name: /启封卷轴|继续/i }))
+    fireEvent.click(screen.getByRole('button', { name: /继续/i }))
+    fireEvent.click(await screen.findByText('上锁'))
     expect(await screen.findByLabelText('口令')).toBeTruthy()
     expect(keyStore.clear).toHaveBeenCalled()
     expect(screen.queryByTestId('darkroom-ready')).toBeNull()

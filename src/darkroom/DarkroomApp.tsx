@@ -7,8 +7,8 @@ import { defaultKeyStore, type KeyStore } from '../vault/keyStore'
 import { fetchVaultBytes, loadVaultFile, unlockWithKey, unlockWithPassphrase, type FetchBytes, type VaultSession } from '../vault/repo'
 import type { WebStore } from '../vault/webStore'
 import type { VaultFile } from '../vault/types'
-import { DarkroomCanvas } from './scene/DarkroomCanvas'
 import { UnlockGate } from './overlays/UnlockGate'
+import { ReelStage } from './reel/ReelStage'
 import { DeskCounts, VaultBridge } from './VaultBridge'
 
 type DarkroomState =
@@ -113,7 +113,7 @@ export function DarkroomApp({ fetchBytes = fetchVaultBytes, keyStore, webStore }
       return (
         <VaultBridge session={state.session} file={state.file} fetchBytes={fetchBytes} onLock={lock} webStore={webStore}>
           <div data-testid="darkroom-ready" className="relative">
-            <DarkroomCanvas />
+            <ReelStage />
             <DeskCounts />
           </div>
         </VaultBridge>
