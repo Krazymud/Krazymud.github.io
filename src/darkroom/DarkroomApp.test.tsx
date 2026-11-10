@@ -1,0 +1,38 @@
+import { fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { copy } from '../config/copy'
+import { makeTestVault, TEST_PASSPHRASE } from '../vault/testVault'
+import { DarkroomApp } from './DarkroomApp'
+
+vi.mock('../audio/sound', () => ({ play: vi.fn(async () => undefined) }))
+
+async function enter(passphrase: string) {
+  fireEvent.change(await screen.findByLabelText('口令'), { target: { value: passphrase } })
+  fireEvent.submit(screen.getByLabelText('口令').closest('form')!)
+}
+
+describe('DarkroomApp', () => {
+  afterEach(() => localStorage.clear())
+
+  it('shows unlock then ready after successful passphrase', async () => {
+    const vault = await makeTestVault()
+    render(<DarkroomApp fetchBytes={vault.fetchBytes} keyStore={null} />)
+    expect(await screen.findByLabelText('口令')).toBeTruthy()
+    expect(screen.queryByTestId('darkroom-ready')).toBeNull()
+    await enter(TEST_PASSPHRASE)
+    expect(await screen.findByTestId('darkroom-ready')).toBeInTheDocument()
+  })
+
+  it('stays locked on a wrong passphrase', async () => {
+    const vault = await makeTestVault()
+    render(<DarkroomApp fetchBytes={vault.fetchBytes} keyStore={null} />)
+    await enter('wrong wrong wrong wrong')
+    expect(await screen.findByRole('alert')).toHaveTextContent('口令不对')
+    expect(screen.queryByTestId('darkroom-ready')).toBeNull()
+  })
+
+  it('shows empty notice when vault is missing', async () => {
+    render(<DarkroomApp fetchBytes={async () => null} keyStore={null} />)
+    expect(await screen.findByText(copy.darkroom.empty)).toBeInTheDocument()
+  })
+})
