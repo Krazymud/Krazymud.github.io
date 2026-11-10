@@ -20,6 +20,7 @@ const ROLL_BUCKETS: RollBucket[] = [
 
 const UNFILED_ROLL: Pick<FilmRoll, 'id' | 'title'> = { id: 'unfiled', title: '未分类' }
 
+// TARGET_MAX_ROLLS caps themed rolls only; unfiled is exempt.
 const TARGET_MAX_ROLLS = 5
 
 function bucketForCaption(caption: string): string {
