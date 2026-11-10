@@ -58,16 +58,16 @@ export function SettingsPage() {
     <section className="space-y-6">
       <h1 className="font-display text-2xl font-bold tracking-wide">{copy.settings.title}</h1>
 
-      <div className="glass-panel rounded-lg p-4">
-        <h2 className="text-sm font-bold">导出进度</h2>
+      <div className="glass-panel rounded-md p-4">
+        <h2 className="text-sm font-bold tracking-wide">导出进度</h2>
         <p className="mt-1 text-xs text-muted">当前已学 {learned} 个单词。换设备前先导出，在新设备上导入。</p>
-        <button type="button" onClick={exportProgress} className="mt-3 border border-accent-hi bg-accent/20 px-4 py-2 text-sm">
+        <button type="button" onClick={exportProgress} className="btn-primary mt-3 px-4 py-2 text-sm">
           导出进度文件
         </button>
       </div>
 
-      <div className="glass-panel rounded-lg p-4">
-        <h2 className="text-sm font-bold">导入进度</h2>
+      <div className="glass-panel rounded-md p-4">
+        <h2 className="text-sm font-bold tracking-wide">导入进度</h2>
         <label className="mt-3 block text-xs text-muted">
           导入进度文件
           <input type="file" accept="application/json,.json" onChange={onFile} className="mt-2 block w-full text-xs" />
@@ -80,7 +80,7 @@ export function SettingsPage() {
         {pending && (
           <div className="mt-3">
             <p className="text-sm">文件里有 {Object.keys(pending.words).length} 个已学单词，导入会覆盖当前进度。</p>
-            <button type="button" onClick={confirmImport} className="mt-3 border border-accent-hi bg-accent/30 px-4 py-2 text-sm">
+            <button type="button" onClick={confirmImport} className="btn-primary mt-3 px-4 py-2 text-sm">
               确认导入
             </button>
           </div>

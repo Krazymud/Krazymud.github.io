@@ -7,3 +7,6 @@ scripts/.cache/
 vault-src/
 assets-src/
 public/vault/vault.json.tmp
+
+.cursor/
+.impeccable/

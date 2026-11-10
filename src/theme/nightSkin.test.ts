@@ -1,16 +1,23 @@
 import { describe, expect, it } from 'vitest'
 import css from '../index.css?raw'
 
-describe('night skin tokens', () => {
-  it('uses cool paper ink instead of warm cream as the default page ground', () => {
-    expect(css).toMatch(/--color-ink:\s*#eef1f5/)
+describe('celadon tray tokens', () => {
+  it('uses celadon glaze ink as the default page ground', () => {
+    expect(css).toMatch(/--color-ink:\s*#d8e4dc/)
     expect(css).not.toMatch(/--color-ink:\s*#f7f4ec/)
-    expect(css).toMatch(/--color-fg:\s*#1a2433/)
-    expect(css).toMatch(/\.home-hero-fade[\s\S]*#eef1f5/)
+    expect(css).not.toMatch(/--color-ink:\s*#eef1f5/)
+    expect(css).toMatch(/--color-fg:\s*#1a2420/)
+    expect(css).toMatch(/\.home-hero-fade[\s\S]*#d8e4dc/)
   })
 
-  it('uses cool glass on the nav header override', () => {
-    expect(css).toMatch(/\.glass-panel-nav\s*\{[^}]*rgba\(245,\s*248,\s*252,\s*0\.42\)/)
-    expect(css).not.toMatch(/\.glass-panel-nav\s*\{[^}]*rgba\(255,\s*255,\s*255/)
+  it('uses porcelain nav without decorative glass blur', () => {
+    expect(css).toMatch(/\.glass-panel-nav\s*\{[^}]*--porcelain/)
+    expect(css).toMatch(/\.glass-panel\s*\{[\s\S]*?backdrop-filter:\s*none/)
+  })
+
+  it('defines the glaze-fill signature move', () => {
+    expect(css).toMatch(/\.glaze-cta/)
+    expect(css).toMatch(/--glaze-fill/)
+    expect(css).toMatch(/\.tea-ring/)
   })
 })
