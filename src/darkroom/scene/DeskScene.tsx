@@ -1,6 +1,8 @@
 import { useThree, type ThreeEvent } from '@react-three/fiber'
 import type { ReactNode } from 'react'
+import type { FilmRoll } from '../rolls'
 import { layoutForAspect, type FocusId } from './cameraFocus'
+import { CANISTER_LAYOUT, Canister } from './props/Canister'
 
 interface PropProps {
   id: Exclude<FocusId, 'desk'>
@@ -43,30 +45,14 @@ function Envelope() {
   )
 }
 
-function Canisters() {
-  const items: Array<[number, number, string]> = [
-    [-0.18, 0.05, '#2b2b2b'],
-    [0.16, -0.08, '#3a2f26'],
-    [0.0, 0.2, '#242830'],
-  ]
+function Canisters({ rolls }: { rolls: FilmRoll[] }) {
+  const visible = rolls.slice(0, CANISTER_LAYOUT.length)
   return (
     <group>
-      {items.map(([x, z, color]) => (
-        <group key={`${x}-${z}`} position={[x, 0, z]}>
-          <mesh castShadow receiveShadow position={[0, 0.17, 0]}>
-            <cylinderGeometry args={[0.13, 0.13, 0.34, 32]} />
-            <meshStandardMaterial color={color} roughness={0.45} metalness={0.55} />
-          </mesh>
-          <mesh position={[0, 0.345, 0]}>
-            <cylinderGeometry args={[0.135, 0.135, 0.02, 32]} />
-            <meshStandardMaterial color="#9a9488" roughness={0.3} metalness={0.9} />
-          </mesh>
-          <mesh position={[0, 0.17, 0]}>
-            <cylinderGeometry args={[0.1325, 0.1325, 0.1, 32]} />
-            <meshStandardMaterial color="#d8c9a3" roughness={0.8} />
-          </mesh>
-        </group>
-      ))}
+      {visible.map((roll, i) => {
+        const layout = CANISTER_LAYOUT[i]!
+        return <Canister key={roll.id} roll={roll} styleIndex={i} position={layout.position} yaw={layout.yaw} />
+      })}
     </group>
   )
 }
@@ -130,7 +116,7 @@ function Viewer() {
   )
 }
 
-export function DeskScene({ onFocus }: { onFocus: (id: FocusId) => void }) {
+export function DeskScene({ onFocus, rolls = [] }: { onFocus: (id: FocusId) => void; rolls?: FilmRoll[] }) {
   const aspect = useThree((s) => s.size.width / Math.max(1, s.size.height))
   const { props, deskSize } = layoutForAspect(aspect)
   return (
@@ -152,7 +138,7 @@ export function DeskScene({ onFocus }: { onFocus: (id: FocusId) => void }) {
         <meshStandardMaterial color="#2a1f18" roughness={0.75} metalness={0.05} />
       </mesh>
       <Prop id="envelope" position={props.envelope} onFocus={onFocus}><Envelope /></Prop>
-      <Prop id="rolls" position={props.rolls} onFocus={onFocus}><Canisters /></Prop>
+      <Prop id="rolls" position={props.rolls} onFocus={onFocus}><Canisters rolls={rolls} /></Prop>
       <Prop id="lightbox" position={props.lightbox} onFocus={onFocus}><Lightbox /></Prop>
       <Prop id="tray" position={props.tray} onFocus={onFocus}><Tray /></Prop>
       <Prop id="viewer" position={props.viewer} onFocus={onFocus}><Viewer /></Prop>

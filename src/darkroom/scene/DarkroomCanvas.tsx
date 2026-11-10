@@ -7,6 +7,7 @@ import { LetterOverlay } from '../overlays/LetterOverlay'
 import { SyncDrawer } from '../overlays/SyncDrawer'
 import { TrayOverlay } from '../overlays/TrayOverlay'
 import { ViewerOverlay } from '../overlays/ViewerOverlay'
+import { useDarkroomVault } from '../VaultBridge'
 import { DeskScene } from './DeskScene'
 import { SceneErrorBoundary } from './SceneErrorBoundary'
 
@@ -17,6 +18,7 @@ function initialCamera() {
 }
 
 export function DarkroomCanvas() {
+  const { rolls } = useDarkroomVault()
   const [focus, setFocus] = useState<FocusId>('desk')
   const [syncOpen, setSyncOpen] = useState(false)
   const [lost, setLost] = useState(false)
@@ -40,7 +42,7 @@ export function DarkroomCanvas() {
           }}
         >
           <color attach="background" args={['#050403']} />
-          <DeskScene onFocus={setFocus} />
+          <DeskScene onFocus={setFocus} rolls={rolls} />
           <CameraRig focus={focus} />
         </Canvas>
       </SceneErrorBoundary>
