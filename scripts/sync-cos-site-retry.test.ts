@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { isOptionalUpload, putWithRetries } from './sync-cos-site.ts'
+import { isOptionalUpload, putWithRetries, remoteMatchesLocal } from './sync-cos-site.ts'
 
 describe('putWithRetries', () => {
   it('retries UserNetworkTooSlow then succeeds', async () => {
@@ -58,5 +58,20 @@ describe('isOptionalUpload', () => {
     expect(isOptionalUpload('vault/blobs/abc.bin')).toBe(true)
     expect(isOptionalUpload('assets/index-abc.js')).toBe(false)
     expect(isOptionalUpload('index.html')).toBe(false)
+  })
+})
+
+describe('remoteMatchesLocal', () => {
+  it('returns false when HEAD fetch throws (do not abort sync)', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('fetch failed'))
+    const matched = await remoteMatchesLocal(
+      { secretId: 'AKIDtest', secretKey: 'secret' },
+      'bucket',
+      'ap-shanghai',
+      'site/assets/x.js',
+      12,
+    )
+    expect(matched).toBe(false)
+    fetchSpy.mockRestore()
   })
 })
