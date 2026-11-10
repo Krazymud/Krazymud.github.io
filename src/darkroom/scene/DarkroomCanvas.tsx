@@ -4,6 +4,8 @@ import { CameraRig } from './CameraRig'
 import type { FocusId } from './cameraFocus'
 import { FilmOverlay } from '../overlays/FilmStrip'
 import { LetterOverlay } from '../overlays/LetterOverlay'
+import { SyncDrawer } from '../overlays/SyncDrawer'
+import { TrayOverlay } from '../overlays/TrayOverlay'
 import { DeskScene } from './DeskScene'
 
 export function DarkroomCanvas() {
@@ -16,6 +18,8 @@ export function DarkroomCanvas() {
         <CameraRig focus={focus} />
       </Canvas>
       {(focus === 'rolls' || focus === 'lightbox') && <FilmOverlay key={focus} mode={focus} onClose={() => setFocus('desk')} />}
+      {focus === 'tray' && <TrayOverlay onClose={() => setFocus('desk')} />}
+      <SyncDrawer />
       {focus === 'envelope' && <LetterOverlay onClose={() => setFocus('desk')} />}
     </div>
   )

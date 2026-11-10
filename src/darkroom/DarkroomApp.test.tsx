@@ -43,3 +43,17 @@ describe('DarkroomApp', () => {
     expect(await screen.findByText(copy.darkroom.empty)).toBeInTheDocument()
   })
 })
+
+describe('DarkroomApp lock', () => {
+  it('returns to unlock and clears the key store', async () => {
+    const vault = await makeTestVault()
+    const keyStore = { load: vi.fn(async () => null), save: vi.fn(async () => undefined), clear: vi.fn(async () => undefined) }
+    render(<DarkroomApp fetchBytes={vault.fetchBytes} keyStore={keyStore as never} webStore={null} />)
+    await enter(TEST_PASSPHRASE)
+    await screen.findByTestId('darkroom-ready')
+    fireEvent.click(screen.getByText('上锁'))
+    expect(await screen.findByLabelText('口令')).toBeTruthy()
+    expect(keyStore.clear).toHaveBeenCalled()
+    expect(screen.queryByTestId('darkroom-ready')).toBeNull()
+  })
+})
