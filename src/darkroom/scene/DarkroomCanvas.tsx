@@ -21,10 +21,14 @@ function initialCamera() {
 export function DarkroomCanvas() {
   const { rolls } = useDarkroomVault()
   const [focus, setFocus] = useState<FocusId>('desk')
+  const [activeRollId, setActiveRollId] = useState<string | null>(null)
   const [syncOpen, setSyncOpen] = useState(false)
   const [lost, setLost] = useState(false)
   const [camera] = useState(initialCamera)
-  const close = () => setFocus('desk')
+  const close = () => {
+    setFocus('desk')
+    setActiveRollId(null)
+  }
   const openSync = () => setSyncOpen(true)
 
   return (
@@ -46,13 +50,21 @@ export function DarkroomCanvas() {
           }}
         >
           <color attach="background" args={['#050403']} />
-          <DeskScene onFocus={setFocus} rolls={rolls} focus={focus} />
+          <DeskScene onFocus={setFocus} rolls={rolls} focus={focus} activeRollId={activeRollId} />
           <CameraRig focus={focus} />
         </Canvas>
         <div className="dr-vig" aria-hidden />
         <div className="dr-grain" aria-hidden />
       </SceneErrorBoundary>
-      {(focus === 'rolls' || focus === 'lightbox') && <FilmOverlay key={focus} mode={focus} onClose={close} />}
+      {(focus === 'rolls' || focus === 'lightbox') && (
+        <FilmOverlay
+          key={focus}
+          mode={focus}
+          onClose={close}
+          activeRollId={activeRollId}
+          onActiveRollIdChange={setActiveRollId}
+        />
+      )}
       {focus === 'tray' && <TrayOverlay onClose={close} onNeedGate={openSync} />}
       {focus === 'viewer' && <ViewerOverlay onClose={close} />}
       <SyncDrawer open={syncOpen} onOpenChange={setSyncOpen} />

@@ -6,6 +6,10 @@ import type { FilmRoll } from '../rolls'
 import { DR_COLORS } from '../theme'
 import { layoutForAspect, type FocusId } from './cameraFocus'
 import { CANISTER_LAYOUT, Canister } from './props/Canister'
+import { FilmPull } from './props/FilmPull'
+import { Lightbox3D } from './props/Lightbox3D'
+import { Tray3D } from './props/Tray3D'
+import { Viewer3D } from './props/Viewer3D'
 
 interface PropProps {
   id: Exclude<FocusId, 'desk'>
@@ -56,65 +60,6 @@ function Canisters({ rolls }: { rolls: FilmRoll[] }) {
         const layout = CANISTER_LAYOUT[i]!
         return <Canister key={roll.id} roll={roll} styleIndex={i} position={layout.position} yaw={layout.yaw} />
       })}
-    </group>
-  )
-}
-
-function Lightbox() {
-  return (
-    <group>
-      <mesh castShadow receiveShadow position={[0, 0.1, 0]}>
-        <boxGeometry args={[1.4, 0.2, 1]} />
-        <meshStandardMaterial color="#2a2623" roughness={0.6} metalness={0.3} />
-      </mesh>
-      <mesh position={[0, 0.205, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[1.25, 0.85]} />
-        <meshStandardMaterial color="#fff1d6" emissive="#ffd9a0" emissiveIntensity={1.4} roughness={0.5} />
-      </mesh>
-      <pointLight position={[0, 0.6, 0]} intensity={2.5} distance={3.5} color="#ffd9a0" />
-    </group>
-  )
-}
-
-function Tray() {
-  return (
-    <group>
-      <mesh castShadow receiveShadow position={[0, 0.03, 0]}>
-        <boxGeometry args={[1.2, 0.06, 0.8]} />
-        <meshStandardMaterial color="#5a2a22" roughness={0.55} metalness={0.1} />
-      </mesh>
-      <mesh position={[0, 0.065, 0]}>
-        <boxGeometry args={[1.04, 0.02, 0.64]} />
-        <meshStandardMaterial color="#1c0f0c" roughness={0.15} metalness={0.4} />
-      </mesh>
-      {[
-        [0, 0.3],
-        [0, -0.3],
-      ].map(([x, z]) => (
-        <mesh key={z} castShadow position={[x, 0.09, z]}>
-          <boxGeometry args={[1.2, 0.06, 0.04]} />
-          <meshStandardMaterial color="#5a2a22" roughness={0.55} />
-        </mesh>
-      ))}
-    </group>
-  )
-}
-
-function Viewer() {
-  return (
-    <group>
-      <mesh castShadow position={[0, -0.15, 0]}>
-        <boxGeometry args={[0.5, 0.2, 0.4]} />
-        <meshStandardMaterial color="#2c2c2e" roughness={0.5} metalness={0.5} />
-      </mesh>
-      <mesh castShadow position={[0, 0.05, 0]}>
-        <cylinderGeometry args={[0.2, 0.2, 0.3, 32]} />
-        <meshStandardMaterial color="#444" roughness={0.35} metalness={0.7} />
-      </mesh>
-      <mesh position={[0, 0.05, 0.16]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.13, 0.13, 0.12, 32]} />
-        <meshPhysicalMaterial color="#10161c" roughness={0.05} metalness={0.2} clearcoat={1} />
-      </mesh>
     </group>
   )
 }
@@ -215,10 +160,12 @@ export function DeskScene({
   onFocus,
   rolls = [],
   focus = 'desk',
+  activeRollId = null,
 }: {
   onFocus: (id: FocusId) => void
   rolls?: FilmRoll[]
   focus?: FocusId
+  activeRollId?: string | null
 }) {
   const aspect = useThree((s) => s.size.width / Math.max(1, s.size.height))
   const { props, deskSize } = layoutForAspect(aspect)
@@ -233,15 +180,16 @@ export function DeskScene({
       </Prop>
       <Prop id="rolls" position={props.rolls} onFocus={onFocus}>
         <Canisters rolls={rolls} />
+        <FilmPull focus={focus} rolls={rolls} activeRollId={activeRollId} />
       </Prop>
       <Prop id="lightbox" position={props.lightbox} onFocus={onFocus}>
-        <Lightbox />
+        <Lightbox3D />
       </Prop>
       <Prop id="tray" position={props.tray} onFocus={onFocus}>
-        <Tray />
+        <Tray3D />
       </Prop>
       <Prop id="viewer" position={props.viewer} onFocus={onFocus}>
-        <Viewer />
+        <Viewer3D />
       </Prop>
     </group>
   )

@@ -24,9 +24,24 @@ export function FilmStrip({ photos, onPick }: { photos: PhotoEntry[]; onPick: (p
   )
 }
 
-export function FilmOverlay({ mode, onClose }: { mode: 'rolls' | 'lightbox'; onClose: () => void }) {
+export function FilmOverlay({
+  mode,
+  onClose,
+  activeRollId: activeRollIdProp,
+  onActiveRollIdChange,
+}: {
+  mode: 'rolls' | 'lightbox'
+  onClose: () => void
+  activeRollId?: string | null
+  onActiveRollIdChange?: (id: string | null) => void
+}) {
   const { rolls, photos } = useDarkroomVault()
-  const [activeRollId, setActiveRollId] = useState<string | null>(null)
+  const [activeRollIdLocal, setActiveRollIdLocal] = useState<string | null>(null)
+  const activeRollId = activeRollIdProp !== undefined ? activeRollIdProp : activeRollIdLocal
+  const setRoll = (id: string | null) => {
+    if (onActiveRollIdChange) onActiveRollIdChange(id)
+    else setActiveRollIdLocal(id)
+  }
   const [frameSource, setFrameSource] = useState<string | null>(null)
 
   const stripPhotos = useMemo(() => {
@@ -45,7 +60,7 @@ export function FilmOverlay({ mode, onClose }: { mode: 'rolls' | 'lightbox'; onC
             rolls={rolls}
             activeRollId={activeRollId}
             onSelect={(id) => {
-              setActiveRollId(id)
+              setRoll(id)
               setFrameSource(null)
             }}
           />
