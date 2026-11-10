@@ -16,6 +16,9 @@ export type DarkroomVault = {
   readBlob: Mutate['readBlob']
   saveNote: Mutate['saveNote']
   saveList: Mutate['saveList']
+  deleteNote: Mutate['deleteNote']
+  deleteList: Mutate['deleteList']
+  toggleListItem: Mutate['toggleListItem']
   addPhoto: Mutate['addPhoto']
   deletePhoto: Mutate['deletePhoto']
   tokenSaved: boolean
@@ -71,6 +74,9 @@ export function VaultBridge({ session, file, fetchBytes, onLock, webStore, webFe
     readBlob: vault.readBlob,
     saveNote: vault.saveNote,
     saveList: vault.saveList,
+    deleteNote: vault.deleteNote,
+    deleteList: vault.deleteList,
+    toggleListItem: vault.toggleListItem,
     addPhoto: vault.addPhoto,
     deletePhoto: vault.deletePhoto,
     tokenSaved: vault.tokenSaved,
