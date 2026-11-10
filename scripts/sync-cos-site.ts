@@ -96,18 +96,21 @@ function isRetryablePut(status: number, body: string): boolean {
 export function uploadOrder(relPaths: string[]): string[] {
   const rank = (rel: string): number => {
     const base = path.posix.basename(rel)
-    if (base === 'index.html' || base === '404.html') return 2
     if (rel.includes('/assets/') || rel.startsWith('assets/')) return 0
-    return 1
+    if (base === 'index.html' || base === '404.html') return 1
+    if (rel.startsWith('vault/') || rel.includes('/vault/')) return 3
+    return 2
   }
   return [...relPaths].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
 }
 
-/** Large fonts already on COS must not block publishing a new index.html. */
+/** Fonts and vault blobs must not block publishing a new index.html. */
 export function isOptionalUpload(rel: string): boolean {
   const ext = path.posix.extname(rel).toLowerCase()
-  if (ext === '.woff' || ext === '.woff2') return true
-  return rel.startsWith('fonts/') || rel.includes('/fonts/')
+  if (ext === '.woff' || ext === '.woff2' || ext === '.bin') return true
+  if (rel.startsWith('fonts/') || rel.includes('/fonts/')) return true
+  if (rel.startsWith('vault/') || rel.includes('/vault/')) return true
+  return false
 }
 
 export async function putWithRetries(

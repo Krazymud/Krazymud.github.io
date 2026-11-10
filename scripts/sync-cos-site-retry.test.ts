@@ -53,8 +53,9 @@ describe('putWithRetries', () => {
 })
 
 describe('isOptionalUpload', () => {
-  it('marks fonts optional and HTML/assets required', () => {
+  it('marks fonts/vault optional and HTML/assets required', () => {
     expect(isOptionalUpload('fonts/lxgw-wenkai-regular.woff2')).toBe(true)
+    expect(isOptionalUpload('vault/blobs/abc.bin')).toBe(true)
     expect(isOptionalUpload('assets/index-abc.js')).toBe(false)
     expect(isOptionalUpload('index.html')).toBe(false)
   })
