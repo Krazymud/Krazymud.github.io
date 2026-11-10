@@ -6,8 +6,9 @@ import { resetPrefsCache } from '../prefs/prefs'
 
 if (typeof HTMLCanvasElement !== 'undefined') {
   const canvasBacking = new WeakMap<HTMLCanvasElement, ReturnType<typeof createCanvas>>()
+  const nativeGetContext = HTMLCanvasElement.prototype.getContext
 
-  HTMLCanvasElement.prototype.getContext = function (type: string): RenderingContext | null {
+  HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, type, options) {
     if (type === '2d') {
       const w = this.width || 1
       const h = this.height || 1
@@ -18,8 +19,8 @@ if (typeof HTMLCanvasElement !== 'undefined') {
       }
       return node.getContext('2d') as unknown as CanvasRenderingContext2D
     }
-    return null
-  }
+    return nativeGetContext.call(this, type, options)
+  } as typeof HTMLCanvasElement.prototype.getContext
 }
 
 afterEach(() => {
