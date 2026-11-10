@@ -3,6 +3,7 @@ import type { ListEntry, ListItem, NoteEntry } from '../../vault/types'
 import { copy } from '../../config/copy'
 import { localCalendarToday } from '../../vault/web'
 import { editBlockedMessage, failureMessage, gateOf } from '../mutateCopy'
+import { DR_COLORS } from '../theme'
 import { useDarkroomVault } from '../VaultBridge'
 import { EditNotice } from './EditNotice'
 
@@ -51,21 +52,46 @@ function NoteLetter({ note, onCreated, onDeleted }: LetterProps & { note: NoteEn
   }
 
   return (
-    <article data-testid="note-letter" data-stationery="typewriter" className="relative bg-[#efe6cf] p-4 font-mono text-[#2a2218] shadow-lg">
-      <span className="absolute right-3 top-2 -rotate-6 border border-[#8a2a1f] px-2 text-[10px] tracking-widest text-[#8a2a1f]">来信</span>
+    <article
+      data-testid="note-letter"
+      data-stationery="typewriter"
+      className="dr-letter-paper relative p-4"
+      style={{ color: DR_COLORS.ink }}
+    >
+      <span className="dr-letter-hint absolute right-3 top-2 -rotate-6 border px-2 text-base tracking-wide">
+        {copy.darkroom.letterStampNote}
+      </span>
       <label className="block text-xs">
         标题
-        <input aria-label="标题" value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1 block w-full border-b border-[#2a2218] bg-transparent font-mono" />
+        <input
+          aria-label="标题"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="dr-letter-field mt-1 block w-full border-b"
+        />
       </label>
       <label className="mt-2 block text-xs">
         日期
-        <input aria-label="日期" value={date} onChange={(e) => setDate(e.target.value)} className="mt-1 block w-full border-b border-[#2a2218] bg-transparent font-mono" />
+        <input
+          aria-label="日期"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="dr-letter-field mt-1 block w-full border-b"
+        />
       </label>
-      <textarea aria-label="正文" value={body} onChange={(e) => setBody(e.target.value)} rows={8} className="mt-3 block w-full bg-transparent font-mono text-sm" />
+      <textarea
+        aria-label="正文"
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        rows={8}
+        className="dr-letter-field mt-3 block w-full text-sm"
+      />
       <div className="mt-2 flex items-center gap-3 text-xs">
-        <button type="button" disabled={blocked} onClick={() => void save()} className="border border-[#2a2218] px-3 py-2 disabled:opacity-40">保存</button>
+        <button type="button" disabled={blocked} onClick={() => void save()} className="dr-letter-field border px-3 py-2 disabled:opacity-40">
+          保存
+        </button>
         {note && (
-          <button type="button" disabled={blocked} onClick={() => void remove()} className="border border-[#8a2a1f] px-3 py-2 text-[#8a2a1f] disabled:opacity-40">
+          <button type="button" disabled={blocked} onClick={() => void remove()} className="dr-letter-hint border px-3 py-2 disabled:opacity-40">
             撕掉
           </button>
         )}
@@ -135,11 +161,24 @@ function ListLetter({ list, onCreated, onDeleted }: LetterProps & { list: ListEn
   }
 
   return (
-    <article data-testid="list-letter" data-stationery="form" className="relative border-2 border-dashed border-[#2f5d4a] bg-[#dbe8df] p-4 font-sans text-[#14281f] shadow-lg">
-      <span className="absolute right-3 top-2 rotate-3 rounded-full border border-[#2f5d4a] px-2 text-[10px] text-[#2f5d4a]">清单</span>
-      <label className="block text-xs font-bold">
+    <article
+      data-testid="list-letter"
+      data-stationery="form"
+      className="dr-letter-paper dr-letter-form relative p-4"
+      style={{ color: DR_COLORS.ink }}
+    >
+      <span className="dr-letter-hint absolute right-3 top-2 rotate-3 rounded-full border px-2 text-base">
+        {copy.darkroom.letterStampList}
+      </span>
+      <label className="dr-letter-hint block text-sm">
         事项名称
-        <input aria-label="事项名称" value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1 block w-full border border-[#2f5d4a] bg-white/60 px-1" />
+        <input
+          aria-label="事项名称"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="dr-letter-field mt-1 block w-full border px-1"
+          style={{ color: DR_COLORS.ink }}
+        />
       </label>
       <ul className="mt-3 space-y-1 text-sm">
         {items.map((item, i) => (
@@ -151,14 +190,23 @@ function ListLetter({ list, onCreated, onDeleted }: LetterProps & { list: ListEn
           </li>
         ))}
       </ul>
-      <label className="mt-3 block text-xs font-bold">
+      <label className="dr-letter-hint mt-3 block text-sm">
         新增条目（每行一项）
-        <textarea aria-label="新增条目" value={draft} onChange={(e) => setDraft(e.target.value)} rows={3} className="mt-1 block w-full border border-[#2f5d4a] bg-white/60 px-1" />
+        <textarea
+          aria-label="新增条目"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          rows={3}
+          className="dr-letter-field mt-1 block w-full border px-1"
+          style={{ color: DR_COLORS.ink }}
+        />
       </label>
       <div className="mt-2 flex items-center gap-3 text-xs">
-        <button type="button" disabled={blocked} onClick={() => void save()} className="border border-[#2f5d4a] px-3 py-2 disabled:opacity-40">保存</button>
+        <button type="button" disabled={blocked} onClick={() => void save()} className="dr-letter-field border px-3 py-2 disabled:opacity-40">
+          保存
+        </button>
         {list && (
-          <button type="button" disabled={blocked} onClick={() => void remove()} className="border border-[#8a2a1f] px-3 py-2 text-[#8a2a1f] disabled:opacity-40">
+          <button type="button" disabled={blocked} onClick={() => void remove()} className="dr-letter-hint border px-3 py-2 disabled:opacity-40">
             作废
           </button>
         )}
@@ -225,7 +273,7 @@ export function LetterOverlay({ onClose, onNeedGate, initialMode = 'notes' }: { 
                 </button>
               </li>
             ))}
-            {notes.length === 0 && <li className="dr-muted">还没有信</li>}
+            {notes.length === 0 && <li className="dr-muted">{copy.darkroom.letterNoNotes}</li>}
           </ul>
           <button
             type="button"
@@ -236,7 +284,7 @@ export function LetterOverlay({ onClose, onNeedGate, initialMode = 'notes' }: { 
             }}
             className="dr-btn dr-panel mb-2 px-3 py-2 text-xs"
           >
-            空白信纸
+            {copy.darkroom.letterBlankNote}
           </button>
           {noteSource !== null && (
             <NoteLetter
@@ -257,7 +305,7 @@ export function LetterOverlay({ onClose, onNeedGate, initialMode = 'notes' }: { 
                 </button>
               </li>
             ))}
-            {lists.length === 0 && <li className="dr-muted">还没有清单</li>}
+            {lists.length === 0 && <li className="dr-muted">{copy.darkroom.letterNoLists}</li>}
           </ul>
           <button
             type="button"
@@ -268,7 +316,7 @@ export function LetterOverlay({ onClose, onNeedGate, initialMode = 'notes' }: { 
             }}
             className="dr-btn dr-panel mb-2 px-3 py-2 text-xs"
           >
-            空白表格
+            {copy.darkroom.letterBlankList}
           </button>
           {listSource !== null && (
             <ListLetter

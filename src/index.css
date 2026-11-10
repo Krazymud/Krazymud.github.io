@@ -253,6 +253,31 @@ body {
   color: #a89782;
 }
 
+.dr-letter-paper {
+  background: #f3e6d2;
+  color: #040302;
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  box-shadow:
+    0 2px 0 rgba(4, 3, 2, 0.06),
+    0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.dr-letter-hint {
+  font-family: 'Reenie Beanie', 'LXGW WenKai', cursive;
+  color: #ee5546;
+  border-color: #ee5546;
+}
+
+.dr-letter-field {
+  border-color: rgba(4, 3, 2, 0.35);
+  background: transparent;
+  font-family: inherit;
+}
+
+.dr-letter-form {
+  border: 2px dashed rgba(238, 85, 70, 0.55);
+}
+
 .home-hero-fade {
   background: linear-gradient(
     180deg,

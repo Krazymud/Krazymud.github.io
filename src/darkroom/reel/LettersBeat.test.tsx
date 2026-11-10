@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { copy } from '../../config/copy'
 import { LettersBeat } from './LettersBeat'
 
 const next = vi.fn()
@@ -30,8 +31,8 @@ describe('LettersBeat', () => {
   it('shows invite and skip when vault has no notes', () => {
     render(<LettersBeat />)
     expect(screen.getByTestId('letters-beat')).toHaveAttribute('data-empty', 'true')
-    expect(screen.getByText(/还没有信/)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /略过|继续/i }))
+    expect(screen.getByText(copy.darkroom.lettersEmptyInvite)).toBeInTheDocument()
+    fireEvent.click(screen.getByText(copy.darkroom.reelSkip))
     expect(next).toHaveBeenCalledOnce()
   })
 
@@ -43,7 +44,7 @@ describe('LettersBeat', () => {
     expect(screen.getByTestId('letters-card')).toBeInTheDocument()
     expect(screen.getByText('昨夜')).toBeInTheDocument()
     await waitFor(() => expect(screen.getByText('烛光下的字句')).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: /继续/i }))
+    fireEvent.click(screen.getByText(copy.darkroom.reelContinue))
     expect(next).toHaveBeenCalledOnce()
   })
 })

@@ -43,6 +43,7 @@ describe('LetterOverlay', () => {
     fireEvent.click(screen.getByText('N1'))
     await waitFor(() => expect((screen.getByLabelText('正文') as HTMLTextAreaElement).value).toBe('hello'))
     expect(screen.getByTestId('note-letter').dataset.stationery).toBe('typewriter')
+    expect(screen.getByTestId('note-letter')).toHaveClass('dr-letter-paper')
     fireEvent.change(screen.getByLabelText('正文'), { target: { value: 'hello!' } })
     fireEvent.click(screen.getByText('保存'))
     await waitFor(() => expect(vault.saveNote).toHaveBeenCalledWith({ source: 'n1', title: 'N1', date: '2024-01-02', body: 'hello!' }))
@@ -51,7 +52,7 @@ describe('LetterOverlay', () => {
   it('creates a note from a blank sheet without source', async () => {
     vault.saveNote.mockResolvedValue({ ok: true })
     render(<LetterOverlay onClose={() => undefined} />)
-    fireEvent.click(screen.getByText('空白信纸'))
+    fireEvent.click(screen.getByText(copy.darkroom.letterBlankNote))
     fireEvent.change(screen.getByLabelText('标题'), { target: { value: 'T' } })
     fireEvent.click(screen.getByText('保存'))
     await waitFor(() => expect(vault.saveNote).toHaveBeenCalledWith(expect.objectContaining({ source: undefined, title: 'T' })))
@@ -64,7 +65,7 @@ describe('LetterOverlay', () => {
       return { ok: true }
     })
     const { rerender } = render(<LetterOverlay onClose={() => undefined} />)
-    fireEvent.click(screen.getByText('空白信纸'))
+    fireEvent.click(screen.getByText(copy.darkroom.letterBlankNote))
     expect(screen.queryByText('撕掉')).toBeNull()
     fireEvent.change(screen.getByLabelText('标题'), { target: { value: 'T' } })
     fireEvent.click(screen.getByText('保存'))
@@ -92,6 +93,7 @@ describe('LetterOverlay', () => {
     fireEvent.click(screen.getByText('L1'))
     const box = await screen.findByRole('checkbox')
     expect(screen.getByTestId('list-letter').dataset.stationery).toBe('form')
+    expect(screen.getByTestId('list-letter')).toHaveClass('dr-letter-paper', 'dr-letter-form')
     fireEvent.click(box)
     await waitFor(() => expect(vault.toggleListItem).toHaveBeenCalledWith('l1', 0, true))
   })
@@ -99,7 +101,7 @@ describe('LetterOverlay', () => {
   it('saves a blank form via saveList', async () => {
     vault.saveList.mockResolvedValue({ ok: true })
     render(<LetterOverlay onClose={() => undefined} initialMode="lists" />)
-    fireEvent.click(screen.getByText('空白表格'))
+    fireEvent.click(screen.getByText(copy.darkroom.letterBlankList))
     fireEvent.change(screen.getByLabelText('事项名称'), { target: { value: 'X' } })
     fireEvent.change(screen.getByLabelText('新增条目'), { target: { value: 'one\ntwo' } })
     fireEvent.click(screen.getByText('保存'))
@@ -116,7 +118,7 @@ describe('LetterOverlay', () => {
       return { ok: true }
     })
     const { rerender } = render(<LetterOverlay onClose={() => undefined} initialMode="lists" />)
-    fireEvent.click(screen.getByText('空白表格'))
+    fireEvent.click(screen.getByText(copy.darkroom.letterBlankList))
     fireEvent.change(screen.getByLabelText('事项名称'), { target: { value: 'X' } })
     fireEvent.change(screen.getByLabelText('新增条目'), { target: { value: 'one' } })
     fireEvent.click(screen.getByText('保存'))
@@ -141,7 +143,7 @@ describe('LetterOverlay without a sync gate', () => {
     const onNeedGate = vi.fn()
     render(<LetterOverlay onClose={() => undefined} onNeedGate={onNeedGate} />)
     expect(screen.getByTestId('edit-blocked')).toHaveTextContent(copy.darkroom.needGate)
-    fireEvent.click(screen.getByText('空白信纸'))
+    fireEvent.click(screen.getByText(copy.darkroom.letterBlankNote))
     const save = screen.getByText('保存')
     expect(save).toBeDisabled()
     fireEvent.click(save)
@@ -170,7 +172,7 @@ describe('LetterOverlay without a sync gate', () => {
     vault.tokenSaved = true
     vault.saveNote.mockResolvedValue({ ok: false, reason: 'locked' })
     render(<LetterOverlay onClose={() => undefined} />)
-    fireEvent.click(screen.getByText('空白信纸'))
+    fireEvent.click(screen.getByText(copy.darkroom.letterBlankNote))
     fireEvent.click(screen.getByText('保存'))
     await waitFor(() => expect(screen.getByRole('status')).not.toBeEmptyDOMElement())
     expect(screen.getByRole('status').textContent).not.toMatch(/locked|blob/)
@@ -181,7 +183,7 @@ describe('LetterOverlay without a sync gate', () => {
     vault.tokenSaved = true
     vault.saveNote.mockResolvedValue({ ok: false, reason: 'blob' })
     render(<LetterOverlay onClose={() => undefined} />)
-    fireEvent.click(screen.getByText('空白信纸'))
+    fireEvent.click(screen.getByText(copy.darkroom.letterBlankNote))
     fireEvent.click(screen.getByText('保存'))
     expect(await screen.findByText(copy.darkroom.blobFailed)).toBeTruthy()
   })
