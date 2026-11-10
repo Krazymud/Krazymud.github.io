@@ -4,13 +4,14 @@ export type Vec3 = [number, number, number]
 export interface Anchor {
   position: Vec3
   target: Vec3
+  fov: number
 }
 
 export const FOCUS_IDS: FocusId[] = ['desk', 'envelope', 'rolls', 'lightbox', 'tray', 'viewer']
 
 export type PropId = Exclude<FocusId, 'desk'>
 
-export const CAMERA_FOV = 50
+export const CAMERA_FOV = 32
 export const LANDSCAPE_ASPECT = 16 / 9
 const TAN_HALF_FOV = Math.tan((CAMERA_FOV / 2) * (Math.PI / 180))
 const PORTRAIT_BELOW = 0.9
@@ -82,7 +83,7 @@ function pullBack(anchor: Anchor, halfWidth: number, aspect: number): Anchor {
   const scale = Math.max(1, fitDistance(halfWidth, aspect) / current)
   if (scale === 1) return anchor
   return {
-    target: anchor.target,
+    ...anchor,
     position: [
       anchor.target[0] + (anchor.position[0] - anchor.target[0]) * scale,
       anchor.target[1] + (anchor.position[1] - anchor.target[1]) * scale,
@@ -91,16 +92,22 @@ function pullBack(anchor: Anchor, halfWidth: number, aspect: number): Anchor {
   }
 }
 
+function withFov(anchor: Omit<Anchor, 'fov'>): Anchor {
+  return { ...anchor, fov: CAMERA_FOV }
+}
+
 export function anchorForFocus(focus: FocusId, aspect: number = LANDSCAPE_ASPECT): Anchor {
   const layout = layoutForAspect(aspect)
   if (focus === 'desk') {
-    const target: Vec3 = [0, 0.3, 0]
-    const base: Anchor = layout.portrait
-      ? { position: [0, 4.2, 2.25], target }
-      : { position: [0, 3.2, 4.6], target }
-    return pullBack(base, layout.halfWidth, aspect)
+    const target: Vec3 = [0, 0, 0.15]
+    const base = layout.portrait
+      ? { position: [0, 6.2, 3.0] as Vec3, target }
+      : { position: [0, 7, 5.4] as Vec3, target }
+    return withFov(pullBack(withFov(base), layout.halfWidth, aspect))
   }
   const prop = layout.props[focus]
   const view = PROP_VIEWS[focus]
-  return pullBack({ position: add(prop, view.position), target: add(prop, view.target) }, view.halfWidth, aspect)
+  return withFov(
+    pullBack(withFov({ position: add(prop, view.position), target: add(prop, view.target) }), view.halfWidth, aspect),
+  )
 }

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { anchorForFocus, fitDistance, FOCUS_IDS, layoutForAspect, type Anchor } from './cameraFocus'
+import {
+  anchorForFocus,
+  CAMERA_FOV,
+  fitDistance,
+  FOCUS_IDS,
+  layoutForAspect,
+  type Anchor,
+} from './cameraFocus'
 
 const PORTRAIT = 390 / 844
 const LANDSCAPE = 16 / 9
@@ -15,8 +22,12 @@ describe('anchorForFocus', () => {
   it('props have distinct anchors', () => {
     expect(anchorForFocus('envelope')).not.toEqual(anchorForFocus('rolls'))
   })
-  it('keeps the original landscape desk framing', () => {
-    expect(anchorForFocus('desk', LANDSCAPE)).toEqual({ position: [0, 3.2, 4.6], target: [0, 0.3, 0] })
+  it('desk home is elevated three-quarter', () => {
+    const a = anchorForFocus('desk', LANDSCAPE)
+    expect(a.position[1]).toBeGreaterThan(5)
+    expect(a.fov).toBe(32)
+    expect(a.position).toEqual([0, 7, 5.4])
+    expect(a.target).toEqual([0, 0, 0.15])
   })
 })
 
@@ -39,7 +50,7 @@ describe('portrait framing', () => {
   it('keeps every prop inside the horizontal view in portrait', () => {
     const { props } = layoutForAspect(PORTRAIT)
     const desk = anchorForFocus('desk', PORTRAIT)
-    const halfVisible = dist(desk) * Math.tan((25 * Math.PI) / 180) * PORTRAIT
+    const halfVisible = dist(desk) * Math.tan(((CAMERA_FOV / 2) * Math.PI) / 180) * PORTRAIT
     for (const [id, pos] of Object.entries(props)) {
       expect(Math.abs(pos[0]) + 0.35, id).toBeLessThan(halfVisible)
     }

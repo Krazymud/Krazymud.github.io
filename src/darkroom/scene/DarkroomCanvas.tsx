@@ -1,5 +1,6 @@
 import { Canvas } from '@react-three/fiber'
 import { useState } from 'react'
+import * as THREE from 'three'
 import { CAMERA_FOV, anchorForFocus, type FocusId } from './cameraFocus'
 import { CameraRig } from './CameraRig'
 import { FilmOverlay } from '../overlays/FilmStrip'
@@ -35,6 +36,9 @@ export function DarkroomCanvas() {
           shadows
           gl={{ antialias: true }}
           onCreated={({ gl }) => {
+            gl.toneMapping = THREE.ACESFilmicToneMapping
+            gl.toneMappingExposure = 1.05
+            gl.outputColorSpace = THREE.SRGBColorSpace
             gl.domElement.addEventListener('webglcontextlost', (event) => {
               event.preventDefault()
               setLost(true)
@@ -42,9 +46,11 @@ export function DarkroomCanvas() {
           }}
         >
           <color attach="background" args={['#050403']} />
-          <DeskScene onFocus={setFocus} rolls={rolls} />
+          <DeskScene onFocus={setFocus} rolls={rolls} focus={focus} />
           <CameraRig focus={focus} />
         </Canvas>
+        <div className="dr-vig" aria-hidden />
+        <div className="dr-grain" aria-hidden />
       </SceneErrorBoundary>
       {(focus === 'rolls' || focus === 'lightbox') && <FilmOverlay key={focus} mode={focus} onClose={close} />}
       {focus === 'tray' && <TrayOverlay onClose={close} onNeedGate={openSync} />}

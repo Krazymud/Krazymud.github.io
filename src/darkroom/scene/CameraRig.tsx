@@ -1,6 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
-import { Vector3 } from 'three'
+import { PerspectiveCamera, Vector3 } from 'three'
 import { anchorForFocus, type FocusId } from './cameraFocus'
 
 function prefersReducedMotion() {
@@ -16,13 +16,17 @@ export function CameraRig({ focus }: { focus: FocusId }) {
   const goalLook = useMemo(() => new Vector3(...anchor.target), [anchor])
   const placed = useRef(false)
 
+  const goalFov = anchor.fov
+
   useEffect(() => {
     if (placed.current && !prefersReducedMotion()) return
     placed.current = true
     camera.position.copy(goal)
     look.current.copy(goalLook)
     camera.lookAt(goalLook)
-  }, [camera, goal, goalLook])
+    if (camera instanceof PerspectiveCamera) camera.fov = goalFov
+    if (camera instanceof PerspectiveCamera) camera.updateProjectionMatrix()
+  }, [camera, goal, goalLook, goalFov])
 
   useFrame((_, dt) => {
     if (prefersReducedMotion()) return
@@ -30,6 +34,10 @@ export function CameraRig({ focus }: { focus: FocusId }) {
     camera.position.lerp(goal, k)
     look.current.lerp(goalLook, k)
     camera.lookAt(look.current)
+    if (camera instanceof PerspectiveCamera) {
+      camera.fov += (goalFov - camera.fov) * k
+      camera.updateProjectionMatrix()
+    }
   })
   return null
 }
