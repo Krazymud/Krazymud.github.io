@@ -6,7 +6,15 @@ vi.mock('../scene/DarkroomCanvas', () => ({
   DarkroomCanvas: () => <div data-testid="darkroom-canvas" />,
 }))
 
-const cta = /启封卷轴|启卷|继续|roll/i
+vi.mock('../VaultBridge', () => ({
+  useDarkroomVault: () => ({
+    notes: [],
+    readBlob: vi.fn(),
+    loading: false,
+  }),
+}))
+
+const cta = /启封卷轴|启卷|继续|略过|roll/i
 
 function stubReducedMotion(reduced: boolean) {
   const matchMedia = vi.fn().mockImplementation((query: string) => ({
@@ -51,6 +59,19 @@ describe('ReelStage', () => {
     expect(screen.queryByTestId('darkroom-canvas')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: cta }))
     expect(screen.getByTestId('darkroom-canvas')).toBeInTheDocument()
+  })
+
+  it('renders LettersBeat after opening', () => {
+    render(<ReelStage />)
+    fireEvent.click(screen.getByRole('button', { name: /启封卷轴|启卷|roll/i }))
+    expect(screen.getByTestId('letters-beat')).toBeInTheDocument()
+  })
+
+  it('shows 下一幕 on desk scene', () => {
+    render(<ReelStage />)
+    fireEvent.click(screen.getByRole('button', { name: /启封卷轴|启卷|roll/i }))
+    fireEvent.click(screen.getByRole('button', { name: /略过/i }))
+    expect(screen.getByRole('button', { name: '下一幕' })).toBeInTheDocument()
   })
 
   it('exposes go() via useReel', () => {

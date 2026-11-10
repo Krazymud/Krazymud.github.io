@@ -10,7 +10,9 @@ import {
 } from 'react'
 import { DarkroomCanvas } from '../scene/DarkroomCanvas'
 import { CreditsScene } from './CreditsScene'
+import { LettersBeat } from './LettersBeat'
 import { OpeningScene } from './OpeningScene'
+import { TrayWallBeat } from './TrayWallBeat'
 import { REEL_ORDER, type ReelSceneId } from './types'
 
 const HEAVY_SCENES = new Set<ReelSceneId>(['desk', 'trayWall', 'book'])
@@ -154,7 +156,7 @@ export function ReelStage({ children }: ReelStageProps) {
     <ReelContext.Provider value={value}>
       <div data-testid="reel-scene" data-scene={scene} className="relative">
         {scene === 'opening' && <OpeningScene onContinue={next} beltUrls={[]} />}
-        {scene === 'letters' && <PlaceholderBeat id="letters" onContinue={next} />}
+        {scene === 'letters' && <LettersBeat />}
         {scene === 'torch' && <PlaceholderBeat id="torch" onContinue={next} />}
         {scene === 'credits' && <CreditsScene onContinue={next} stillUrls={[]} />}
 
@@ -168,7 +170,7 @@ export function ReelStage({ children }: ReelStageProps) {
                   className="pointer-events-auto border border-accent-hi bg-black/60 px-4 py-2 text-sm text-fg"
                   onClick={next}
                 >
-                  继续
+                  下一幕
                 </button>
               </div>
             )}
@@ -176,9 +178,7 @@ export function ReelStage({ children }: ReelStageProps) {
         </HeavySceneShell>
 
         <HeavySceneShell id="trayWall" mounted={trayMounted}>
-          {scene === 'trayWall' ? (
-            <PlaceholderBeat id="trayWall" onContinue={next} />
-          ) : null}
+          {scene === 'trayWall' ? <TrayWallBeat /> : null}
         </HeavySceneShell>
 
         <HeavySceneShell id="book" mounted={bookMounted}>
