@@ -9,17 +9,19 @@ function prefersReducedMotion() {
 
 export function CameraRig({ focus }: { focus: FocusId }) {
   const camera = useThree((s) => s.camera)
-  const anchor = useMemo(() => anchorForFocus(focus), [focus])
+  const aspect = useThree((s) => s.size.width / Math.max(1, s.size.height))
+  const anchor = useMemo(() => anchorForFocus(focus, aspect), [focus, aspect])
   const look = useRef(new Vector3(...anchor.target))
   const goal = useMemo(() => new Vector3(...anchor.position), [anchor])
   const goalLook = useMemo(() => new Vector3(...anchor.target), [anchor])
+  const placed = useRef(false)
 
   useEffect(() => {
-    if (prefersReducedMotion()) {
-      camera.position.copy(goal)
-      look.current.copy(goalLook)
-      camera.lookAt(goalLook)
-    }
+    if (placed.current && !prefersReducedMotion()) return
+    placed.current = true
+    camera.position.copy(goal)
+    look.current.copy(goalLook)
+    camera.lookAt(goalLook)
   }, [camera, goal, goalLook])
 
   useFrame((_, dt) => {

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useImmersive } from '../app/immersive'
 import { play } from '../audio/sound'
 import { copy } from '../config/copy'
 import { DecryptError } from '../vault/crypto'
@@ -82,6 +83,8 @@ export function DarkroomApp({ fetchBytes = fetchVaultBytes, keyStore, webStore }
     void store?.clear().catch(() => undefined)
     setState((prev) => (prev.status === 'ready' ? { status: 'locked', file: prev.file } : prev))
   }, [store])
+
+  useImmersive(state.status === 'ready')
 
   switch (state.status) {
     case 'loading':

@@ -1,6 +1,6 @@
-import type { ThreeEvent } from '@react-three/fiber'
+import { useThree, type ThreeEvent } from '@react-three/fiber'
 import type { ReactNode } from 'react'
-import type { FocusId } from './cameraFocus'
+import { layoutForAspect, type FocusId } from './cameraFocus'
 
 interface PropProps {
   id: Exclude<FocusId, 'desk'>
@@ -131,6 +131,8 @@ function Viewer() {
 }
 
 export function DeskScene({ onFocus }: { onFocus: (id: FocusId) => void }) {
+  const aspect = useThree((s) => s.size.width / Math.max(1, s.size.height))
+  const { props, deskSize } = layoutForAspect(aspect)
   return (
     <group>
       <ambientLight intensity={0.4} />
@@ -146,14 +148,14 @@ export function DeskScene({ onFocus }: { onFocus: (id: FocusId) => void }) {
         shadow-mapSize={[1024, 1024]}
       />
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow userData={{ focusId: 'desk' }} onClick={() => onFocus('desk')}>
-        <planeGeometry args={[9, 5]} />
+        <planeGeometry args={deskSize} />
         <meshStandardMaterial color="#2a1f18" roughness={0.75} metalness={0.05} />
       </mesh>
-      <Prop id="envelope" position={[-2.2, 0, 0.2]} onFocus={onFocus}><Envelope /></Prop>
-      <Prop id="rolls" position={[-0.6, 0, 0.4]} onFocus={onFocus}><Canisters /></Prop>
-      <Prop id="lightbox" position={[1.4, 0, -0.4]} onFocus={onFocus}><Lightbox /></Prop>
-      <Prop id="tray" position={[2.8, 0, 0.6]} onFocus={onFocus}><Tray /></Prop>
-      <Prop id="viewer" position={[0, 0.9, 0]} onFocus={onFocus}><Viewer /></Prop>
+      <Prop id="envelope" position={props.envelope} onFocus={onFocus}><Envelope /></Prop>
+      <Prop id="rolls" position={props.rolls} onFocus={onFocus}><Canisters /></Prop>
+      <Prop id="lightbox" position={props.lightbox} onFocus={onFocus}><Lightbox /></Prop>
+      <Prop id="tray" position={props.tray} onFocus={onFocus}><Tray /></Prop>
+      <Prop id="viewer" position={props.viewer} onFocus={onFocus}><Viewer /></Prop>
     </group>
   )
 }

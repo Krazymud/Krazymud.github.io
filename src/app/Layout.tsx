@@ -1,19 +1,31 @@
 import { motion, useReducedMotion } from 'motion/react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { play, stopAll, unlockAudio } from '../audio/sound'
 import { perfEnabled } from '../perf/perf'
 import { PerfOverlay } from '../perf/PerfOverlay'
 import { setPrefs, usePrefs } from '../prefs/prefs'
 import { copy } from '../config/copy'
+import { ImmersiveContext } from './immersive'
 
 const NAV = [{ to: '/', label: copy.nav.home, end: true }]
 
 function SpeakerIcon({ muted }: { muted: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden
+    >
       <path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" stroke="none" />
-      {muted ? <path d="M16 9l5 6M21 9l-5 6" /> : <path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" />}
+      {muted ? (
+        <path d="M16 9l5 6M21 9l-5 6" />
+      ) : (
+        <path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" />
+      )}
     </svg>
   )
 }
@@ -26,6 +38,7 @@ export function Layout() {
   const { muted } = usePrefs()
   const reducedMotion = useReducedMotion() ?? false
   const isHome = pathname === '/'
+  const [immersive, setImmersive] = useState(false)
 
   useEffect(() => {
     const onVisibility = () => {
@@ -41,59 +54,67 @@ export function Layout() {
     else stopAll()
   }
 
+  const muteButton = (className: string) => (
+    <button type="button" aria-label="静音" aria-pressed={muted} onClick={toggleMute} className={className}>
+      <SpeakerIcon muted={muted} />
+    </button>
+  )
+
   return (
-    <div
-      data-shell={isHome ? 'home' : 'inner'}
-      onPointerDownCapture={unlockAudio}
-      onClickCapture={unlockAudio}
-      onKeyDownCapture={unlockAudio}
-      className="relative min-h-dvh bg-ink text-fg"
-    >
-      <header className="glass-panel glass-panel-nav relative z-10 mx-5 mt-4 flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-xs">
-        <span className="font-display text-accent-hi">{copy.siteName}</span>
-        <nav className="flex items-center gap-4">
-          {NAV.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              onClick={() => void play('tap')}
-              className={({ isActive }) => (isActive ? 'border-b border-accent-hi text-fg' : 'text-muted hover:text-fg')}
-            >
-              {item.label}
-            </NavLink>
-          ))}
-          <button
-            type="button"
-            aria-label="静音"
-            aria-pressed={muted}
-            onClick={toggleMute}
-            className="text-muted hover:text-fg"
+    <ImmersiveContext.Provider value={setImmersive}>
+      <div
+        data-shell={immersive ? 'immersive' : isHome ? 'home' : 'inner'}
+        onPointerDownCapture={unlockAudio}
+        onClickCapture={unlockAudio}
+        onKeyDownCapture={unlockAudio}
+        className={`relative min-h-dvh text-fg ${immersive ? 'bg-[#050403]' : 'bg-ink'}`}
+      >
+        {!immersive && (
+          <header className="glass-panel glass-panel-nav relative z-10 mx-5 mt-4 flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-xs">
+            <span className="font-display text-accent-hi">{copy.siteName}</span>
+            <nav className="flex items-center gap-4">
+              {NAV.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  onClick={() => void play('tap')}
+                  className={({ isActive }) =>
+                    isActive ? 'border-b border-accent-hi text-fg' : 'text-muted hover:text-fg'
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+              {muteButton('text-muted hover:text-fg')}
+            </nav>
+          </header>
+        )}
+        {isHome ? (
+          <main
+            className={immersive ? 'relative z-10' : 'relative z-10 mx-auto w-full max-w-md px-5 pt-6 pb-10'}
           >
-            <SpeakerIcon muted={muted} />
-          </button>
-        </nav>
-      </header>
-      {isHome ? (
-        <main className="relative z-10 mx-auto w-full max-w-md px-5 pt-6 pb-10">
-          <Outlet />
-        </main>
-      ) : reducedMotion ? (
-        <main className={INNER_MAIN}>
-          <Outlet />
-        </main>
-      ) : (
-        <motion.main
-          key={pathname}
-          className={INNER_MAIN}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.26, ease: 'easeOut' }}
-        >
-          <Outlet />
-        </motion.main>
-      )}
-      {perfEnabled && <PerfOverlay />}
-    </div>
+            <Outlet />
+          </main>
+        ) : reducedMotion ? (
+          <main className={INNER_MAIN}>
+            <Outlet />
+          </main>
+        ) : (
+          <motion.main
+            key={pathname}
+            className={INNER_MAIN}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.26, ease: 'easeOut' }}
+          >
+            <Outlet />
+          </motion.main>
+        )}
+        {immersive &&
+          muteButton('dr-btn dr-panel fixed left-3 top-9 z-30 flex h-9 w-9 items-center justify-center')}
+        {perfEnabled && <PerfOverlay />}
+      </div>
+    </ImmersiveContext.Provider>
   )
 }
