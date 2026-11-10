@@ -12,6 +12,7 @@ import { DarkroomCanvas } from '../scene/DarkroomCanvas'
 import { CreditsScene } from './CreditsScene'
 import { LettersBeat } from './LettersBeat'
 import { OpeningScene } from './OpeningScene'
+import { TorchComicBeat } from './TorchComicScene'
 import { TrayWallBeat } from './TrayWallBeat'
 import { REEL_ORDER, type ReelSceneId } from './types'
 
@@ -157,7 +158,7 @@ export function ReelStage({ children }: ReelStageProps) {
       <div data-testid="reel-scene" data-scene={scene} className="relative">
         {scene === 'opening' && <OpeningScene onContinue={next} beltUrls={[]} />}
         {scene === 'letters' && <LettersBeat />}
-        {scene === 'torch' && <PlaceholderBeat id="torch" onContinue={next} />}
+        {scene === 'torch' && <TorchComicBeat />}
         {scene === 'credits' && <CreditsScene onContinue={next} stillUrls={[]} />}
 
         <HeavySceneShell id="desk" mounted={deskMounted}>
