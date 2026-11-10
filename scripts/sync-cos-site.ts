@@ -141,24 +141,36 @@ export async function putWithRetries(
   throw new Error(lastError)
 }
 
-async function remoteMatchesLocal(
+/** HEAD miss / network flake → treat as different so we attempt PUT. */
+export async function remoteMatchesLocal(
   creds: CosCreds,
   bucket: string,
   region: string,
   key: string,
   localBytes: number,
 ): Promise<boolean> {
-  const { url, headers } = await signedCosRequest({
-    method: 'HEAD',
-    bucket,
-    region,
-    key,
-    creds,
-  })
-  const response = await fetch(url, { method: 'HEAD', headers })
-  if (!response.ok) return false
-  const remoteLen = response.headers.get('content-length')
-  return remoteLen !== null && Number(remoteLen) === localBytes
+  try {
+    const { url, headers } = await signedCosRequest({
+      method: 'HEAD',
+      bucket,
+      region,
+      key,
+      creds,
+    })
+    const response = await fetch(url, { method: 'HEAD', headers })
+    if (!response.ok) return false
+    const remoteLen = response.headers.get('content-length')
+    return remoteLen !== null && Number(remoteLen) === localBytes
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error)
+    console.warn(`HEAD ${key} failed (${detail.slice(0, 80)}); will PUT`)
+    return false
+  }
+}
+
+function isHtmlEntry(rel: string): boolean {
+  const base = path.posix.basename(rel)
+  return base === 'index.html' || base === '404.html'
 }
 
 export async function syncCosSite(distDir: string): Promise<void> {
@@ -179,12 +191,13 @@ export async function syncCosSite(distDir: string): Promise<void> {
 
   const rels = uploadOrder(files.map((filePath) => posixRel(absDist, filePath)))
 
+  const failures: string[] = []
+
   for (const rel of rels) {
     const filePath = path.join(absDist, ...rel.split('/'))
     const key = `${prefix}/${rel}`
     const body = await readFile(filePath)
-    const base = path.posix.basename(rel)
-    const mustPut = base === 'index.html' || base === '404.html'
+    const mustPut = isHtmlEntry(rel)
     if (!mustPut && (await remoteMatchesLocal(creds, bucket, region, key, body.byteLength))) {
       console.log(`skip ${key} (same size)`)
       continue
@@ -207,13 +220,25 @@ export async function syncCosSite(distDir: string): Promise<void> {
       }, key)
       console.log(`uploaded ${key}`)
     } catch (error) {
-      if (!isOptionalUpload(rel)) throw error
       const detail = error instanceof Error ? error.message : String(error)
-      console.warn(`skip optional ${key}: ${detail.slice(0, 160)}`)
+      // HTML must publish; fonts/vault already optional; soft-fail other assets so
+      // a flaky early PUT cannot block index.html (CDN otherwise stays on old build).
+      if (mustPut) throw error
+      if (isOptionalUpload(rel)) {
+        console.warn(`skip optional ${key}: ${detail.slice(0, 160)}`)
+      } else {
+        console.warn(`skip asset ${key}: ${detail.slice(0, 160)}`)
+        failures.push(key)
+      }
     }
   }
 
   await maybePurgeCdn(cdnDomain)
+  if (failures.length) {
+    throw new Error(
+      `COS sync uploaded HTML but failed ${failures.length} required asset(s): ${failures.slice(0, 5).join(', ')}`,
+    )
+  }
 }
 
 async function main(): Promise<void> {
