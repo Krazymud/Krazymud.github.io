@@ -2,6 +2,7 @@ import { Canvas } from '@react-three/fiber'
 import { useState } from 'react'
 import { CameraRig } from './CameraRig'
 import type { FocusId } from './cameraFocus'
+import { FilmOverlay } from '../overlays/FilmStrip'
 import { LetterOverlay } from '../overlays/LetterOverlay'
 import { DeskScene } from './DeskScene'
 
@@ -14,6 +15,7 @@ export function DarkroomCanvas() {
         <DeskScene onFocus={setFocus} />
         <CameraRig focus={focus} />
       </Canvas>
+      {(focus === 'rolls' || focus === 'lightbox') && <FilmOverlay key={focus} mode={focus} onClose={() => setFocus('desk')} />}
       {focus === 'envelope' && <LetterOverlay onClose={() => setFocus('desk')} />}
     </div>
   )

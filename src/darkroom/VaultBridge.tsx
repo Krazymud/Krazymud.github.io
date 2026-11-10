@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import type { FetchBytes, VaultSession } from '../vault/repo'
-import type { ListEntry, NoteEntry, VaultFile } from '../vault/types'
+import type { ListEntry, NoteEntry, PhotoEntry, VaultFile } from '../vault/types'
 import { useVaultMutate, type MutateResult } from '../vault/useVaultMutate'
 import { localCalendarToday, type WebClock } from '../vault/web'
 import { defaultWebStore, type WebStore } from '../vault/webStore'
@@ -10,6 +10,7 @@ type Mutate = ReturnType<typeof useVaultMutate>
 
 export type DarkroomVault = {
   rolls: FilmRoll[]
+  photos: PhotoEntry[]
   notes: NoteEntry[]
   lists: ListEntry[]
   loading: boolean
@@ -68,6 +69,7 @@ export function VaultBridge({ session, file, fetchBytes, onLock, webStore, webFe
 
   const value: DarkroomVault = {
     rolls,
+    photos: manifest.photos,
     notes: manifest.notes,
     lists: manifest.lists,
     loading: vault.loading,
