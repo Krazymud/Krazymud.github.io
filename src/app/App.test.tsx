@@ -25,24 +25,34 @@ describe('app shell', () => {
     vi.restoreAllMocks()
   })
 
+  function stubEmptyVault() {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 404, statusText: 'Not Found' })),
+    )
+  }
+
   it('loads the Darkroom entry on /', async () => {
+    stubEmptyVault()
     renderAt('/')
     expect(screen.getByRole('banner')).toHaveTextContent(copy.siteName)
     const main = screen.getByRole('main')
-    expect(await within(main).findByText('暗房')).toBeInTheDocument()
+    expect(await within(main).findByText(copy.siteName)).toBeInTheDocument()
   })
 
   it('redirects /trial to home', async () => {
+    stubEmptyVault()
     renderAt('/trial')
     const main = screen.getByRole('main')
-    expect(await within(main).findByText('暗房')).toBeInTheDocument()
+    expect(await within(main).findByText(copy.siteName)).toBeInTheDocument()
     expect(screen.queryByText(/日课/)).toBeNull()
   })
 
   it('redirects unknown paths to the Darkroom entry', async () => {
+    stubEmptyVault()
     renderAt('/2018/09/05/leetcode05/')
     const main = screen.getByRole('main')
-    expect(await within(main).findByText('暗房')).toBeInTheDocument()
+    expect(await within(main).findByText(copy.siteName)).toBeInTheDocument()
   })
 
   it('uses an open shell on home', () => {
