@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { setPrefs, usePrefs } from '../../prefs/prefs'
 import { DEFAULT_PLAYLIST } from './playlist'
 
 export interface ReelRadioContextValue {
@@ -43,7 +44,8 @@ function playAudio(audio: HTMLAudioElement): Promise<void> {
 }
 
 export function ReelRadioProvider({ children }: { children: ReactNode }) {
-  const [muted, setMuted] = useState(false)
+  const prefs = usePrefs()
+  const muted = prefs.muted
   const [volume, setVolumeState] = useState(0.45)
   const [trackIndex, setTrackIndex] = useState(0)
   const [armed, setArmed] = useState(false)
@@ -155,7 +157,7 @@ export function ReelRadioProvider({ children }: { children: ReactNode }) {
     setVolumeState(Math.min(1, Math.max(0, v)))
   }, [])
 
-  const toggleMute = useCallback(() => setMuted((m) => !m), [])
+  const toggleMute = useCallback(() => setPrefs({ muted: !mutedRef.current }), [])
 
   const next = useCallback(() => {
     setTrackIndex((i) => (i + 1) % DEFAULT_PLAYLIST.length)

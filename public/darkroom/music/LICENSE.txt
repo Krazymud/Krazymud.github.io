@@ -5,10 +5,23 @@ Tracks in this folder MUST be public-domain recordings or works you own the
 rights to distribute on the public web. Do not copy proprietary or CDN-hosted
 audio from third-party gift sites (e.g. roll.giadaserena.top).
 
-Current files (tone-a.mp3, tone-b.mp3, tone-c.mp3) are short synthetic
-placeholder tones generated locally with ffmpeg for UI wiring and automated
-tests only. They are labeled in the playlist as 「测试曲 A/B/C」.
+Current playlist (Wikimedia Commons → re-encoded locally as 128 kbps MP3):
 
-Before production deploy, replace these placeholders with properly licensed
-public-domain performances (see Musopen, IMSLP, or your own recordings) and
-update src/darkroom/reel/playlist.ts titles accordingly.
+1. satie-gymnopedie-1.mp3
+   Source: File:Gymnopedie No. 1..ogg (Wikimedia Commons)
+   License: CC0
+   Composition: Erik Satie (public domain)
+
+2. chopin-nocturne-op37-1.mp3
+   Source: File:Chopin- Nocturne op. 37 no. 1.ogg (Wikimedia Commons)
+   License: CC0
+   Composition: Frédéric Chopin (public domain)
+   Performance credit as listed on Commons (Constantin Stephan metadata)
+
+3. debussy-clair-de-lune.mp3
+   Source: File:Clair de lune (Claude Debussy) Suite bergamasque.ogg
+   License: Public domain
+   Composition: Claude Debussy (public domain)
+
+Re-encoding with ffmpeg does not change the upstream license. Keep this file
+updated if tracks are replaced.
