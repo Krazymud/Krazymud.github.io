@@ -117,7 +117,7 @@ export function isOptionalUpload(rel: string): boolean {
 }
 
 const HEAD_TIMEOUT_MS = 8_000
-const PUT_TIMEOUT_MS = 120_000
+const PUT_TIMEOUT_MS = 180_000
 
 export async function putWithRetries(
   put: () => Promise<{ ok: boolean; status: number; statusText: string; text: () => Promise<string> }>,
