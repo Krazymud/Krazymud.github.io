@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { isOptionalUpload, putWithRetries, remoteMatchesLocal } from './sync-cos-site.ts'
+import { isOptionalUpload, putWithRetries, remoteMatchesLocal, uploadOrder } from './sync-cos-site.ts'
 
 describe('putWithRetries', () => {
   it('retries UserNetworkTooSlow then succeeds', async () => {
@@ -53,11 +53,26 @@ describe('putWithRetries', () => {
 })
 
 describe('isOptionalUpload', () => {
-  it('marks fonts/vault optional and HTML/assets required', () => {
+  it('marks fonts/vault/music optional and HTML/assets required', () => {
     expect(isOptionalUpload('fonts/lxgw-wenkai-regular.woff2')).toBe(true)
     expect(isOptionalUpload('vault/blobs/abc.bin')).toBe(true)
+    expect(isOptionalUpload('darkroom/music/satie-gymnopedie-1.mp3')).toBe(true)
     expect(isOptionalUpload('assets/index-abc.js')).toBe(false)
     expect(isOptionalUpload('index.html')).toBe(false)
+  })
+})
+
+describe('uploadOrder', () => {
+  it('uploads radio music with assets before HTML and vault', () => {
+    const ordered = uploadOrder([
+      'vault/blobs/a.bin',
+      'index.html',
+      'darkroom/music/satie-gymnopedie-1.mp3',
+      'assets/index-abc.js',
+    ])
+    expect(ordered.slice(0, 2)).toEqual(['assets/index-abc.js', 'darkroom/music/satie-gymnopedie-1.mp3'])
+    expect(ordered[2]).toBe('index.html')
+    expect(ordered[3]).toBe('vault/blobs/a.bin')
   })
 })
 

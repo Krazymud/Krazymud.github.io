@@ -92,11 +92,12 @@ function isRetryablePut(status: number, body: string): boolean {
   return false
 }
 
-/** Upload order: hashed assets first, HTML entrypoints last. */
+/** Upload order: hashed assets + radio music first, HTML, then other, vault last. */
 export function uploadOrder(relPaths: string[]): string[] {
   const rank = (rel: string): number => {
     const base = path.posix.basename(rel)
     if (rel.includes('/assets/') || rel.startsWith('assets/')) return 0
+    if (rel.includes('/darkroom/music/') || rel.startsWith('darkroom/music/')) return 0
     if (base === 'index.html' || base === '404.html') return 1
     if (rel.startsWith('vault/') || rel.includes('/vault/')) return 3
     return 2
@@ -104,14 +105,19 @@ export function uploadOrder(relPaths: string[]): string[] {
   return [...relPaths].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
 }
 
-/** Fonts and vault blobs must not block publishing a new index.html. */
+/** Fonts, vault, and large media must not block publishing a new index.html. */
 export function isOptionalUpload(rel: string): boolean {
   const ext = path.posix.extname(rel).toLowerCase()
   if (ext === '.woff' || ext === '.woff2' || ext === '.bin') return true
+  if (ext === '.mp3' || ext === '.mp4' || ext === '.webm' || ext === '.wav') return true
   if (rel.startsWith('fonts/') || rel.includes('/fonts/')) return true
   if (rel.startsWith('vault/') || rel.includes('/vault/')) return true
+  if (rel.includes('/darkroom/music/') || rel.startsWith('darkroom/music/')) return true
   return false
 }
+
+const HEAD_TIMEOUT_MS = 8_000
+const PUT_TIMEOUT_MS = 120_000
 
 export async function putWithRetries(
   put: () => Promise<{ ok: boolean; status: number; statusText: string; text: () => Promise<string> }>,
@@ -157,7 +163,11 @@ export async function remoteMatchesLocal(
       key,
       creds,
     })
-    const response = await fetch(url, { method: 'HEAD', headers })
+    const response = await fetch(url, {
+      method: 'HEAD',
+      headers,
+      signal: AbortSignal.timeout(HEAD_TIMEOUT_MS),
+    })
     if (!response.ok) return false
     const remoteLen = response.headers.get('content-length')
     return remoteLen !== null && Number(remoteLen) === localBytes
@@ -216,7 +226,12 @@ export async function syncCosSite(distDir: string): Promise<void> {
           },
           body,
         })
-        return fetch(url, { method: 'PUT', headers, body })
+        return fetch(url, {
+          method: 'PUT',
+          headers,
+          body,
+          signal: AbortSignal.timeout(PUT_TIMEOUT_MS),
+        })
       }, key)
       console.log(`uploaded ${key}`)
     } catch (error) {
