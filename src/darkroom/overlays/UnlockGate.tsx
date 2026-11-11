@@ -5,10 +5,7 @@ interface UnlockGateProps {
   onUnlock: (passphrase: string, remember: boolean) => Promise<boolean>
 }
 
+/** Full-bleed cinematic unlock — first viewport matches darkroom title card, not a light form. */
 export function UnlockGate(props: UnlockGateProps) {
-  return (
-    <main className="mx-auto w-full max-w-md px-4">
-      <UnlockPanel {...props} />
-    </main>
-  )
+  return <UnlockPanel {...props} />
 }

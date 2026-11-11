@@ -27,17 +27,17 @@ function Page() {
 }
 
 describe('immersive layout', () => {
-  it('hides the header while a page is immersive without remounting it, and keeps a mute control', () => {
+  it('keeps darkroom home chrome without light header and does not remount on immersive toggle', () => {
     const router = createMemoryRouter([{ path: '/', element: <Layout />, children: [{ index: true, element: <Page /> }] }])
     render(<RouterProvider router={router} />)
-    expect(document.querySelector('header')).not.toBeNull()
-    fireEvent.click(screen.getByText('toggle'))
+    // Home is always darkroom shell — no glass header.
     expect(document.querySelector('header')).toBeNull()
     expect(document.querySelector('[data-shell="immersive"]')).not.toBeNull()
     expect(screen.getAllByRole('button', { name: '静音' })).toHaveLength(1)
     fireEvent.click(screen.getByText('toggle'))
-    expect(document.querySelector('header')).not.toBeNull()
-    expect(screen.getAllByRole('button', { name: '静音' })).toHaveLength(1)
+    expect(document.querySelector('header')).toBeNull()
+    expect(document.querySelector('[data-shell="immersive"]')).not.toBeNull()
+    fireEvent.click(screen.getByText('toggle'))
     expect(mounts).toHaveBeenCalledTimes(1)
   })
 })
