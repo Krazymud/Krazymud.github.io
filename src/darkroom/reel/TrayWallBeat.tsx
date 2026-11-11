@@ -54,24 +54,23 @@ export function TrayWallBeat() {
   return (
     <section
       data-testid="tray-wall-beat"
-      className="flex min-h-[40vh] flex-col items-center justify-center gap-4 p-8 text-fg"
+      className="flex min-h-[40vh] flex-col items-center justify-center gap-4 p-8"
+      style={{ background: '#0b0705', color: '#f3e6d2' }}
       aria-label="照片墙"
     >
-      <p className="font-display text-lg tracking-widest">照片墙</p>
-      <p className="text-xs text-muted">从显影盘中挑选，订上钉子。（至多 {WALL_LIMIT} 张用于拍立得带走）</p>
+      <p className="text-lg tracking-widest" style={{ fontFamily: 'Fraunces, serif' }}>
+        照片墙
+      </p>
+      <p className="text-xs opacity-70">从显影盘中挑选，订上钉子。（至多 {WALL_LIMIT} 张用于拍立得带走）</p>
       <button
         type="button"
-        className="border border-accent-hi px-6 py-2 text-sm disabled:opacity-40"
+        className="border border-[#ee5546]/70 px-6 py-2 text-sm disabled:opacity-40"
         disabled={!hasPhotos || loadingPolaroid}
         onClick={() => void onTakeHome()}
       >
         {loadingPolaroid ? '读取照片…' : '带走拍立得'}
       </button>
-      <button
-        type="button"
-        className="border border-accent-hi px-6 py-2 text-sm"
-        onClick={() => next()}
-      >
+      <button type="button" className="border border-[#f3e6d2]/35 px-6 py-2 text-sm" onClick={() => next()}>
         继续
       </button>
     </section>

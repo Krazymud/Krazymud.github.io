@@ -152,7 +152,7 @@ export function ReelStage({ children }: ReelStageProps) {
               <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex justify-center">
                 <button
                   type="button"
-                  className="pointer-events-auto border border-accent-hi bg-black/60 px-4 py-2 text-sm text-fg"
+                  className="pointer-events-auto border border-[#ee5546]/70 bg-[#040302]/70 px-4 py-2 text-sm text-[#f3e6d2]"
                   onClick={next}
                 >
                   下一幕

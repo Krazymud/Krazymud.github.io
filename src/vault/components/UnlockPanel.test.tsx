@@ -27,7 +27,7 @@ describe('UnlockPanel', () => {
     render(<UnlockPanel canRemember onUnlock={vi.fn(async () => true)} />)
     expect(screen.getByText(copy.siteName)).toBeInTheDocument()
     expect(screen.queryByText('PRIVATE VAULT')).not.toBeInTheDocument()
-    expect(screen.getByTestId('unlock-panel').className).toMatch(/dr-opening/)
+    expect(screen.getByTestId('unlock-panel').className).toMatch(/dr-stage/)
     expect(screen.getByRole('button', { name: copy.darkroom.unseal })).toBeInTheDocument()
     expect(screen.getByText(/roll it, darling/i)).toBeInTheDocument()
   })

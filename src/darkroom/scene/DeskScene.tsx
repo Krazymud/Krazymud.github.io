@@ -58,7 +58,16 @@ function Canisters({ rolls }: { rolls: FilmRoll[] }) {
     <group>
       {visible.map((roll, i) => {
         const layout = CANISTER_LAYOUT[i]!
-        return <Canister key={roll.id} roll={roll} styleIndex={i} position={layout.position} yaw={layout.yaw} />
+        return (
+          <Canister
+            key={roll.id}
+            roll={roll}
+            styleIndex={i}
+            rollNo={i + 1}
+            position={layout.position}
+            yaw={layout.yaw}
+          />
+        )
       })}
     </group>
   )
@@ -110,7 +119,8 @@ function rollsClusterLocal(): THREE.Vector3 {
     z += slot.position[2]
   }
   const n = CANISTER_LAYOUT.length
-  return new THREE.Vector3(x / n, y / n, z / n)
+  // Canisters sit at R+0.03 above layout y (see Canister.tsx).
+  return new THREE.Vector3(x / n, y / n + 0.41, z / n)
 }
 
 function LampRig({ focus, rollsProp }: { focus: FocusId; rollsProp: [number, number, number] }) {
@@ -143,15 +153,20 @@ function LampRig({ focus, rollsProp }: { focus: FocusId; rollsProp: [number, num
       <object3D ref={target} position={deskLook} />
       <spotLight
         ref={spot}
-        position={[-0.4, 5.2, 3.8]}
-        angle={0.55}
-        penumbra={0.85}
-        intensity={48}
+        position={[0.6, 8.5, 2.2]}
+        angle={0.62}
+        penumbra={0.95}
+        intensity={140}
+        distance={30}
+        decay={2}
         color={DR_COLORS.spot}
         castShadow
         shadow-mapSize={[1024, 1024]}
-        shadow-radius={4}
+        shadow-radius={6}
+        shadow-bias={-0.0004}
       />
+      <pointLight position={[-1, 2.2, 4.5]} intensity={0} color="#ffb47a" distance={8} decay={2} />
+      <directionalLight position={[-6, 3, -5]} intensity={0.35} color={DR_COLORS.rim} />
     </>
   )
 }
@@ -172,7 +187,6 @@ export function DeskScene({
   return (
     <group>
       <ambientLight intensity={0.18} color={DR_COLORS.ambient} />
-      <directionalLight position={[4, 6, -5]} intensity={1.1} color={DR_COLORS.rim} />
       <LampRig focus={focus} rollsProp={props.rolls} />
       <WoodDesk deskSize={deskSize} onFocus={onFocus} />
       <Prop id="envelope" position={props.envelope} onFocus={onFocus}>

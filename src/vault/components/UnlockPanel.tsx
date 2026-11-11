@@ -10,11 +10,7 @@ interface UnlockPanelProps {
   onUnlock: (passphrase: string, remember: boolean) => Promise<boolean>
 }
 
-const PLACEHOLDER_FRAMES = [
-  'linear-gradient(145deg,#2a221c,#15100c 55%,#3a2a22)',
-  'linear-gradient(160deg,#1c2420,#0e1210 50%,#2a3228)',
-  'linear-gradient(135deg,#242028,#100e14 60%,#32282e)',
-]
+const PLACEHOLDER_TONES = ['#2a2420', '#1c1a18', '#32302c', '#242220']
 
 export function UnlockPanel({ canRemember, onUnlock }: UnlockPanelProps) {
   const reduced = useReducedMotion() ?? false
@@ -80,71 +76,76 @@ export function UnlockPanel({ canRemember, onUnlock }: UnlockPanelProps) {
         void submit()
       }}
       onAnimationEnd={() => setShaking(false)}
-      className={`dr-opening relative flex min-h-dvh w-full items-center justify-center overflow-hidden px-4 py-10 ${shaking ? 'motion-safe:animate-vault-shake' : ''}`}
-      style={{ background: DR_COLORS.bg, color: DR_COLORS.cream }}
+      className={`dr-stage relative min-h-dvh overflow-hidden ${shaking ? 'motion-safe:animate-vault-shake' : ''}`}
+      style={{ background: DR_COLORS.ink, color: DR_COLORS.cream }}
     >
-      <div className="dr-opening-bokeh" aria-hidden />
-      <div className="dr-opening-specks" aria-hidden />
-      <div className="dr-vig absolute inset-0 z-[2]" aria-hidden />
+      <div className="dr-proj">
+        <div className="dr-proj-spill" aria-hidden />
+        <div className="dr-proj-frame">
+          <div className="dr-opening-beam" aria-hidden />
+          <div className="dr-opening-shadow" aria-hidden />
+          <div className="dr-opening-zap z1" aria-hidden />
+          <div className="dr-opening-zap z2" aria-hidden />
+          <div className="dr-opening-weave" aria-hidden />
+          <div className="dr-opening-mottle" aria-hidden />
+          <div className="dr-opening-specks" aria-hidden />
+          <div className="dr-opening-grain" aria-hidden />
+          <div className="dr-opening-vig" aria-hidden />
 
-      <aside
-        className="pointer-events-none absolute left-4 top-6 z-10 hidden max-w-[14rem] text-left text-[10px] leading-relaxed tracking-[0.14em] opacity-70 sm:block"
-        style={{ fontFamily: DR_FONTS.mono }}
-        aria-hidden
-      >
-        <p>DARKROOM V.01 — {copy.siteName.toUpperCase()}</p>
-        <p>400 · 24 EXP · REEL 1</p>
-        <p className="mt-3">THREADING FILM ........... OK</p>
-        <p>WARMING THE LAMP .......... OK</p>
-        <p>AWAITING KEY .............. ··</p>
-      </aside>
+          <aside className="dr-opening-log mono" aria-hidden>
+            <p>
+              DARKROOM V.01 — {copy.siteName.toUpperCase()}
+              <br />
+              400 · 24 EXP · REEL 1
+              <br />
+              <br />
+              THREADING FILM ........... OK
+              <br />
+              WARMING THE LAMP .......... OK
+              <br />
+              AWAITING KEY .............. ··
+            </p>
+          </aside>
 
-      <div className="relative z-10 flex w-full max-w-4xl items-center justify-center gap-8 sm:gap-12">
-        <div className="flex max-w-md flex-1 flex-col items-center gap-5 text-center">
-          <h1
-            className="text-5xl font-normal tracking-[0.08em] sm:text-6xl"
-            style={{ fontFamily: DR_FONTS.display, color: DR_COLORS.cream }}
-          >
-            {copy.siteName}
-          </h1>
-          <p
-            className="text-sm italic tracking-[0.06em] opacity-80 sm:text-base"
-            style={{ fontFamily: DR_FONTS.display }}
-          >
-            {copy.darkroom.tagline}
-          </p>
+          <div className="dr-opening-title">
+            <h1 style={{ fontFamily: DR_FONTS.display }}>{copy.siteName}</h1>
+            <p className="sub" style={{ fontFamily: DR_FONTS.display }}>
+              {copy.darkroom.tagline}
+            </p>
+          </div>
 
-          <label className="mt-2 w-full max-w-xs text-left text-[10px] tracking-[0.2em] opacity-70">
-            {copy.darkroom.passphraseLabel}
-            <input
-              type="password"
-              autoComplete="off"
-              value={passphrase}
-              disabled={busy}
-              onChange={(event) => {
-                setPassphrase(event.target.value)
-                setMessage(null)
-              }}
-              className="mt-2 block w-full border-0 border-b bg-transparent px-0 py-2 text-base outline-none"
-              style={{
-                borderColor: 'rgba(243,230,210,0.35)',
-                color: DR_COLORS.cream,
-                fontFamily: DR_FONTS.mono,
-              }}
-            />
-          </label>
-
-          {canRemember && (
-            <label className="flex items-center gap-2 text-xs opacity-70">
+          <div className="absolute left-1/2 top-[52%] z-[5] w-[min(18rem,70%)] -translate-x-1/2 text-center">
+            <label className="block text-left text-[10px] tracking-[0.2em] opacity-70">
+              {copy.darkroom.passphraseLabel}
               <input
-                type="checkbox"
-                checked={remember}
-                onChange={(event) => setRemember(event.target.checked)}
-                className="accent-[#ee5546]"
+                type="password"
+                autoComplete="off"
+                value={passphrase}
+                disabled={busy}
+                onChange={(event) => {
+                  setPassphrase(event.target.value)
+                  setMessage(null)
+                }}
+                className="mt-2 block w-full border-0 border-b bg-transparent px-0 py-2 text-base outline-none"
+                style={{
+                  borderColor: 'rgba(243,230,210,0.35)',
+                  color: DR_COLORS.cream,
+                  fontFamily: DR_FONTS.mono,
+                }}
               />
-              在这台设备上记住
             </label>
-          )}
+            {canRemember && (
+              <label className="mt-3 flex items-center justify-center gap-2 text-xs opacity-70">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(event) => setRemember(event.target.checked)}
+                  className="accent-[#ee5546]"
+                />
+                在这台设备上记住
+              </label>
+            )}
+          </div>
 
           <button
             type="button"
@@ -156,12 +157,10 @@ export function UnlockPanel({ canRemember, onUnlock }: UnlockPanelProps) {
             onPointerCancel={cancelHold}
             onClick={reduced ? () => void submit() : undefined}
             onContextMenu={(event) => event.preventDefault()}
-            className="relative mt-2 touch-none select-none px-2 py-1 text-3xl transition-opacity hover:opacity-90 disabled:opacity-60 sm:text-4xl"
-            style={{ fontFamily: DR_FONTS.hand, color: DR_COLORS.accent }}
+            className="dr-opening-mark relative touch-none select-none disabled:opacity-60"
+            style={{ fontFamily: DR_FONTS.hand, color: DR_COLORS.accent, top: '72%' }}
           >
-            <span className="relative z-10">
-              {busy ? copy.darkroom.unsealing : copy.darkroom.openingCtaHand}
-            </span>
+            <span className="relative z-10">{busy ? copy.darkroom.unsealing : copy.darkroom.openingCtaHand}</span>
             {!reduced && (
               <motion.span
                 aria-hidden
@@ -173,42 +172,37 @@ export function UnlockPanel({ canRemember, onUnlock }: UnlockPanelProps) {
               />
             )}
           </button>
-          <p className="text-[10px] tracking-[0.18em] opacity-50">
+          <p className="absolute bottom-[14%] left-0 right-0 z-[5] text-center text-[10px] tracking-[0.18em] opacity-50">
             {reduced ? copy.darkroom.tapHint : copy.darkroom.holdHint}
           </p>
-
           {message && (
-            <p role="alert" className="text-sm" style={{ color: DR_COLORS.accent }}>
+            <p role="alert" className="absolute bottom-[9%] left-0 right-0 z-[5] text-center text-sm" style={{ color: DR_COLORS.accent }}>
               {message}
             </p>
           )}
-        </div>
 
-        <aside data-testid="unlock-belt" className="dr-film-belt hidden shrink-0 sm:flex" aria-hidden>
-          {PLACEHOLDER_FRAMES.map((bg, i) => (
-            <div key={i} className="dr-film-frame">
-              <div className="dr-film-frame-inner" style={{ background: bg }} />
+          <aside data-testid="unlock-belt" className="dr-opening-strip" aria-hidden>
+            <div className="dr-opening-belt">
+              {[...PLACEHOLDER_TONES, ...PLACEHOLDER_TONES].map((bg, i) => (
+                <div key={i} className="dr-opening-fr">
+                  <div className="img" style={{ background: bg }} />
+                </div>
+              ))}
             </div>
-          ))}
-        </aside>
-      </div>
+          </aside>
 
-      <p
-        className="absolute bottom-5 left-5 z-10 text-[10px] tracking-[0.2em] opacity-50"
-        style={{ fontFamily: DR_FONTS.mono }}
-      >
-        SINCE
-        <br />
-        DARKROOM
-      </p>
-      <p
-        className="absolute bottom-5 right-5 z-10 text-right text-[10px] tracking-[0.2em] opacity-50"
-        style={{ fontFamily: DR_FONTS.mono }}
-      >
-        RUNNING TIME
-        <br />
-        AWAITING KEY
-      </p>
+          <p className="dr-opening-corner bl mono">
+            SINCE
+            <br />
+            DARKROOM
+          </p>
+          <p className="dr-opening-corner br mono">
+            RUNNING TIME
+            <br />
+            AWAITING KEY
+          </p>
+        </div>
+      </div>
     </form>
   )
 }

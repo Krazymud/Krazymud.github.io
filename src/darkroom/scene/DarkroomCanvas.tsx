@@ -41,7 +41,7 @@ export function DarkroomCanvas({ frameloop = 'always' }: { frameloop?: FrameLoop
   const openSync = () => setSyncOpen(true)
 
   return (
-    <div className="fixed inset-0 bg-[#050403]" data-focus={focus}>
+    <div className="fixed inset-0 bg-[#0b0705]" data-focus={focus}>
       <SceneErrorBoundary lost={lost}>
         <Canvas
           frameloop={frameloop}
@@ -59,7 +59,7 @@ export function DarkroomCanvas({ frameloop = 'always' }: { frameloop?: FrameLoop
             })
           }}
         >
-          <color attach="background" args={['#050403']} />
+          <color attach="background" args={['#0b0705']} />
           <DeskScene onFocus={setFocus} rolls={rolls} focus={focus} activeRollId={activeRollId} />
           <CameraRig focus={focus} />
         </Canvas>

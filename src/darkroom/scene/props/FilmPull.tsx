@@ -15,37 +15,66 @@ export function filmLengthForFrames(n: number): number {
   return Math.max(FILM_FRAME_PITCH * 2, body)
 }
 
+/** Procedural orange acetate base + sprocket punch — shell parity without private frames. */
 function makeStripTexture(frameCount: number): THREE.CanvasTexture {
-  const cells = Math.max(1, Math.min(frameCount, 24))
-  const w = 64 * cells
-  const h = 96
+  const cells = Math.max(1, Math.min(frameCount || 8, 24))
+  const FW = 64
+  const FH = 96
+  const w = FW * cells
+  const h = FH
   const canvas = document.createElement('canvas')
   canvas.width = w
   canvas.height = h
   const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = '#0a0806'
+
+  ctx.fillStyle = '#c4642a'
   ctx.fillRect(0, 0, w, h)
-  const cellW = w / cells
+  const g = ctx.createLinearGradient(0, 0, 0, h)
+  g.addColorStop(0, 'rgba(80,25,0,.4)')
+  g.addColorStop(0.12, 'rgba(80,25,0,.1)')
+  g.addColorStop(0.5, 'rgba(255,205,150,.14)')
+  g.addColorStop(0.88, 'rgba(80,25,0,.1)')
+  g.addColorStop(1, 'rgba(80,25,0,.4)')
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, w, h)
+
   for (let i = 0; i < cells; i++) {
-    const x = i * cellW
-    ctx.fillStyle = '#f5e6c8'
-    for (let row = 0; row < 8; row++) {
-      const sy = 4 + row * 11
-      ctx.fillRect(x + 6, sy, 8, 6)
-      ctx.fillRect(x + cellW - 14, sy, 8, 6)
-    }
-    const inset = cellW * 0.14
+    const x = i * FW
+    const inset = 10
+    ctx.fillStyle = 'rgba(60,18,2,.35)'
+    ctx.fillRect(x + inset - 2, 14, FW - inset * 2 + 4, h - 28)
     const hue = (i * 47) % 360
-    ctx.fillStyle = `hsl(${hue}, 22%, 38%)`
-    ctx.fillRect(x + inset, 14, cellW - inset * 2, h - 28)
-    ctx.strokeStyle = 'rgba(255,214,160,0.15)'
-    ctx.strokeRect(x + inset + 2, 16, cellW - inset * 2 - 4, h - 32)
+    ctx.fillStyle = `hsl(${hue}, 18%, 22%)`
+    ctx.fillRect(x + inset, 16, FW - inset * 2, h - 32)
+    ctx.fillStyle = 'rgba(185,80,25,.35)'
+    ctx.fillRect(x + inset, 16, FW - inset * 2, h - 32)
   }
+
+  // Sprocket punch (destination-out)
+  ctx.globalCompositeOperation = 'destination-out'
+  for (let px = 6; px < w; px += 22) {
+    roundRect(ctx, px, 4, 10, 14, 2)
+    ctx.fill()
+    roundRect(ctx, px, h - 18, 10, 14, 2)
+    ctx.fill()
+  }
+  ctx.globalCompositeOperation = 'source-over'
+
   const tex = new THREE.CanvasTexture(canvas)
   tex.colorSpace = THREE.SRGBColorSpace
   tex.wrapS = THREE.ClampToEdgeWrapping
-  tex.anisotropy = 4
+  tex.anisotropy = 8
   return tex
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.arcTo(x + w, y, x + w, y + h, r)
+  ctx.arcTo(x + w, y + h, x, y + h, r)
+  ctx.arcTo(x, y + h, x, y, r)
+  ctx.arcTo(x, y, x + w, y, r)
+  ctx.closePath()
 }
 
 const PULL_Z_REST = -0.42
@@ -74,6 +103,18 @@ export function FilmPull({
   const stripMap = useMemo(() => makeStripTexture(frameCount), [frameCount])
   useEffect(() => () => stripMap.dispose(), [stripMap])
 
+  const geo = useMemo(() => {
+    const g = new THREE.PlaneGeometry(length, 0.95, 140, 1)
+    const p = g.attributes.position!
+    for (let i = 0; i < p.count; i++) {
+      const u = (p.getX(i)! + length / 2) / length
+      p.setZ(i, Math.sin(u * Math.PI) * 0.08 * Math.exp(-u * 1.2) + Math.sin(u * Math.PI * 4) * 0.008)
+    }
+    g.computeVertexNormals()
+    return g
+  }, [length])
+  useEffect(() => () => geo.dispose(), [geo])
+
   useFrame((_, dt) => {
     const g = group.current
     if (!g) return
@@ -92,18 +133,17 @@ export function FilmPull({
 
   return (
     <group ref={group} position={[0.08, 0.46, PULL_Z_REST]} rotation={[-Math.PI / 2.15, 0, 0]}>
-      <mesh castShadow receiveShadow>
-        <planeGeometry args={[length, 0.22]} />
+      <mesh castShadow receiveShadow geometry={geo}>
         <meshPhysicalMaterial
           map={stripMap}
-          color="#2a241c"
-          emissive="#ffb870"
-          emissiveIntensity={visible ? 0.35 : 0.12}
-          roughness={0.38}
-          metalness={0.08}
-          clearcoat={0.85}
-          clearcoatRoughness={0.22}
           transparent
+          alphaTest={0.4}
+          roughness={0.45}
+          metalness={0}
+          clearcoat={0.7}
+          clearcoatRoughness={0.22}
+          emissive="#5a2008"
+          emissiveIntensity={0.35}
           opacity={0.85}
           side={THREE.DoubleSide}
         />
