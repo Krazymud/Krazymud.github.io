@@ -43,11 +43,14 @@ export function LettersBeat() {
       <section
         data-testid="letters-beat"
         data-empty="true"
-        className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-6 py-12 text-fg"
+        className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-6 py-12"
+        style={{ background: DR_COLORS.bg, color: DR_COLORS.cream }}
         aria-label="书信"
       >
-        <p className="font-display text-sm text-muted">书信</p>
-        <p className="max-w-md text-center text-sm text-muted">{copy.darkroom.lettersEmptyInvite}</p>
+        <p className="text-sm opacity-70" style={{ fontFamily: 'Fraunces, serif' }}>
+          书信
+        </p>
+        <p className="max-w-md text-center text-sm opacity-70">{copy.darkroom.lettersEmptyInvite}</p>
         <button type="button" className="dr-letter-hint border px-6 py-2 text-sm" onClick={() => next()}>
           {copy.darkroom.reelSkip}
         </button>

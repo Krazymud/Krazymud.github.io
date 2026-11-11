@@ -188,18 +188,23 @@ export function ReelRadioHud() {
   return (
     <div
       data-testid="reel-radio-hud"
-      className="pointer-events-auto fixed bottom-20 right-4 z-[170] flex items-center gap-2 rounded-full border border-white/15 bg-black/55 px-3 py-1.5 text-xs text-fg backdrop-blur-sm"
+      className="pointer-events-auto fixed bottom-5 left-4 z-[170] flex items-center gap-2 border border-[#f3e6d2]/20 bg-[#040302]/70 px-3 py-1.5 text-[11px] uppercase tracking-[0.08em] text-[#f3e6d2] backdrop-blur-sm"
       aria-live="polite"
     >
-      <span className="max-w-[10rem] truncate text-muted">{muted ? '静音' : trackTitle}</span>
-      <button type="button" className="px-1 text-muted hover:text-fg" aria-label="上一曲" onClick={prev}>
+      <span className="max-w-[10rem] truncate text-[#c4b39c]">{muted ? '静音' : trackTitle}</span>
+      <button type="button" className="px-1 text-[#c4b39c] hover:text-[#f3e6d2]" aria-label="上一曲" onClick={prev}>
         ‹
       </button>
-      <button type="button" className="px-1 text-muted hover:text-fg" aria-label="下一曲" onClick={next}>
+      <button type="button" className="px-1 text-[#c4b39c] hover:text-[#f3e6d2]" aria-label="下一曲" onClick={next}>
         ›
       </button>
-      <button type="button" className="px-1 text-muted hover:text-fg" aria-label={muted ? '取消静音' : '静音'} onClick={toggleMute}>
-        {muted ? '🔇' : '🔈'}
+      <button
+        type="button"
+        className="px-1 text-[#c4b39c] hover:text-[#f3e6d2]"
+        aria-label={muted ? '取消静音' : '静音'}
+        onClick={toggleMute}
+      >
+        {muted ? 'MUTE' : 'ON'}
       </button>
     </div>
   )

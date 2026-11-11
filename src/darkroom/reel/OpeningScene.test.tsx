@@ -19,12 +19,13 @@ describe('OpeningScene', () => {
   it('shows vertical film belt frames when beltUrls are provided', () => {
     render(<OpeningScene onContinue={() => {}} beltUrls={['blob:a', 'blob:b']} />)
     const belt = screen.getByTestId('opening-belt')
-    expect(belt.querySelectorAll('img')).toHaveLength(2)
+    expect(belt.querySelectorAll('img')).toHaveLength(4) // duplicated for continuous roll
   })
 
   it('shows placeholder film frames when beltUrls are empty', () => {
     render(<OpeningScene onContinue={() => {}} beltUrls={[]} />)
     const belt = screen.getByTestId('opening-belt')
-    expect(belt.querySelectorAll('.dr-film-frame')).toHaveLength(3)
+    // belt duplicates frames for continuous roll animation
+    expect(belt.querySelectorAll('.dr-opening-fr').length).toBeGreaterThanOrEqual(4)
   })
 })

@@ -114,7 +114,7 @@ export function DarkroomApp({ fetchBytes = fetchVaultBytes, keyStore, webStore }
               setState({ status: 'loading' })
               setAttempt((n) => n + 1)
             }}
-            className="mt-4 border border-accent-hi px-6 py-2 text-sm text-fg"
+            className="mt-4 border border-[#ee5546]/70 px-6 py-2 text-sm text-[#f3e6d2]"
           >
             重试
           </button>

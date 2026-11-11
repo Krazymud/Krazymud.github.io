@@ -20,33 +20,54 @@ export function rollStyle(index: number): CanisterLabelStyle {
   return LABEL_STYLES[index % LABEL_STYLES.length]!
 }
 
-export function makeCanisterLabelBitmap(roll: FilmRoll, style: CanisterLabelStyle): HTMLCanvasElement {
+/** Match reference rolls-enter labelTex: wrap-around bands + Fraunces italic + ROLL nn · ISO · 24 EXP. */
+export function makeCanisterLabelBitmap(roll: FilmRoll, style: CanisterLabelStyle, rollNo = 1): HTMLCanvasElement {
+  const W = 1024
+  const H = 512
   const canvas = document.createElement('canvas')
-  canvas.width = 1024
-  canvas.height = 512
-  const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = style.bg
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  canvas.width = W
+  canvas.height = H
+  const x = canvas.getContext('2d')!
+  x.fillStyle = style.bg
+  x.fillRect(0, 0, W, H)
+  x.fillStyle = style.band
+  x.fillRect(0, 0, W, 26)
+  x.fillRect(0, H - 26, W, 26)
 
-  const bandH = 72
-  ctx.fillStyle = style.band
-  ctx.fillRect(0, 0, canvas.width, bandH)
+  const name = roll.title || roll.id
+  for (const cx of [W * 0.25, W * 0.75]) {
+    x.save()
+    x.translate(cx, H / 2)
+    x.rotate(Math.PI / 2)
+    x.fillStyle = style.ink
+    x.textAlign = 'center'
+    let fs = 104
+    x.font = `italic 300 ${fs}px ${DR_FONTS.display}`
+    while (fs > 36 && x.measureText(name).width > 430) {
+      fs -= 4
+      x.font = `italic 300 ${fs}px ${DR_FONTS.display}`
+    }
+    x.fillText(name, 0, 10, 430)
+    x.font = `400 26px ${DR_FONTS.mono}`
+    x.globalAlpha = 0.85
+    x.fillText(`ROLL ${String(rollNo).padStart(2, '0')} · ${style.iso} · 24 EXP`, 0, 62)
+    x.restore()
 
-  ctx.fillStyle = style.ink
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
+    x.save()
+    x.translate(cx - 150, H / 2)
+    x.rotate(Math.PI / 2)
+    x.fillStyle = style.ink
+    x.globalAlpha = 0.7
+    x.textAlign = 'center'
+    x.font = `400 20px ${DR_FONTS.mono}`
+    x.fillText(roll.id.toUpperCase(), 0, 0)
+    x.restore()
+  }
 
-  ctx.font = `600 72px ${DR_FONTS.display}`
-  ctx.fillText(roll.title, canvas.width / 2, canvas.height * 0.42)
-
-  const frameCount = roll.photoSources.length
-  ctx.font = `32px ${DR_FONTS.mono}`
-  ctx.fillText(`ISO ${style.iso} · ${frameCount} 帧`, canvas.width / 2, canvas.height * 0.72)
-
-  ctx.font = `28px ${DR_FONTS.letter}`
-  ctx.globalAlpha = 0.75
-  ctx.fillText(roll.id.toUpperCase(), canvas.width / 2, canvas.height * 0.88)
-  ctx.globalAlpha = 1
+  for (let i = 0; i < 1600; i++) {
+    x.fillStyle = `rgba(0,0,0,${Math.random() * 0.06})`
+    x.fillRect(Math.random() * W, Math.random() * H, 2, 2)
+  }
 
   return canvas
 }

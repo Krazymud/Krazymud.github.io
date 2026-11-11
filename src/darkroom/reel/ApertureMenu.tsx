@@ -91,24 +91,23 @@ export function ApertureMenu() {
   }
 
   return (
-    <div className="pointer-events-none fixed left-4 top-14 z-[190]">
+    <div className="pointer-events-none fixed right-4 top-4 z-[190]">
       <button
         type="button"
-        className="pointer-events-auto rounded-full border border-white/20 bg-black/50 px-3 py-1.5 text-xs text-fg backdrop-blur-sm"
+        className="pointer-events-auto border border-[#f3e6d2]/30 bg-[#040302]/70 px-3 py-1.5 text-[10px] uppercase tracking-[0.14em] text-[#f3e6d2] backdrop-blur-sm"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
-        光圈
+        SETTINGS · 光圈
       </button>
       {open ? (
         <div className="pointer-events-auto">
-          <div data-testid="aperture-panel" className="mt-2 w-56 rounded-lg border border-white/15 bg-black/80 p-3 text-xs text-fg shadow-lg backdrop-blur-md">
+          <div
+            data-testid="aperture-panel"
+            className="mt-2 w-56 border border-[#f3e6d2]/20 bg-[#0b0705]/92 p-3 text-xs text-[#f3e6d2] shadow-lg backdrop-blur-md"
+          >
             <Row label="音乐">
-              <button
-                type="button"
-                className="rounded border border-accent-hi px-2 py-0.5"
-                onClick={toggleMute}
-              >
+              <button type="button" className="rounded border border-[#ee5546]/60 px-2 py-0.5" onClick={toggleMute}>
                 音乐：{muted ? '关' : '开'}
               </button>
             </Row>
@@ -121,23 +120,15 @@ export function ApertureMenu() {
                 step={0.05}
                 value={volume}
                 onChange={(e) => setVolume(Number(e.target.value))}
-                className="w-full"
+                className="w-full accent-[#ee5546]"
               />
             </Row>
             <Row label="清晰">
               <div className="flex gap-1">
-                <button
-                  type="button"
-                  className={btnCls(clarity === '1')}
-                  onClick={() => onClarity('1')}
-                >
+                <button type="button" className={btnCls(clarity === '1')} onClick={() => onClarity('1')}>
                   清晰：标准
                 </button>
-                <button
-                  type="button"
-                  className={btnCls(clarity === '2')}
-                  onClick={() => onClarity('2')}
-                >
+                <button type="button" className={btnCls(clarity === '2')} onClick={() => onClarity('2')}>
                   清晰：锐利
                 </button>
               </div>
@@ -156,7 +147,7 @@ export function ApertureMenu() {
               <Row label="带走">
                 <button
                   type="button"
-                  className="w-full rounded border border-accent-hi px-2 py-1 disabled:opacity-40"
+                  className="w-full rounded border border-[#ee5546]/60 px-2 py-1 disabled:opacity-40"
                   disabled={loadingPolaroid}
                   onClick={() => void onPolaroid()}
                 >
@@ -166,13 +157,13 @@ export function ApertureMenu() {
             ) : null}
             <Row label="保险柜">
               <div className="flex flex-col gap-1">
-                <button type="button" className="rounded border border-white/25 px-2 py-1" onClick={lock}>
+                <button type="button" className="rounded border border-[#f3e6d2]/25 px-2 py-1" onClick={lock}>
                   锁上
                 </button>
                 {unsynced && !syncing ? (
                   <button
                     type="button"
-                    className="rounded border border-accent-hi px-2 py-1 disabled:opacity-40"
+                    className="rounded border border-[#ee5546]/60 px-2 py-1 disabled:opacity-40"
                     disabled={!tokenSaved}
                     onClick={() => void retrySync()}
                   >
@@ -189,13 +180,13 @@ export function ApertureMenu() {
 }
 
 function btnCls(active: boolean) {
-  return `flex-1 rounded border px-1 py-0.5 ${active ? 'border-accent-hi text-fg' : 'border-white/20 text-muted'}`
+  return `flex-1 rounded border px-1 py-0.5 ${active ? 'border-[#ee5546] text-[#f3e6d2]' : 'border-[#f3e6d2]/20 text-[#c4b39c]'}`
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="mb-3 last:mb-0">
-      <p className="mb-1 text-[10px] uppercase tracking-widest text-muted">{label}</p>
+      <p className="mb-1 text-[10px] uppercase tracking-widest text-[#c4b39c]">{label}</p>
       {children}
     </div>
   )
