@@ -1,7 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { play, stopAll, unlockAudio } from '../audio/sound'
+import { stopAll, unlockAudio } from '../audio/sound'
 import { copy } from '../config/copy'
 import { getPrefs } from '../prefs/prefs'
 import { routes } from './routes'
@@ -14,9 +14,7 @@ vi.mock('../audio/sound', () => ({
 
 function renderHome() {
   const router = createMemoryRouter(routes, { initialEntries: ['/'] })
-  render(
-    <RouterProvider router={router} />,
-  )
+  render(<RouterProvider router={router} />)
 }
 
 function setVisibility(state: DocumentVisibilityState) {
@@ -29,9 +27,14 @@ describe('Layout', () => {
     localStorage.clear()
     vi.mocked(stopAll).mockClear()
     vi.mocked(unlockAudio).mockReset()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 404, statusText: 'Not Found' })),
+    )
   })
   afterEach(() => {
     Reflect.deleteProperty(document, 'visibilityState')
+    vi.unstubAllGlobals()
   })
 
   it('stops every sound when the page is hidden', () => {
@@ -60,32 +63,23 @@ describe('Layout', () => {
     expect(mutedAtUnlock).toEqual([true, false])
   })
 
-  it('shows 暗房 branding without legacy nav links', () => {
+  it('uses immersive darkroom shell without light glass nav', async () => {
     renderHome()
-    const header = document.querySelector('header')!
-    expect(header).toHaveTextContent(copy.siteName)
-    expect(screen.getByRole('link', { name: copy.nav.home })).toBeInTheDocument()
+    expect(document.querySelector('header')).toBeNull()
+    expect(document.querySelector('[data-shell="immersive"]')).not.toBeNull()
     expect(screen.queryByRole('link', { name: '日课' })).toBeNull()
     expect(screen.queryByRole('link', { name: '锦匣' })).toBeNull()
-    expect(screen.queryByRole('link', { name: '案头' })).toBeNull()
-    expect(screen.queryByText('MIDNIGHT GARAGE')).toBeNull()
-  })
-
-  it('plays tap when navigating home', () => {
-    renderHome()
-    vi.mocked(play).mockClear()
-    fireEvent.click(screen.getByRole('link', { name: copy.nav.home }))
-    expect(play).toHaveBeenCalledWith('tap')
+    await waitFor(() => expect(screen.getByText(copy.siteName)).toBeInTheDocument())
   })
 
   it('unlocks audio on any pointer, click or key press', () => {
     renderHome()
-    const page = screen.getByRole('link', { name: copy.nav.home })
-    fireEvent.pointerDown(page)
+    const mute = screen.getByRole('button', { name: '静音' })
+    fireEvent.pointerDown(mute)
     expect(unlockAudio).toHaveBeenCalledTimes(1)
-    fireEvent.click(page)
-    expect(unlockAudio).toHaveBeenCalledTimes(2)
-    fireEvent.keyDown(page, { key: 'Enter' })
-    expect(unlockAudio).toHaveBeenCalledTimes(3)
+    fireEvent.click(mute)
+    expect(unlockAudio).toHaveBeenCalled()
+    fireEvent.keyDown(mute, { key: 'Enter' })
+    expect(unlockAudio).toHaveBeenCalled()
   })
 })

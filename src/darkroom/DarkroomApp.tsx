@@ -26,9 +26,17 @@ interface DarkroomAppProps {
 
 function Notice({ children }: { children: ReactNode }) {
   return (
-    <section className="glass-panel mx-auto mt-10 max-w-md rounded-lg px-5 py-8 text-center">
-      <p className="font-display text-xs text-fg">{copy.siteName}</p>
-      <div className="mt-4 text-sm text-muted">{children}</div>
+    <section
+      className="dr-opening relative flex min-h-dvh items-center justify-center overflow-hidden px-4"
+      style={{ background: '#0b0705', color: '#f3e6d2' }}
+    >
+      <div className="dr-opening-bokeh" aria-hidden />
+      <div className="relative z-10 mx-auto max-w-md px-5 py-8 text-center">
+        <p className="text-xs tracking-[0.2em]" style={{ fontFamily: 'Fraunces, serif' }}>
+          {copy.siteName}
+        </p>
+        <div className="mt-4 text-sm opacity-80">{children}</div>
+      </div>
     </section>
   )
 }
@@ -84,11 +92,16 @@ export function DarkroomApp({ fetchBytes = fetchVaultBytes, keyStore, webStore }
     setState((prev) => (prev.status === 'ready' ? { status: 'locked', file: prev.file } : prev))
   }, [store])
 
-  useImmersive(state.status === 'ready')
+  // Always immersive: lock / empty / ready all use darkroom chrome, never light glass shell.
+  useImmersive(true)
 
   switch (state.status) {
     case 'loading':
-      return <p className="mt-10 text-center text-sm text-muted">{copy.darkroom.opening}</p>
+      return (
+        <p className="mt-10 text-center text-sm" style={{ color: '#c4b39c' }}>
+          {copy.darkroom.opening}
+        </p>
+      )
     case 'empty':
       return <Notice>{copy.darkroom.empty}</Notice>
     case 'error':

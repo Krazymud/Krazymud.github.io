@@ -68,7 +68,7 @@ describe('DarkroomApp lock', () => {
     render(<DarkroomApp fetchBytes={vault.fetchBytes} keyStore={keyStore as never} webStore={null} />)
     await enter(TEST_PASSPHRASE)
     await screen.findByTestId('darkroom-ready')
-    fireEvent.click(screen.getByRole('button', { name: /启封卷轴|启卷|继续/i }))
+    fireEvent.click(screen.getByRole('button', { name: /roll it, darling/i }))
     fireEvent.click(screen.getByRole('button', { name: /继续/i }))
     fireEvent.click(await screen.findByText('上锁'))
     expect(await screen.findByLabelText('口令')).toBeTruthy()

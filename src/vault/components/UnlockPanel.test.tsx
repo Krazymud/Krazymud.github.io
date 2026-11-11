@@ -23,11 +23,13 @@ describe('UnlockPanel', () => {
     motion.reduced = false
   })
 
-  it('shows vault copy without legacy English labels', () => {
+  it('shows cinematic darkroom unlock without legacy glass vault chrome', () => {
     render(<UnlockPanel canRemember onUnlock={vi.fn(async () => true)} />)
     expect(screen.getByText(copy.siteName)).toBeInTheDocument()
     expect(screen.queryByText('PRIVATE VAULT')).not.toBeInTheDocument()
-    expect(screen.getByText(copy.darkroom.unseal)).toBeInTheDocument()
+    expect(screen.getByTestId('unlock-panel').className).toMatch(/dr-opening/)
+    expect(screen.getByRole('button', { name: copy.darkroom.unseal })).toBeInTheDocument()
+    expect(screen.getByText(/roll it, darling/i)).toBeInTheDocument()
   })
 
   it('does not offer to save the passphrase', () => {

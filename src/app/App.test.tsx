@@ -35,7 +35,6 @@ describe('app shell', () => {
   it('loads the Darkroom entry on /', async () => {
     stubEmptyVault()
     renderAt('/')
-    expect(screen.getByRole('banner')).toHaveTextContent(copy.siteName)
     const main = screen.getByRole('main')
     expect(await within(main).findByText(copy.siteName)).toBeInTheDocument()
   })
@@ -55,16 +54,20 @@ describe('app shell', () => {
     expect(await within(main).findByText(copy.siteName)).toBeInTheDocument()
   })
 
-  it('uses an open shell on home', () => {
+  it('uses immersive darkroom shell on home (no light glass chrome)', async () => {
+    stubEmptyVault()
     renderAt('/')
-    expect(document.querySelector('[data-shell="home"]')).toBeTruthy()
+    await within(screen.getByRole('main')).findByText(copy.siteName)
+    expect(document.querySelector('[data-shell="immersive"]')).toBeTruthy()
+    expect(screen.queryByRole('banner')).toBeNull()
     expect(document.querySelector('main')?.className ?? '').not.toMatch(/glass-panel-solid/)
   })
 
-  it('mutes and unmutes from the top bar', () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(new ArrayBuffer(8))))
+  it('mutes and unmutes from the immersive control', async () => {
+    stubEmptyVault()
     setAudioContextFactory(() => ({ state: 'running', decodeAudioData: async () => ({}) }) as unknown as AudioContext)
     renderAt('/')
+    await within(screen.getByRole('main')).findByText(copy.siteName)
     const mute = screen.getByRole('button', { name: '静音' })
     expect(mute).toHaveAttribute('aria-pressed', 'false')
     fireEvent.click(mute)

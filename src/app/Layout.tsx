@@ -63,13 +63,13 @@ export function Layout() {
   return (
     <ImmersiveContext.Provider value={setImmersive}>
       <div
-        data-shell={immersive ? 'immersive' : isHome ? 'home' : 'inner'}
+        data-shell={immersive || isHome ? 'immersive' : 'inner'}
         onPointerDownCapture={unlockAudio}
         onClickCapture={unlockAudio}
         onKeyDownCapture={unlockAudio}
-        className={`relative min-h-dvh text-fg ${immersive ? 'bg-[#050403]' : 'bg-ink'}`}
+        className={`relative min-h-dvh text-fg ${immersive || isHome ? 'bg-[#050403]' : 'bg-ink'}`}
       >
-        {!immersive && (
+        {!immersive && !isHome && (
           <header className="glass-panel glass-panel-nav relative z-10 mx-5 mt-4 flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-xs">
             <span className="font-display text-accent-hi">{copy.siteName}</span>
             <nav className="flex items-center gap-4">
@@ -91,9 +91,7 @@ export function Layout() {
           </header>
         )}
         {isHome ? (
-          <main
-            className={immersive ? 'relative z-10' : 'relative z-10 mx-auto w-full max-w-md px-5 pt-6 pb-10'}
-          >
+          <main className="relative z-10">
             <Outlet />
           </main>
         ) : reducedMotion ? (
@@ -111,8 +109,8 @@ export function Layout() {
             <Outlet />
           </motion.main>
         )}
-        {immersive &&
-          muteButton('dr-btn dr-panel fixed left-3 top-9 z-30 flex h-9 w-9 items-center justify-center')}
+        {(immersive || isHome) &&
+          muteButton('dr-btn dr-panel fixed right-3 top-3 z-30 flex h-9 w-9 items-center justify-center')}
         {perfEnabled && <PerfOverlay />}
       </div>
     </ImmersiveContext.Provider>
