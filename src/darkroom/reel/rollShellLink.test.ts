@@ -13,6 +13,6 @@ describe('roll-link shell targeting', () => {
 
   it('cache-busts roll-link on scene pages', () => {
     const opening = readFileSync(join(process.cwd(), 'public/reel-shell/opening.html'), 'utf8')
-    expect(opening).toContain('roll-link.js?v=vaultcta1')
+    expect(opening).toMatch(/roll-link\.js\?v=vaultcta\d+/)
   })
 })

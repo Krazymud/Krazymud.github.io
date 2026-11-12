@@ -32,10 +32,19 @@ function mustEnv(name: string): string {
   return value
 }
 
-function cacheControl(rel: string): string {
+export function cacheControl(rel: string): string {
   const base = path.basename(rel)
-  if (base === 'index.html' || base === '404.html') return 'no-cache'
-  if (rel.includes(`${path.sep}assets${path.sep}`) || rel.includes('/assets/')) {
+  const ext = path.extname(rel).toLowerCase()
+  // SPA + reel-shell HTML must not stick on CDN for a day (stale opening.html broke CTA).
+  if (ext === '.html' || base === 'index.html' || base === '404.html') return 'no-cache'
+  if (rel.includes('/reel-shell/') || rel.startsWith('reel-shell/')) {
+    if (ext === '.js' || ext === '.css') return 'no-cache'
+  }
+  if (
+    rel.startsWith('assets/') ||
+    rel.includes(`${path.sep}assets${path.sep}`) ||
+    rel.includes('/assets/')
+  ) {
     return 'public, max-age=31536000, immutable'
   }
   return 'public, max-age=86400'
@@ -64,7 +73,7 @@ async function walkFiles(dir: string): Promise<string[]> {
   return files
 }
 
-function purgeUrlList(domain: string | undefined): string[] {
+export function purgeUrlList(domain: string | undefined): string[] {
   const fromEnv = process.env.CDN_PURGE_URLS
     ?.split(',')
     .map((part) => part.trim())
@@ -73,7 +82,23 @@ function purgeUrlList(domain: string | undefined): string[] {
 
   const host = domain?.replace(/^https?:\/\//, '').replace(/\/$/, '')
   if (!host) return []
-  return [`https://${host}/index.html`, `https://${host}/404.html`]
+  const root = `https://${host}`
+  return [
+    `${root}/index.html`,
+    `${root}/404.html`,
+    `${root}/reel-shell/index.html`,
+    `${root}/reel-shell/opening.html`,
+    `${root}/reel-shell/roll-link.js`,
+    `${root}/reel-shell/vault-bridge.js`,
+    `${root}/reel-shell/frame-c.html`,
+    `${root}/reel-shell/frame-e.html`,
+    `${root}/reel-shell/rolls.html`,
+    `${root}/reel-shell/tray.html`,
+    `${root}/reel-shell/wall.html`,
+    `${root}/reel-shell/torch-comic.html`,
+    `${root}/reel-shell/book-cover.html`,
+    `${root}/reel-shell/credits.html`,
+  ]
 }
 
 async function maybePurgeCdn(domain: string | undefined): Promise<void> {
@@ -178,9 +203,9 @@ export async function remoteMatchesLocal(
   }
 }
 
-function isHtmlEntry(rel: string): boolean {
-  const base = path.posix.basename(rel)
-  return base === 'index.html' || base === '404.html'
+/** Always re-PUT HTML so CDN origin updates even when byte length is unchanged. */
+export function isHtmlEntry(rel: string): boolean {
+  return path.posix.extname(rel).toLowerCase() === '.html'
 }
 
 export async function syncCosSite(distDir: string): Promise<void> {

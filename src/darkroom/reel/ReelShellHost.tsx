@@ -4,7 +4,7 @@ import { vaultToReelContent, type ReelPhotoUrls } from './vaultToReelContent'
 import type { ListContent, ListEntry, NoteEntry, PhotoEntry } from '../../vault/types'
 
 const STORAGE_KEY = 'reel-vault-content'
-const SHELL_SRC = '/reel-shell/index.html?vault=1&embed=1'
+const SHELL_SRC = '/reel-shell/index.html?vault=1&embed=1&v=cta2'
 const BLOB_MS = 5_000
 const BUILD_MS = 12_000
 
