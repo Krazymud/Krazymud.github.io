@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { vaultToReelContent } from './vaultToReelContent'
+import { fitPaperLetter, LETTER_CHAR_BUDGET, vaultToReelContent } from './vaultToReelContent'
 import type { PhotoEntry } from '../../vault/types'
 
 function photo(partial: Partial<PhotoEntry> & Pick<PhotoEntry, 'hash' | 'date'>): PhotoEntry {
@@ -45,6 +45,20 @@ describe('vaultToReelContent', () => {
     expect(blob).not.toMatch(/Tong|CCC|u\/[0-9a-f]{8}/)
     expect(content.rolls[0].frames[0].photo).toBe('blob:a')
     expect(content.picks.opening[0].photo).toBe('blob:a')
+  })
+
+  it('keeps the scene-03 letter inside one sheet', () => {
+    const long = '今天的风很温柔。'.repeat(80)
+    expect(fitPaperLetter(long).length).toBeLessThanOrEqual(LETTER_CHAR_BUDGET + 1)
+    expect(fitPaperLetter(long).endsWith('…')).toBe(true)
+    const content = vaultToReelContent({
+      photos: [],
+      notes: [{ entry: { title: '长信', date: '2026-01-01', blob: 'n', source: 'n', hash: 'n' }, text: long }],
+      lists: [],
+      urls: {},
+    })
+    expect(content.letter.length).toBeLessThanOrEqual(LETTER_CHAR_BUDGET + 1)
+    expect(content.letter).toContain('长信')
   })
 
   it('pads empty vault with sample img paths', () => {

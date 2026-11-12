@@ -66,6 +66,16 @@ function earliestSince(photos: PhotoEntry[], fallback: string): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+/** Scene 03 letter is one sheet; longer notes stay on the rolls and the book. */
+export const LETTER_CHAR_BUDGET = 220
+
+export function fitPaperLetter(text: string): string {
+  const trimmed = text.trim()
+  if (trimmed.length <= LETTER_CHAR_BUDGET) return trimmed
+  const cut = trimmed.slice(0, LETTER_CHAR_BUDGET).replace(/\s+\S*$/, '').replace(/[，。、；：!！?？,.\n]+$/u, '')
+  return `${cut}…`
+}
+
 function buildLetter(notes: ReelContentInput['notes']): string {
   const blocks = notes
     .map(({ entry, text }) => {
@@ -76,8 +86,8 @@ function buildLetter(notes: ReelContentInput['notes']): string {
       return `${entry.title.trim()}\n\n${body}`
     })
     .filter(Boolean)
-  if (blocks.length) return blocks.join('\n\n——\n\n')
-  return `${copy.siteName}\n\n匣中回忆 · 一卷胶片。`
+  const joined = blocks.length ? blocks.join('\n\n——\n\n') : `${copy.siteName}\n\n匣中回忆 · 一卷胶片。`
+  return fitPaperLetter(joined)
 }
 
 /** Build blackpeng-compatible window.CONTENT from vault-only media and text. */

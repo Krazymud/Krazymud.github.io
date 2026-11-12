@@ -66,12 +66,12 @@ svg.fiber path{fill:none;stroke:rgba(246,226,190,.75);stroke-width:1.6;stroke-li
 .opened .tearhint,.tearing .tearhint{opacity:0}
 
 /* 信：先藏在袋子里，撕开以后抽出来放到右边 */
-.letter{position:absolute;left:110px;top:290px;width:400px;height:500px;z-index:3;transform:rotate(-4deg);opacity:0}
+.letter{position:absolute;left:110px;top:290px;width:400px;height:500px;z-index:3;transform:rotate(-4deg);opacity:0;overflow:hidden}
 .letter .paper{position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.55' numOctaves='4' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 .45  0 0 0 0 .38  0 0 0 0 .3  0 0 0 -.9 .62'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23p)'/%3E%3C/svg%3E"),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012 .05' numOctaves='3' seed='9'/%3E%3CfeColorMatrix values='0 0 0 0 .5  0 0 0 0 .42  0 0 0 0 .32  0 0 0 -.7 .42'/%3E%3C/filter%3E%3Crect width='600' height='600' filter='url(%23f)'/%3E%3C/svg%3E"),radial-gradient(120% 90% at 40% 25%,#fbf8f1,#f1eadb 70%,#e4d9c3);
   box-shadow:0 30px 50px rgba(0,0,0,.6),0 2px 3px rgba(0,0,0,.4)}
 .letter .fold{position:absolute;left:0;right:0;top:34%;height:1px;background:linear-gradient(90deg,transparent,rgba(80,50,20,.3),transparent);box-shadow:0 1px 0 rgba(255,235,200,.25)}
 .letter .head{position:absolute;left:40px;right:40px;top:30px;display:flex;justify-content:space-between;color:#5a3a1c;font:400 8px/1.6 'JB Mono',monospace;letter-spacing:.14em;text-transform:uppercase}
-.letter pre{position:absolute;left:40px;right:30px;top:74px;margin:0;white-space:pre-wrap;line-break:strict;font:400 16px/1.7 'Courier Prime',monospace;color:#150e08;text-shadow:0 0 .5px rgba(20,12,6,.7)}
+.letter pre{position:absolute;left:40px;right:30px;top:74px;margin:0;max-height:348px;overflow:hidden;white-space:pre-wrap;line-break:strict;font:400 16px/1.7 'Courier Prime',monospace;color:#150e08;text-shadow:0 0 .5px rgba(20,12,6,.7)}
 .caret{display:inline-block;width:9px;height:16px;background:#150e08;vertical-align:-3px;opacity:.8}
 .letter .sign{position:absolute;right:50px;top:330px;font:400 34px/1 'Reenie',cursive;color:var(--red);transform:rotate(-5deg);opacity:0;transition:opacity 1s}
 .letter.done .sign{opacity:1}
@@ -206,23 +206,30 @@ function open(){if(fr.classList.contains('opened'))return;dragging=false;p=W;ren
   fr.classList.add('opened');setTimeout(type,2300)}
 
 // 客人只换这一段字（中文的破折号两半中间夹一个不断行的字符，不会一半留在行尾一半掉到下一行开头）
-const TEXT=CONTENT.letter.replace(/[—―]{2}/g,m=>m[0]+'⁠'+m[1]);
-// 中文一个字占得宽，写长了会掉出纸外（11.02 她朋友那封）：先把整封信摆进去量，放不下就把字一点点缩小，署名跟在正文后面
-// 字体可能还没到：现在量一次，开始打字前再量一次
-const fitLetter=()=>{const out=document.getElementById('type'),sign=document.getElementById('signW'),ROOM=500-74-64;
- out.style.visibility='hidden';out.textContent=TEXT;let fs=16;out.style.fontSize='';
- while(out.offsetHeight>ROOM&&fs>10.5){fs-=.5;out.style.fontSize=fs+'px'}
- sign.style.top=Math.min(450,Math.max(330,74+out.offsetHeight+10))+'px';out.textContent='';out.style.visibility=''};fitLetter();
+let TEXT=(CONTENT.letter||'').replace(/[—―]{2}/g,m=>m[0]+'⁠'+m[1]);
+// 中文一个字占得宽，写长了会掉出纸外：先缩小字号，还放不下就截到纸里，并允许点一下跳过打字
+const fitLetter=()=>{const out=document.getElementById('type'),sign=document.getElementById('signW'),ROOM=500-74-80;
+ out.style.visibility='hidden';let fs=16;out.style.fontSize=fs+'px';out.textContent=TEXT;
+ while(out.offsetHeight>ROOM&&fs>12){fs-=.5;out.style.fontSize=fs+'px'}
+ while(out.offsetHeight>ROOM&&TEXT.length>24){
+   TEXT=TEXT.slice(0,Math.max(24,Math.floor(TEXT.length*0.82))).replace(/\s+\S*$/,'').replace(/[，。、；：!！?？,.\n…]+$/,'')+'…';
+   out.textContent=TEXT}
+ sign.style.top=Math.min(430,Math.max(300,74+Math.min(out.offsetHeight,ROOM)+8))+'px';out.textContent='';out.style.visibility=''};fitLetter();
 {const C=CONTENT,[y,m,d]=C.since.split('-').map(Number),MONL=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
  document.getElementById('forW').textContent='for '+C.names.to;document.getElementById('nameW').textContent=C.names.both;
  document.getElementById('dateW').textContent=d+' '+MONL[m-1];document.getElementById('signW').textContent=C.names.sign}
 // 打字机。光标用脚本闪，不用 CSS 动画，不然打字时整张纸被当成图层，字会糊
 function type(){fitLetter();const out=document.getElementById('type'),caret=document.createElement('span');caret.className='caret';
-  let i=0;const blink=setInterval(()=>caret.style.visibility=caret.style.visibility==='hidden'?'':'hidden',500);
-  const tick=()=>{if(i>=TEXT.length){clearInterval(blink);caret.remove();document.getElementById('letter').classList.add('done');ROLL.prep();
-    setTimeout(()=>{fr.classList.add('tipping');setTimeout(()=>ROLL.done('cross'),1000)},5200);return}
+  let i=0,hurry=false,finished=false;const blink=setInterval(()=>caret.style.visibility=caret.style.visibility==='hidden'?'':'hidden',500);
+  const finish=()=>{if(finished)return;finished=true;clearInterval(blink);caret.remove();out.textContent=TEXT;
+    document.getElementById('letter').classList.add('done');ROLL.prep();
+    setTimeout(()=>{fr.classList.add('tipping');setTimeout(()=>ROLL.done('cross'),hurry?700:1000)},hurry?700:2800)};
+  const skip=e=>{if(!fr.classList.contains('opened')||finished)return;if(e.target&&e.target.closest&&e.target.closest('input,textarea'))return;hurry=true};
+  fr.addEventListener('pointerdown',skip);
+  const tick=()=>{if(hurry||i>=TEXT.length){finish();return}
     const c=TEXT[i++];out.textContent=TEXT.slice(0,i);out.appendChild(caret);keyClick(c);
-    setTimeout(tick,c==='\n'?380:/[.,]/.test(c)?260:45+Math.random()*70)};
+    const pace=TEXT.length>120?22:(c==='\n'?280:/[.,。，]/.test(c)?160:36+Math.random()*40);
+    setTimeout(tick,pace)};
   out.appendChild(caret);tick()}
 if(new URLSearchParams(location.search).has('open'))open();
 </script>
