@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A Roll For Two · Wall</title>
+<style>
+@font-face{font-family:'JB Mono';src:url(font/jbmono.woff2) format('woff2')}
+@font-face{font-family:'Fraunces';src:url(font/Fraunces-normal.woff2) format('woff2');font-weight:100 900}
+@font-face{font-family:'Fraunces';src:url(font/Fraunces-italic.woff2) format('woff2');font-weight:100 900;font-style:italic}
+@font-face{font-family:'Reenie';src:url(font/ReenieBeanie-normal.woff2) format('woff2')}
+@font-face{font-family:'Courier Prime';src:url(font/CourierPrime-normal.woff2) format('woff2')}
+:root{--cream:#f3e6d2;--ink:#040302;--red:#e2412f}
+html,body{margin:0;height:100%;background:var(--ink);overflow:hidden;-webkit-user-select:none;user-select:none}
+#stage{position:absolute;left:50%;top:50%;width:1600px;height:1000px;background:var(--ink)}
+.mono{font:400 11px/1.7 'JB Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--cream)}
+.proj{position:absolute;left:280px;top:130px;width:1040px;height:694px}
+@keyframes jitter{0%{transform:translate(0,0)}25%{transform:translate(.2px,-.15px)}50%{transform:translate(-.15px,.2px)}75%{transform:translate(.15px,.1px)}}
+.proj .spill{position:absolute;inset:-50px;border-radius:80px;background:radial-gradient(closest-side,rgba(255,140,80,.14),transparent);filter:blur(60px)}
+.frame{position:absolute;inset:0;overflow:hidden;background:#120806;cursor:grab;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1040 694'%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='9'/%3E%3C/filter%3E%3Crect x='18' y='18' width='1004' height='658' rx='30' fill='white' filter='url(%23b)'/%3E%3C/svg%3E") center/100% 100%;
+          mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1040 694'%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='9'/%3E%3C/filter%3E%3Crect x='18' y='18' width='1004' height='658' rx='30' fill='white' filter='url(%23b)'/%3E%3C/svg%3E") center/100% 100%}
+.frame.dragging{cursor:grabbing}
+/* 拖墙的时候别把字选成一片蓝 */
+.frame{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.frame img{-webkit-user-drag:none}
+
+/* 软木墙：比画面宽很多，拖着沿红线往右走 */
+.wall{position:absolute;left:0;top:-20px;width:4200px;height:740px;will-change:transform;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='c'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' seed='5'/%3E%3CfeColorMatrix values='0 0 0 0 .18  0 0 0 0 .09  0 0 0 0 .04  0 0 0 -2.2 1.25'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23c)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='d'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.02' numOctaves='3' seed='2'/%3E%3CfeColorMatrix values='0 0 0 0 .1  0 0 0 0 .04  0 0 0 0 .02  0 0 0 -1.2 .8'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23d)'/%3E%3C/svg%3E"),
+    linear-gradient(#7a4a2c,#6a3e24)}
+/* 从显影盘滑进来时：墙的左边不是一刀切，从暗里慢慢晕进软木，滑到位就收掉 */
+.wall.soft{-webkit-mask-image:linear-gradient(to right,transparent 0,rgba(0,0,0,.35) calc(var(--soft,0px)*.5),#000 var(--soft,0px));mask-image:linear-gradient(to right,transparent 0,rgba(0,0,0,.35) calc(var(--soft,0px)*.5),#000 var(--soft,0px))}
+/* 安全灯：一盏在上面偏左，跟着镜头走一点点 */
+.safelight{position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;
+  background:radial-gradient(820px 600px at var(--lx,40%) 38%,rgba(255,214,170,1),rgba(185,110,70,.9) 45%,rgba(30,12,6,.98) 88%)}
+.glow{position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;background:radial-gradient(520px 380px at var(--lx,40%) 34%,rgba(255,140,80,.18),transparent 70%)}
+
+.ph{position:absolute;z-index:2;background:#efe6d6;padding:10px 10px 30px;box-shadow:0 14px 22px rgba(0,0,0,.55),0 2px 3px rgba(0,0,0,.4);cursor:pointer;transition:transform .5s cubic-bezier(.3,1.3,.5,1),box-shadow .3s}
+.ph .im{width:100%;height:100%;background:#333 center/cover;filter:sepia(.18) saturate(.95) contrast(1.02)}
+.ph .cap{position:absolute;left:10px;bottom:8px;font:400 8px/1 'JB Mono',monospace;letter-spacing:.1em;color:#6a5440;text-transform:uppercase}
+.ph:hover{box-shadow:0 22px 34px rgba(0,0,0,.6),0 2px 3px rgba(0,0,0,.4)}
+.ph::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg,rgba(255,230,200,.16),transparent 45%,rgba(60,20,0,.12))}
+.tape{position:absolute;width:70px;height:22px;background:rgba(214,190,150,.6);box-shadow:0 1px 2px rgba(0,0,0,.25);z-index:3;pointer-events:none}
+.pin{position:absolute;width:13px;height:13px;margin:-6px 0 0 -6px;border-radius:50%;z-index:5;pointer-events:none;
+  background:radial-gradient(circle at 35% 30%,#ff8f80,#c7362b 55%,#6e140e);box-shadow:2px 4px 4px rgba(0,0,0,.55)}
+/* 尽头那颗空钉子：隔一会儿闪一下光，鼠标过去变小手，点它进下一幕；外面一圈看不见的大点击区 */
+.pin.endpin{pointer-events:auto;cursor:pointer;z-index:8;animation:endglint 4.2s ease-in-out 1.5s infinite}
+.pin.endpin::before{content:'';position:absolute;inset:-22px;border-radius:50%}
+.pin.endpin:hover{animation:none;box-shadow:2px 4px 4px rgba(0,0,0,.55),0 0 14px 5px rgba(255,170,120,.6)}
+@keyframes endglint{0%,78%,100%{box-shadow:2px 4px 4px rgba(0,0,0,.55),0 0 0 0 rgba(255,190,140,0)}86%{box-shadow:2px 4px 4px rgba(0,0,0,.55),0 0 16px 6px rgba(255,190,140,.75)}}
+svg.thread{position:absolute;left:0;top:0;z-index:4;pointer-events:none;overflow:visible}
+.hand{position:absolute;font:400 25px/1 'Reenie',cursive;color:var(--red);z-index:6;pointer-events:none;white-space:nowrap}
+/* 后面一层：老电影海报、乐谱，旧纸发黄、有折痕，被照片压着 */
+.poster{position:absolute;z-index:1;pointer-events:none;box-shadow:0 10px 18px rgba(0,0,0,.45);transform-origin:50% 0}
+.poster img{display:block;width:100%;filter:sepia(.32) saturate(.78) brightness(.8) contrast(.94)}
+.poster::after{content:"";position:absolute;inset:0;mix-blend-mode:multiply;
+  background:linear-gradient(90deg,transparent 49.6%,rgba(60,30,10,.22) 50%,rgba(255,240,210,.12) 50.6%,transparent 51.4%),
+    linear-gradient(0deg,transparent 33%,rgba(60,30,10,.18) 33.3%,transparent 34%),
+    radial-gradient(60% 40% at 70% 80%,rgba(120,70,20,.22),transparent 70%),radial-gradient(120% 90% at 50% 50%,transparent 55%,rgba(40,18,5,.35))}
+/* 小东西：票根、压花、邮票、便利贴、一张没拍的相纸 */
+.deco{position:absolute;z-index:3;pointer-events:none;filter:drop-shadow(0 6px 6px rgba(0,0,0,.45))}
+.deco img{display:block;width:100%}
+.sticky{position:absolute;z-index:3;pointer-events:none;width:120px;height:110px;padding:14px 12px;box-sizing:border-box;background:linear-gradient(#f2dc7a,#e9cf62);box-shadow:0 8px 12px rgba(0,0,0,.4);font:400 24px/1.1 'Reenie',cursive;color:#3a2a14}
+.blank{position:absolute;z-index:3;pointer-events:none;width:118px;height:142px;background:#f1ece2;padding:9px 9px 30px;box-sizing:border-box;box-shadow:0 8px 14px rgba(0,0,0,.45)}
+.blank i{display:block;width:100%;height:100%;background:linear-gradient(135deg,#2a2622,#141210)}
+/* 红线上挂的小纸牌：日子和地方 */
+.tag{position:absolute;z-index:6;pointer-events:none;transform-origin:50% 0}
+.tag::before{content:"";position:absolute;left:50%;top:-22px;height:24px;border-left:1.4px solid rgba(226,65,47,.9)}
+.tag span{position:relative;display:block;padding:7px 12px 7px 18px;background:#d9c49a;color:#3a2614;font:400 11px/1.3 'Courier Prime',monospace;letter-spacing:.06em;white-space:nowrap;box-shadow:0 5px 8px rgba(0,0,0,.45);
+  clip-path:polygon(10px 0,100% 0,100% 100%,10px 100%,0 50%)}
+.tag span::before{content:"";position:absolute;left:8px;top:calc(50% - 3px);width:6px;height:6px;border-radius:50%;background:#4a2a14}
+/* 第四卷：背面还写着话，微微发光，等人来翻 */
+.ph.lit4{animation:lit4 3.2s ease-in-out infinite}
+/* 她说闪到眼睛了（10.31）：比原来暗一半 */
+@keyframes lit4{0%,100%{box-shadow:0 14px 22px rgba(0,0,0,.55),0 0 0 2px rgba(255,226,150,.4),0 0 14px 4px rgba(255,206,96,.32),0 0 40px 12px rgba(255,180,60,.14)}
+  50%{box-shadow:0 14px 22px rgba(0,0,0,.55),0 0 0 2px rgba(255,240,180,.6),0 0 20px 7px rgba(255,220,120,.48),0 0 60px 20px rgba(255,190,70,.24)}}
+.ph .spk{position:absolute;z-index:3;width:6px;height:6px;margin:-3px;border-radius:50%;pointer-events:none;background:radial-gradient(#fff8e0,#ffd56e 45%,rgba(255,190,60,0) 70%);
+  box-shadow:0 0 5px 1px rgba(255,210,110,.5);opacity:0;animation:spk var(--sd,2.6s) ease-in-out var(--sw,0s) infinite}
+.ph .spk::before,.ph .spk::after{content:"";position:absolute;left:50%;top:50%;background:rgba(255,236,170,.85);transform:translate(-50%,-50%)}
+.ph .spk::before{width:20px;height:1.2px}.ph .spk::after{width:1.2px;height:20px}
+@keyframes spk{0%,62%,100%{opacity:0;transform:scale(.3)}74%{opacity:1;transform:scale(1)}86%{opacity:0;transform:scale(.5) translateY(-6px)}}
+/* 风：一阵从左吹到右，照片和海报绕着钉子晃一下 */
+.sway{animation:sway 1.9s cubic-bezier(.3,.6,.4,1) var(--wd,0s) both}
+@keyframes sway{0%{rotate:0deg}22%{rotate:var(--wa,2.4deg)}48%{rotate:calc(var(--wa,2.4deg)*-.55)}72%{rotate:calc(var(--wa,2.4deg)*.25)}100%{rotate:0deg}}
+.ph.lit4.sway{animation:sway 1.9s cubic-bezier(.3,.6,.4,1) var(--wd,0s) both,lit4 3.2s ease-in-out infinite}
+/* 每卷一张索引卡 */
+.card{position:absolute;width:190px;padding:14px 16px 16px;background:#e9dcc2;color:#3a2614;box-shadow:0 10px 18px rgba(0,0,0,.5);z-index:2}
+.card b{display:block;font:italic 300 30px/1 'Fraunces',serif;margin:6px 0 8px}
+.card small{display:block;font:400 9px/1.6 'JB Mono',monospace;letter-spacing:.12em;text-transform:uppercase;opacity:.8}
+.card::before{content:"";position:absolute;left:0;right:0;top:34px;border-top:1px solid rgba(200,60,40,.5)}
+
+/* 摘下来看：照片飞到眼前，背面写着那天 */
+.peek{position:fixed;inset:0;z-index:30;display:none}
+.peek.on{display:block}
+.peek .dim{position:absolute;inset:0;background:rgba(5,2,1,.6)}
+.peek .big{position:absolute;left:50%;top:50%;width:440px;height:330px;margin:-190px 0 0 -220px;perspective:1400px;cursor:pointer}
+.peek .flip{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .8s cubic-bezier(.3,1.2,.5,1)}
+.peek .big.back .flip{transform:rotateY(180deg)}
+.peek .side{position:absolute;inset:0;backface-visibility:hidden;background:#efe6d6;padding:14px 14px 44px;box-shadow:0 30px 60px rgba(0,0,0,.7)}
+.peek .side .im{width:100%;height:100%;background:center/cover;filter:sepia(.15)}
+.peek .side.b{transform:rotateY(180deg);padding:34px;background:#ece2cf;color:#2a1a0e}
+.peek .side.b .d{font:400 34px/1 'Reenie',cursive;color:var(--red)}
+.peek .side.b p{font:400 15px/1.7 'Courier Prime',monospace;margin:18px 0 0}
+.peek .side .cap2{position:absolute;left:16px;bottom:9px;font:400 24px/1 'Reenie',cursive;color:#a8392a}
+.peek .tip{position:absolute;left:0;right:0;bottom:-46px;text-align:center;font:400 26px/1 'Reenie',cursive;color:#ee5546}
+
+.hint{position:absolute;left:0;right:0;bottom:58px;text-align:center;font:400 30px/1 'Reenie',cursive;color:#ee5546;pointer-events:none;transition:opacity .6s}
+.corner{position:absolute;opacity:.55;z-index:20}
+.grain{position:absolute;inset:0;opacity:.2;mix-blend-mode:overlay;pointer-events:none;z-index:20;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");animation:grain .4s steps(3) infinite}
+@keyframes grain{33%{background-position:40px 70px}66%{background-position:-60px 20px}}
+.vig{position:absolute;inset:0;pointer-events:none;z-index:20;background:radial-gradient(120% 95% at 50% 50%,transparent 48%,rgba(2,1,0,.8) 100%)}
+.bokeh{position:absolute;border-radius:50%;pointer-events:none;z-index:19;filter:blur(18px);background:radial-gradient(circle,rgba(255,170,110,.25),transparent 70%)}
+</style></head>
+<body>
+<div id="stage">
+  <div class="proj">
+    <div class="spill"></div>
+    <div class="frame" id="frame">
+      <div class="wall" id="wall"><svg class="thread" id="thread"></svg></div>
+      <div class="safelight" id="sl"></div><div class="glow" id="gl"></div>
+      <div class="bokeh" id="bk1" style="left:-60px;top:480px;width:260px;height:260px"></div>
+      <div class="bokeh" id="bk2" style="left:880px;top:-60px;width:200px;height:200px"></div>
+      <div class="hint" id="hint">follow the red thread →</div>
+      <div class="mono corner" style="left:68px;top:58px">Scene 06 — The wall</div>
+      <div class="mono corner" style="right:68px;top:58px;text-align:right" id="where">Roll 01 · for Two</div>
+      <div class="grain"></div><div class="vig"></div>
+    </div>
+  </div>
+  <div class="peek" id="peek"><div class="dim"></div>
+    <div class="big" id="big"><div class="flip"><div class="side"><div class="im" id="bigIm"></div><div class="cap2" id="bigCap"></div></div><div class="side b"><div class="d" id="bigD"></div><p id="bigT"></p></div></div>
+      <div class="tip" id="tip">tap to turn it over</div></div></div>
+</div>
+
+<script src="zh.js?v=tnqgtm"></script>
+<script src="content.js?v=29994fe04a"></script>
+<script src="roll-link.js?v=to1cu6"></script>
+<script>
+// 客人写的字放进网页时原样显示：写了 < 和 & 不会吞掉一截（11.03）
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const s=document.getElementById('stage');let k=1;
+const fit=()=>{k=Math.min(innerWidth/1600,innerHeight/1000);s.style.transform=`translate(-50%,-50%) scale(${k})`};
+fit();addEventListener('resize',fit);
+
+// 四卷，每卷六张，红线按日子一路串过去。客人换照片、日期、背面的话
+const ROLLS=[
+  {no:'01',name:'for Two',dates:'May — Jun 2026',x:140},
+  {no:'02',name:'slow days',dates:'Jul — Aug 2026',x:1000},
+  {no:'03',name:'far away',dates:'Sep 2026',x:1860},
+  {no:'04',name:'still us',dates:'Oct 2026 —',x:2720},
+];
+const CR=CONTENT.rolls;ROLLS.forEach((r,i)=>{r.name=CR[i].name;r.dates=CR[i].dates});
+const WALL_W=4200;
+// 每卷去过的地方：挂在红线的小纸牌上，摘下照片时底下也写这一行
+const PLACES=CR.map(r=>r.place);
+// 第四卷八张：背面就是前面显影盘里那几句话（没被挑去洗的，走到这里还能读到）
+// 第四卷八张都发光、都能翻背面：没圈去洗的那几张，客人写的话走到这里也能读到（她 10.31 定的）
+const R4D=CR[3].frames.map(f=>f.date);
+const BACK4=['The first photo I ever took of you. You were laughing, and I forgot to focus.','Rain all afternoon. You fell asleep halfway through the film.','You said this was your worst angle. I disagree, for the record.','We missed the last bus and walked home anyway.'];
+const DATES=[['05.10','the first one'],['05.14',''],['05.21','?'],['06.02',''],['06.09','♡'],['06.28','this one']];
+const BACK=['The first photo I ever took of you. You were laughing at something I said, and I forgot to focus.','Rain all afternoon. We stayed in and you fell asleep halfway through the film.','You said this was your worst angle. I disagree, for the record.'];
+// 种子随机，每次打开排得一样
+let seed=7;const rnd=()=>(seed=(seed*9301+49297)%233280)/233280;
+const wall=document.getElementById('wall'),svg=document.getElementById('thread');
+const pins=[];const photos=[];
+// 老电影海报和乐谱（维基共享资源，公有领域，见 img/wall/LICENSE.txt）：x, y, 宽, 角度
+const POSTERS=[['sunrise',30,250,300,-3],['harvest-cover',420,20,150,5],['lonesome',700,300,250,2],['sweetheart',1230,40,130,-3],
+  ['seventh',1640,505,118,-4,'notape'],['harvest-p1',1980,30,200,-5],['citylights',2700,30,270,-2],['pandora',3200,400,170,-3],['wings',3560,30,240,3]];
+const sway=[];
+POSTERS.forEach(([n,x,y,w,a,opt])=>{const d=document.createElement('div');d.className='poster';d.style.cssText=`left:${x}px;top:${y}px;width:${w}px;transform:rotate(${a}deg)`;
+  d.innerHTML=`<img src="img/wall/${n}.jpg" alt="" fetchpriority="high">`;wall.appendChild(d);sway.push([d,x+w/2,.5]);
+  // 两角胶带
+  if(opt!=='notape')[[-18,-8,-30],[w-52,-6,24]].forEach(([tx,ty,ta])=>{const t=document.createElement('div');t.className='tape';t.style.cssText=`left:${x+tx}px;top:${y+ty}px;transform:rotate(${ta+a}deg);z-index:2`;wall.appendChild(t)})});
+// 夹在照片中间的小东西
+const DECO=[['img/ticket.webp',930,575,150,10],['img/daisy/daisy-pressed.webp',1700,540,120,-12],['img/collage/stamp-ca.jpg',2380,610,70,-6],['img/collage/stamp-mi.jpg',2445,628,70,8],['img/daisy/fmn-pressed.webp',3330,575,110,14]];
+DECO.forEach(([src,x,y,w,a])=>{const d=document.createElement('div');d.className='deco';d.style.cssText=`left:${x}px;top:${y}px;width:${w}px;transform:rotate(${a}deg)`;d.innerHTML=`<img src="${src}" alt="">`;wall.appendChild(d)});
+{const n=document.createElement('div');n.className='sticky';n.style.cssText='left:1250px;top:560px;transform:rotate(-5deg)';n.textContent='buy more film. (and snacks)';wall.appendChild(n);
+ const b=document.createElement('div');b.className='blank';b.style.cssText='left:2620px;top:540px;transform:rotate(7deg)';b.innerHTML='<i></i>';wall.appendChild(b);
+ const t=document.createElement('div');t.className='tape';t.style.cssText='left:2640px;top:532px;transform:rotate(-8deg)';wall.appendChild(t)}
+// 墙上照片打乱（她 10.31 定的）：格子位置不变，放哪张照片换掉。第 4 卷那八张均匀撒开，不挤在最后；前三卷的打乱填进剩下的格子。
+// 用另一个种子，不碰排位置用的 rnd()（不然整面墙的位置都会变）
+const SHUF=(()=>{let s=20261031;const r=()=>(s=(s*16807)%2147483647)/2147483647;
+  const slots=ROLLS.flatMap((_,ri)=>[...Array(ri===3?8:6)].map(()=>ri)),n=slots.length,out=new Array(n);
+  const four=[...Array(8)].map((_,j)=>[3,j]),rest=[0,1,2].flatMap(ri=>[...Array(6)].map((_,j)=>[ri,j]));
+  for(let i=rest.length-1;i>0;i--){const k=Math.floor(r()*(i+1));[rest[i],rest[k]]=[rest[k],rest[i]]}
+  four.forEach((f,i)=>{let at=Math.min(n-1,Math.floor((i+.25+r()*.5)*n/8));while(out[at])at=(at+1)%n;out[at]=f});
+  for(let i=0;i<n;i++)if(!out[i])out[i]=rest.pop();return out})();let slotK=0;
+ROLLS.forEach((r,ri)=>{
+  const card=document.createElement('div');card.className='card';
+  const cx=r.x+30+(ri===2?90:0);card.style.left=cx+'px';card.style.top=(ri%2?120:84)+'px';card.style.transform=`rotate(${(rnd()-.5)*6}deg)`;
+  card.innerHTML=`<small>Roll ${r.no} · 24 exp</small><b>${esc(r.name)}</b><small>${esc(r.dates)}</small>`;wall.appendChild(card);
+  const tp=document.createElement('div');tp.className='tape';tp.style.left=(cx+60)+'px';tp.style.top=((ri%2?120:84)-10)+'px';tp.style.transform=`rotate(${(rnd()-.5)*14}deg)`;wall.appendChild(tp);
+  // 六张照片在这一卷的区域里散开，上下交错
+  const R4=ri===3,NP=R4?8:6;
+  for(let j=0;j<NP;j++){
+    const big=R4?j===1||j===6:j===1||j===4,w=R4?(big?200:140+rnd()*30):(big?230:150+rnd()*40),h=R4?(big?156:110+rnd()*24):(big?180:120+rnd()*30);
+    const x=R4?r.x+240+(j%4)*215+(rnd()-.5)*24:r.x+250+(j%3)*262+(rnd()-.5)*30;
+    const y=R4?(j<4?110:350)+(rnd()-.5)*44:(j<3?(ri%2?90:230):(ri%2?300:440))+(rnd()-.5)*50;
+    const p=document.createElement('div');p.className='ph';
+    p.style.cssText=`left:${x}px;top:${y}px;width:${w}px;height:${h}px;transform:rotate(${(rnd()-.5)*9}deg)`;
+    const [si,sj]=SHUF[slotK++],fr=CR[si].frames[sj],pic=fr.photo,d=fr.date,mark=R4?'':DATES[j][1];
+    p.innerHTML=`<div class="im"></div><span class="cap">${esc(d.replace('.','/'))} · frame ${String(sj+1).padStart(2,'0')}</span>`;
+    p.dataset.pic=pic;p.dataset.d=d;p.dataset.place=PLACES[si];const lit=si===3;p.dataset.t=lit?(fr.line||''):'';if(lit){p.classList.add('lit4');
+      for(let s=0;s<3;s++){const e=document.createElement('i');e.className='spk';const side=Math.random()*4|0,u=Math.random()*100;
+        e.style.cssText=`left:${side===1?100:side===3?0:u}%;top:${side===0?0:side===2?100:u}%;--sd:${(2.2+Math.random()*1.6).toFixed(2)}s;--sw:${(-Math.random()*3).toFixed(2)}s`;p.appendChild(e)}}
+    wall.appendChild(p);photos.push(p);sway.push([p,x+w/2,1]);p.fr=fr;CONTENT.cropBg(p.firstChild,fr,CONTENT.small(fr));   // 墙上的小格子用小图（11.02：以前 26 张大图要五六兆），点开放大才用大图
+    // 有的用图钉，有的用胶带
+    const px=x+w*(.3+rnd()*.4),py=y+6;
+    if(rnd()<.75){const pin=document.createElement('div');pin.className='pin';pin.style.left=px+'px';pin.style.top=py+'px';wall.appendChild(pin)}
+    else{const t=document.createElement('div');t.className='tape';t.style.left=(px-35)+'px';t.style.top=(py-12)+'px';t.style.transform=`rotate(${(rnd()-.5)*20}deg)`;wall.appendChild(t)}
+    pins.push([px,py,j,d,ri]);p.style.transformOrigin=`${px-x}px 6px`;
+    // 红笔：日期，有的圈一下、打问号、画爱心
+    const hw=document.createElement('div');hw.className='hand';hw.style.left=(x+w-70)+'px';hw.style.top=(y+h-2)+'px';hw.style.transform=`rotate(${(rnd()-.5)*10}deg)`;
+    hw.textContent=d+(mark&&mark!=='?'&&mark!=='♡'?'  '+mark:'');wall.appendChild(hw);
+    if(mark==='?'||mark==='♡'){const m=document.createElement('div');m.className='hand';m.style.left=(x-24)+'px';m.style.top=(y-10)+'px';m.style.fontSize='44px';m.textContent=mark;wall.appendChild(m)}
+    if(j===0&&ri===0){const c=document.createElementNS('http://www.w3.org/2000/svg','ellipse');Object.entries({cx:x+w/2,cy:y+h/2+6,rx:w/2+26,ry:h/2+30,fill:'none',stroke:'#d63b2c','stroke-width':2.4,transform:`rotate(-4 ${x+w/2} ${y+h/2})`,'stroke-dasharray':'2 0'}).forEach(([a,v])=>c.setAttribute(a,v));svg.appendChild(c)}
+  }
+});
+// 红线：按日子一颗图钉一颗图钉绕过去，每段往下垂一点
+pins.sort((a,b)=>a[0]-b[0]);
+let dpath=`M${pins[0][0]} ${pins[0][1]}`;
+for(let i=1;i<pins.length;i++){const [x0,y0]=pins[i-1],[x1,y1]=pins[i];const sag=24+Math.abs(x1-x0)*.06;dpath+=` Q${(x0+x1)/2} ${Math.max(y0,y1)+sag} ${x1} ${y1}`}
+// 尽头：一颗空钉子，没有照片，铅笔写着留给下一张
+const END=[pins[pins.length-1][0]+250,200];
+{const [ex,ey]=END,[x0,y0]=pins[pins.length-1];dpath+=` Q${(x0+ex)/2} ${Math.max(y0,ey)+40} ${ex} ${ey}`;
+ const pin=document.createElement('div');pin.className='pin endpin';pin.style.left=ex+'px';pin.style.top=ey+'px';wall.appendChild(pin);
+ // 点空钉子：灯闪两下灭，进下一幕
+ pin.addEventListener('pointerdown',e=>e.stopPropagation());pin.addEventListener('click',e=>{e.stopPropagation();if(!outT){outT=1;blackout()}});
+ const hw=document.createElement('div');hw.className='hand';hw.style.cssText=`left:${ex-40}px;top:${ey+36}px;font-size:30px;transform:rotate(-4deg)`;hw.textContent='for the next one.';wall.appendChild(hw)}
+// 最后一段钻进墙角的黑里
+const [lx,ly]=END;dpath+=` Q${lx+120} ${ly+260} ${lx+260} 760`;
+// 每卷一块小纸牌，挂在这一卷第二、三颗钉子之间那段线最低的地方
+ROLLS.forEach((r,ri)=>{const ps=pins.filter(p=>p[4]===ri);if(ps.length<3)return;const [x0,y0]=ps[1],[x1,y1]=ps[2],sag=24+Math.abs(x1-x0)*.06,cy=Math.max(y0,y1)+sag;
+  const tx=(x0+x1)/2,ty=(y0+2*cy+y1)/4;const t=document.createElement('div');t.className='tag';
+  t.style.cssText=`left:${tx-50}px;top:${ty+20}px;transform:rotate(${(rnd()-.5)*12}deg)`;t.innerHTML=`<span>${esc(ps[1][3])} · ${esc(PLACES[ri])}</span>`;wall.appendChild(t)});
+svg.setAttribute('width',WALL_W);svg.setAttribute('height',760);
+const th=document.createElementNS('http://www.w3.org/2000/svg','path');
+Object.entries({d:dpath,fill:'none',stroke:'#e2412f','stroke-width':2.4,'stroke-linecap':'round',opacity:.9}).forEach(([a,v])=>th.setAttribute(a,v));
+const sh=th.cloneNode();sh.setAttribute('stroke','rgba(0,0,0,.45)');sh.setAttribute('transform','translate(3 6)');sh.setAttribute('stroke-width',2.2);sh.setAttribute('filter','blur(2px)');
+svg.prepend(sh);svg.appendChild(th);
+
+// ---- 拖着沿墙走，有一点惯性；安全灯和前景光斑跟着错开 ----
+const fr=document.getElementById('frame'),MAX=WALL_W-1040;let x=0,v=0,drag=null;
+const local=e=>(e.clientX-fr.getBoundingClientRect().left)/k;
+fr.addEventListener('dragstart',e=>e.preventDefault());
+fr.addEventListener('pointerdown',e=>{if(e.target.closest('.ph'))return;e.preventDefault();getSelection().removeAllRanges();drag={x:local(e),start:x,t:performance.now(),last:local(e)};fr.classList.add('dragging');fr.setPointerCapture(e.pointerId)});
+fr.addEventListener('pointermove',e=>{if(!drag)return;const lx=local(e);v=(lx-drag.last);drag.last=lx;x=Math.max(0,Math.min(MAX,drag.start-(lx-drag.x)));document.getElementById('hint').style.opacity=0});
+const endDrag=()=>{drag=null;fr.classList.remove('dragging')};fr.addEventListener('pointerup',endDrag);fr.addEventListener('pointercancel',endDrag);
+fr.addEventListener('wheel',e=>{e.preventDefault();x=Math.max(0,Math.min(MAX,x+(e.deltaY+e.deltaX)*.9));document.getElementById('hint').style.opacity=0},{passive:false});
+const where=document.getElementById('where');
+// ---- 从显影盘过来（?from=tray）：那边黑闪两下，亮起来就是这里。墙只从右边轻轻滑进来一小段，
+// 红线从画面左边牵进来，先平平的，再慢慢垂成弧挂到第一颗图钉。嵌在显影盘里时等它发 go，单独打开就直接来 ----
+const FROM=new URLSearchParams(location.search).has('from');let enter=null,endT=0,outT=0;
+const ENTER_X=-180;
+const lead=document.createElementNS('http://www.w3.org/2000/svg','path');
+Object.entries({fill:'none',stroke:'#e2412f','stroke-width':2.4,'stroke-linecap':'round',opacity:.9}).forEach(([a,v])=>lead.setAttribute(a,v));
+let LX=-200,LY=300,droop=0;
+function drawLead(){const [px,py]=pins[0],d=droop,span=px-LX;
+  lead.setAttribute('d',`M${LX-3000} ${LY} L${LX} ${LY} C${LX+span*.35} ${LY+70*d} ${px-span*.3} ${Math.max(LY,py)+30+110*d} ${px} ${py}`)}
+// 墙左边那道虚边会把墙里的东西一起虚掉，所以引线单独放一张 svg，跟着墙一起挪
+const leadSvg=document.createElementNS('http://www.w3.org/2000/svg','svg');leadSvg.setAttribute('class','thread lead');leadSvg.style.cssText='left:0;top:-20px;z-index:5';leadSvg.setAttribute('width',WALL_W);leadSvg.setAttribute('height',760);
+// fx,fy 是画面坐标，换成墙上的（墙被挪了 x，又往上提了 20px）
+function go(fx,fy){LX=fx+x;LY=fy+20;drawLead();leadSvg.appendChild(lead);wall.after(leadSvg);enter={t0:performance.now()};document.getElementById('hint').style.opacity=0}
+if(FROM){x=ENTER_X;wall.classList.add('soft');
+  if(window.parent===window)go(-20,300);
+  else addEventListener('message',e=>{if(e.data&&e.data.go&&!enter)go(e.data.x,e.data.y)})}
+(function loop(){
+  // 先快后慢地停在墙头；左边一窄条虚边跟着收掉
+  if(enter){const ms=performance.now()-enter.t0,u=Math.min(1,ms/1800);x=ENTER_X*Math.pow(1-u,3);
+    wall.style.setProperty('--soft',(260*(1-u))+'px');
+    droop=Math.min(1,Math.max(0,(ms-500)/1600));droop=droop*droop*(3-2*droop);drawLead();
+    if(u>=1&&droop>=1){enter=null;wall.style.setProperty('--soft','0px');wall.classList.remove('soft');document.getElementById('hint').style.opacity=''}}
+  else if(!drag&&Math.abs(v)>.1){x=Math.max(0,Math.min(MAX,x-v));v*=.92}
+  wall.style.transform=leadSvg.style.transform=`translate3d(${-x}px,0,0)`;
+  const lx=40+Math.sin(x/700)*8;document.getElementById('sl').style.setProperty('--lx',lx+'%');document.getElementById('gl').style.setProperty('--lx',lx+'%');
+  document.getElementById('bk1').style.transform=`translateX(${-x*.25%400}px)`;document.getElementById('bk2').style.transform=`translateX(${-x*.18%300}px)`;
+  const r=ROLLS.slice().reverse().find(r=>x+520>=r.x)||ROLLS[0];where.textContent=`Roll ${r.no} · ${r.name}`;
+  requestAnimationFrame(loop)})();
+function blackout(){const sl=document.getElementById('sl'),f=document.getElementById('frame');
+  [[0,.15],[90,1],[230,.1],[330,.85],[620,0]].forEach(([t,o])=>setTimeout(()=>{f.style.filter=`brightness(${o})`},t));
+  // 看完照片墙了：壳子的设置栏里多出「带走拍立得」
+  if(ROLL.in)top.postMessage({roll:'pola'},'*');
+  setTimeout(()=>ROLL.done('black'),1100)}
+
+// ---- 风：隔一会儿一阵，从左往右扫过画面，照片晃得多，海报晃得少 ----
+function gust(){const near=sway.filter(([el,cx])=>cx>x-200&&cx<x+1240);
+  near.forEach(([el,cx,k])=>{el.style.setProperty('--wd',((cx-x)/1040*1.1).toFixed(2)+'s');el.style.setProperty('--wa',((1.4+Math.random()*2.2)*k).toFixed(2)+'deg');
+    el.classList.remove('sway');void el.offsetWidth;el.classList.add('sway')});
+  setTimeout(gust,9000+Math.random()*7000)}
+setTimeout(gust,6000);
+
+// ---- 点一张：摘下来凑到眼前，再点翻到背面 ----
+const peek=document.getElementById('peek'),big=document.getElementById('big');
+photos.forEach(p=>p.addEventListener('click',e=>{e.stopPropagation();
+  {const b=document.getElementById('bigIm');b.style.backgroundSize=b.style.backgroundPosition='';CONTENT.cropBg(b,p.fr)}
+  document.getElementById('bigD').textContent=p.dataset.d;document.getElementById('bigT').textContent=p.dataset.t;
+  document.getElementById('bigCap').textContent=`${p.dataset.d} · ${p.dataset.place}`;
+  big.classList.remove('back');big.dataset.flip=p.dataset.t?'1':'';
+  document.getElementById('tip').textContent=p.dataset.t?'something on the back. tap to turn it over':'tap anywhere to pin it back';peek.classList.add('on')}));
+big.addEventListener('click',e=>{e.stopPropagation();if(!big.dataset.flip){peek.classList.remove('on');return}
+  big.classList.toggle('back');document.getElementById('tip').textContent=big.classList.contains('back')?'tap outside to pin it back':'tap to turn it over'});
+peek.addEventListener('click',()=>peek.classList.remove('on'));
+</script>
+</body></html>

@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en"><head><script>window.FILM_V="29994fe04a";window.FILM_JS={"bc-book.js":"tnbnsy","bc-candle.js":"tnd9hs","bc-card.js":"to1erh","bc-collage.js":"tnco07","bc-compass.js":"to17lf","bc-desk.js":"tnpyds","bc-letters.js":"tnbplo","bc-libcard.js":"to1gte","bc-map.js":"tnrhq4","bc-pages.js":"to1gte","bc-petals.js":"to18vn","bc-popup.js":"tncq0l","bc-read.js":"to11bs","bc-reel.js":"to11bs","bc-tex.js":"tnboar","bc-turn.js":"tnco2z","content.js":"tnpznb","pola.js":"tnrys8","roll-link.js":"to1cu6","tray-lt-dive.js":"tnpltd","tray-lt-flow.js":"tnqdf9","tray-lt.js":"tnpf3k","zh.js":"tnqgtm","lib/BufferGeometryUtils.js":"tnd0f8","lib/GLTFLoader.js":"tnd0f8","lib/three.module.js":"tn9zuj"}</script><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A Roll For Two</title>
+<!-- 片头要用的字先拿，每一幕再用就是现成的 -->
+<link rel="preload" href="font/ReenieBeanie-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="font/Fraunces-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="font/Fraunces-italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="font/jbmono.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+html,body{margin:0;height:100%;background:#040302;overflow:hidden}
+/* 每一幕一个 iframe，叠在一起；只有当前这幕看得见、能点 */
+iframe{position:fixed;inset:0;width:100%;height:100%;border:0;background:#040302;opacity:0;pointer-events:none;will-change:opacity,transform}
+iframe.on{opacity:1;pointer-events:auto}
+/* 转场用的一块幕：白闪、黑场 */
+.veil{position:fixed;inset:0;z-index:10;pointer-events:none;opacity:0;background:#040302}
+/* 黑着等下一幕装好：等久了，中间亮一行小字，免得以为坏了 */
+.veil::after{content:'loading the next reel';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:400 11px 'JB Mono',monospace;letter-spacing:.3em;text-transform:uppercase;color:rgba(243,230,210,.45);opacity:0;transition:opacity 1.2s}
+.veil.wait::after{opacity:1;animation:reel 1.6s ease-in-out infinite}
+@keyframes reel{50%{color:rgba(243,230,210,.2)}}
+.veil.white{background:#fff6e4}
+/* 设置：右上角一个相机光圈。靠过去叶片张开一点，点一下张开，菜单从它底下垂下来 */
+.set{position:fixed;right:18px;top:14px;z-index:20;font:400 10px/1 'JB Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#f3e6d2;user-select:none}
+.ap{display:flex;align-items:center;gap:9px;margin-left:auto;height:30px;padding:0;border:0;background:none;cursor:pointer;opacity:.5;transition:opacity .4s;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit}
+/* 光圈左边写一个 settings，不然有人不知道那是设置 */
+.ap .apl{font-size:10px}
+.ap:hover,.set.open .ap{opacity:1}
+.ap svg{display:block;width:30px;height:30px;flex:none;overflow:visible}
+.ap .b{fill:#cdbda4;stroke:#2e251d;stroke-width:.7;transform:rotate(-10deg) translateY(2.6px);transition:transform .55s cubic-bezier(.4,0,.2,1)}
+.ap:hover .b{transform:rotate(-5deg) translateY(4.2px)}
+.set.open .ap .b{transform:rotate(0deg) translateY(6.8px)}
+.ap .hole{fill:#120d09}.ap .rim{fill:none;stroke:#e9dcc6;stroke-width:1.3}
+.ap .glint{fill:none;stroke:rgba(255,236,206,.5);stroke-width:.8;stroke-linecap:round}
+.menu{position:absolute;right:0;top:40px;min-width:236px;padding:14px 16px 12px;border-radius:10px;background:rgba(16,12,9,.86);border:1px solid rgba(243,230,210,.13);
+  box-shadow:0 10px 30px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  opacity:0;visibility:hidden;transform:translateY(-8px) scale(.97);transform-origin:top right;transition:opacity .3s,transform .35s cubic-bezier(.3,.7,.3,1),visibility 0s .35s}
+.set.open .menu{opacity:1;visibility:visible;transform:none;transition:opacity .3s,transform .35s cubic-bezier(.3,.7,.3,1),visibility 0s}
+.menu .row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:6px 0}
+.menu .row+.row{border-top:1px solid rgba(243,230,210,.07)}
+.menu .k{opacity:.45}
+.menu .row[hidden]{display:none}
+.menu b{font-weight:400;cursor:pointer}.menu b.off{opacity:.5}
+.menu .tr{justify-content:center;gap:10px}.menu .tr i{font-style:normal;cursor:pointer;padding:2px 4px;opacity:.7}.menu .tr i:hover{opacity:1}
+.menu .tr span{max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:none;letter-spacing:.03em;font-size:11px;opacity:.85}
+.menu input[type=range]{-webkit-appearance:none;appearance:none;width:120px;height:14px;background:none;cursor:pointer;margin:0}
+.menu input[type=range]::-webkit-slider-runnable-track{height:2px;background:linear-gradient(90deg,#f3e6d2 var(--v,70%),rgba(243,230,210,.2) var(--v,70%))}
+.menu input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;margin-top:-4px;border-radius:50%;background:#f3e6d2;box-shadow:0 0 0 3px rgba(243,230,210,.12)}
+.menu input[type=range]::-moz-range-track{height:2px;background:rgba(243,230,210,.2)}.menu input[type=range]::-moz-range-progress{height:2px;background:#f3e6d2}
+.menu input[type=range]::-moz-range-thumb{width:10px;height:10px;border:0;border-radius:50%;background:#f3e6d2}
+.opt{display:flex;gap:10px}.opt u{text-decoration:none;cursor:pointer;opacity:.4;padding-bottom:2px;border-bottom:1px solid transparent}
+.opt u:hover{opacity:.75}.opt u.sel{opacity:1;border-bottom-color:currentColor}.opt u.dis{cursor:not-allowed;opacity:.22}
+/* 左下角一行小字：正在放哪首。点一下静音/再点放回来 */
+.np{display:none;position:fixed;left:22px;bottom:16px;z-index:20;font:400 10px/1.5 'JB Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#f3e6d2;opacity:0;transition:opacity 1.5s;cursor:pointer;user-select:none}
+.np.on{opacity:.38}.np.on:hover{opacity:.75}
+.np i{font-style:normal;display:inline-block;width:12px}
+.np.muted{text-decoration:line-through}
+</style></head>
+<body>
+<div class="veil" id="veil"></div>
+<audio id="music" preload="auto"></audio>
+<div class="set" id="set">
+  <button class="ap" id="ap" aria-label="settings"><span class="apl">settings</span><svg viewBox="-12 -12 24 24"><defs><clipPath id="apc"><circle r="10.2"/></clipPath></defs>
+    <circle r="10.2" class="hole"/>
+    <g clip-path="url(#apc)"><g transform="rotate(0)"><path class="b" d="M-17 0 L5 0 L5 17 L-17 17 Z"/></g><g transform="rotate(60)"><path class="b" d="M-17 0 L5 0 L5 17 L-17 17 Z"/></g><g transform="rotate(120)"><path class="b" d="M-17 0 L5 0 L5 17 L-17 17 Z"/></g><g transform="rotate(180)"><path class="b" d="M-17 0 L5 0 L5 17 L-17 17 Z"/></g><g transform="rotate(240)"><path class="b" d="M-17 0 L5 0 L5 17 L-17 17 Z"/></g><g transform="rotate(300)"><path class="b" d="M-17 0 L5 0 L5 17 L-17 17 Z"/></g></g>
+    <circle r="10.6" class="rim"/><path class="glint" d="M-7.2 -5.6 A9 9 0 0 1 -2.5 -8.7"/></svg></button>
+  <div class="menu" id="menu">
+    <div class="row"><span class="k">music</span><b id="mOn">on</b></div>
+    <div class="row"><span class="k">volume</span><input type="range" id="vol" min="0" max="100" step="1"></div>
+    <div class="row"><span class="k">sound</span><input type="range" id="sfx" min="0" max="100" step="1"></div>
+    <div class="row tr"><i id="mPrev">‹</i><span id="mT">—</span><i id="mNext">›</i></div>
+    <div class="row"><span class="k">clarity</span><span class="opt" id="qOpt"><u data-q="smooth">smooth</u><u data-q="standard">standard</u><u data-q="sharp">sharp</u></span></div>
+    <div class="row" id="polaRow" hidden><span class="k">polaroids</span><b id="polaGo">take them home</b></div>
+    <div class="row"><span class="k">language</span><span class="opt" id="lOpt"><u data-l="en">EN</u><u data-l="zh">中文</u></span></div>
+  </div>
+</div>
+<div class="np" id="np"><i>♪</i><span id="npT"></span></div>
+<style>@font-face{font-family:'JB Mono';src:url(font/jbmono.woff2) format('woff2')}</style>
+<script src="zh.js?v=tnqgtm"></script>
+<script src="vault-bridge.js"></script>
+<script src="content.js?v=29994fe04a"></script>
+<script src="roll-link.js?v=to1cu6"></script>
+<script src="pola.js?v=tnrys8"></script>
+<script>
+// 整卷的顺序。显影盘里面自己装着照片墙（tray 暗一下进 wall），所以这里算一幕
+const SCENES=['opening.html','frame-c.html','frame-e.html','rolls.html?enter=bag','tray.html?lt','torch-comic.html','book-cover.html','credits.html'];
+// 三个 3D 大场景不提前加载：提前加载会在后台抢资源（上一幕打字、翻信时卡），
+// 显影盘还会在客人圈照片之前就读走「要洗哪几张」。等上一幕喊 prep（快演完了）或者真要切过去时再加载
+const HEAVY=new Set([3,4,6]);
+// 这几幕 iframe 的 load 到了画面还是黑的（模型还在装），等它自己喊 ready 才算装好；喊不出来的话最多等 25 秒
+const SAYS_READY=new Set([3,4,6]);
+// 整卷的歌：从收音机主持人说完开始，一直放到片尾。客人挑一首或者排几首，按顺序接着放
+// 都是过了版权期的老录音（music/LICENSE.txt）；客人可以换、删、排顺序，也可以放自己的歌。列表循环，只留一首就是单曲循环
+// 专属设置（服务器 custom.json）里有自己的歌单就用它（文件在客人的 x/）
+const MUSIC=window.CUSTOM?.music||[
+  {src:'/darkroom/music/satie-gymnopedie-1.mp3',title:'Gymnopédie No.1 · Erik Satie'},
+  {src:'/darkroom/music/debussy-clair-de-lune.mp3',title:'Clair de Lune · Claude Debussy'},
+  {src:'/darkroom/music/chopin-nocturne-op37-1.mp3',title:'Nocturne Op.37 No.1 · Frédéric Chopin'},
+];
+const q=new URLSearchParams(location.search),BOOT=window.FILM_V||Date.now().toString(36);   // 服务器给了版本号就用它（同一版每次地址一样，浏览器能用存着的）
+let cur=+q.get('s')||0,now=null,next=null,busy=false;
+const veil=document.getElementById('veil'),music=document.getElementById('music');
+function load(i){if(i>=SCENES.length)return null;const f=document.createElement('iframe');f.src=SCENES[i]+(SCENES[i].includes('?')?'&':'?')+'b='+BOOT;f.dataset.i=i;f.allow='autoplay';document.body.insertBefore(f,veil);
+  const ok=()=>{if(!f.dataset.ready){f.dataset.ready=1;f.dispatchEvent(new Event('ready'))}};
+  if(SAYS_READY.has(i)){f.addEventListener('load',()=>setTimeout(ok,25000),{once:true});f.sayReady=ok}else f.addEventListener('load',ok,{once:true});return f}
+function show(f){f.classList.add('on');f.style.transition='';f.style.opacity='';f.style.transform='';const go=()=>f.contentWindow.postMessage({roll:'go'},'*');
+  // 还没加载完就等它加载完再喊开始
+  if(f.dataset.ready)go();else f.addEventListener('ready',go,{once:true})}
+addEventListener('load',()=>{});
+function boot(){if(cur===0)try{['aroll.dev','aroll.marks'].forEach(k=>sessionStorage.removeItem(k))}catch(e){}
+  now=load(cur);show(now);preload();warm(cur)}
+function preload(force){next=null;if(cur+1>=SCENES.length||(HEAVY.has(cur+1)&&!force))return;next=load(cur+1)}
+const loaded=f=>f.dataset.ready?wait(0):new Promise(r=>f.addEventListener('ready',r,{once:true}));
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const tween=(el,css,ms,ease='ease')=>new Promise(r=>{el.style.transition=Object.keys(css).map(k=>`${k.replace(/[A-Z]/g,m=>'-'+m.toLowerCase())} ${ms}ms ${ease}`).join(',');setTimeout(()=>{Object.assign(el.style,css);setTimeout(r,ms)},30)});
+// ---- 转场：上一幕自己演完它那一段（灯灭、袋子倒、书合上……），喊 done 的时候带一个 fx，这边负责最后接过去 ----
+const FX={
+  // 烧穿：片子卡在片门里被灯烤化——中间先起一个泡，一个不规则的洞往外烧开，洞边一圈白热、一圈橙、一圈焦黑，再外面一圈烤黄；
+  // 洞里露出的就是下一幕。上一幕用一张低清的遮罩一帧帧挖掉，洞边的火画在最上面一层
+  async burn(a,b){const GW=640,GH=400;
+    show(b);a.style.zIndex=3;b.style.zIndex=2;
+    let sd=7;const rnd=()=>(sd=(sd*16807)%2147483647)/2147483647;const N=64,G=new Float32Array(N*N).map(rnd);
+    const vn=(x,y)=>{const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf),g=(i,j)=>G[((j%N+N)%N)*N+((i%N+N)%N)];
+      return g(xi,yi)*(1-u)*(1-v)+g(xi+1,yi)*u*(1-v)+g(xi,yi+1)*(1-u)*v+g(xi+1,yi+1)*u*v};
+    const fbm=(x,y)=>vn(x,y)*.55+vn(x*2.1,y*2.1)*.28+vn(x*4.3,y*4.3)*.17;
+    // 形状：离中心的远近 + 起伏 + 细碎的泡；画面越宽，洞的轮廓越密（大屏上不会是几个大圆鼓包）
+    const F=new Float32Array(GW*GH),cx=.52,cy=.48,asp=GW/GH;
+    for(let j=0;j<GH;j++)for(let i=0;i<GW;i++){const x=i/GW,y=j/GH,dx=(x-cx)*asp,dy=y-cy;
+      F[j*GW+i]=Math.hypot(dx,dy)/1.05+(fbm(x*7,y*7)-.5)*.34+(fbm(x*30,y*30)-.5)*.06}
+    const mk=()=>{const c=document.createElement('canvas');c.width=GW;c.height=GH;return c};
+    const fire=mk(),mask=mk();fire.style.cssText='position:fixed;inset:0;width:100%;height:100%;z-index:9;pointer-events:none';document.body.appendChild(fire);
+    const fx=fire.getContext('2d'),mx=mask.getContext('2d'),fi=fx.createImageData(GW,GH),mi=mx.createImageData(GW,GH),fd=fi.data,md=mi.data;
+    const t0=performance.now(),DUR=window.BURN_DUR||2100,E=.003,sm=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t)};
+    await new Promise(done=>{(function step(){const u=Math.min(1,(performance.now()-t0)/DUR),T=-.04+Math.pow(u,2.1)*1.5,fl=performance.now()/80;
+      for(let k=0;k<F.length;k++){const d=F[k]-T,o=k*4;let R=0,Gc=0,B=0,A=0;
+        if(d<0){R=255;Gc=246;B=226;A=255}                                                   // 洞里：放映灯的白光
+        else if(d<.008){const w=d/.008,f=.88+.12*Math.sin(fl*1.3+(k%GW)*.05+Math.floor(k/GW)*.07);R=255;Gc=(214-120*w)*f;B=(120-110*w)*f;A=255}  // 白热到橙
+        else if(d<.02){const w=sm(.008,.02,d);R=120*(1-w)+38*w;Gc=36*(1-w)+18*w;B=8;A=255}     // 焦褐
+        else if(d<.07){const w=(d-.02)/.05;R=70;Gc=36;B=10;A=(1-w)*(1-w)*120}                 // 烤黄的一圈
+        fd[o]=R;fd[o+1]=Gc;fd[o+2]=B;fd[o+3]=A;md[o+3]=255*sm(-E,E*.5,d)}
+      fx.putImageData(fi,0,0);mx.putImageData(mi,0,0);const url=mask.toDataURL();
+      a.style.webkitMaskImage=a.style.maskImage=`url(${url})`;a.style.webkitMaskSize=a.style.maskSize='100% 100%';
+      u<1?setTimeout(step,33):done()})()});
+    // 整格都烧穿了，满屏是灯光；白光慢慢退下去，下一幕从光里出来
+    a.classList.remove('on');a.style.maskImage=a.style.webkitMaskImage='';
+    await tween(fire,{opacity:0},1100,'ease-out');fire.remove();b.style.zIndex=''},
+  // 光圈：老电影收尾那样，四周的黑往里收成一个小亮圆，亮圆抖两下合上；换幕，再从中间张开
+  async iris(a,b){const ir=document.createElement('div');ir.style.cssText='position:fixed;inset:0;z-index:9;pointer-events:none;background:#040302';document.body.appendChild(ir);
+    const D=Math.hypot(innerWidth,innerHeight)/2+40;
+    const set=r=>{r=Math.max(0,r);const m=`radial-gradient(circle at 50% 50%,transparent ${r}px,#000 ${r+Math.max(2,r*.06)}px)`;ir.style.webkitMaskImage=ir.style.maskImage=m};
+    const run=(from,to,ms,ease)=>new Promise(done=>{const t0=performance.now();(function step(){const u=Math.min(1,(performance.now()-t0)/ms);set(from+(to-from)*ease(u));u<1?setTimeout(step,16):done()})()});
+    const io=u=>u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2,out=u=>1-Math.pow(1-u,3);
+    set(D);await wait(30);await run(D,34,1600,io);
+    // 小亮圆停一下，像灯丝抖了两抖
+    for(const r of [30,36,31,35,33]){set(r);await wait(90)}
+    await run(33,0,280,u=>u*u);a.classList.remove('on');show(b);await wait(420);
+    await run(0,D,1800,out);ir.remove()},
+  // 白闪：像片头烧穿，白一下再暗下来变成下一幕
+  async white(a,b){veil.className='veil white';await tween(veil,{opacity:1},260,'ease-in');a.classList.remove('on');show(b);await wait(120);await tween(veil,{opacity:0},1100,'ease-out')},
+  // 黑场：暗下去，停一拍，再亮
+  async black(a,b){veil.className='veil';await tween(veil,{opacity:1},700,'ease-in');a.classList.remove('on');show(b);await wait(350);await tween(veil,{opacity:0},900,'ease-out')},
+  // 镜头往下摇：上一幕往上走出画面，下一幕从下面接上来
+  async pan(a,b){b.style.transform='translateY(100%)';show(b);b.style.transform='translateY(100%)';
+    await wait(30);
+    const e='cubic-bezier(.6,0,.25,1)';tween(a,{transform:'translateY(-100%)'},1600,e);await tween(b,{transform:'translateY(0%)'},1600,e);a.classList.remove('on')},
+  // 叠化
+  async cross(a,b){b.style.opacity=0;show(b);b.style.opacity=0;await wait(30);await tween(b,{opacity:1},1300);a.classList.remove('on')},
+  // 推进去：上一幕放大着淡掉，下一幕从略大收回原样
+  async zoom(a,b){b.style.opacity=0;b.style.transform='scale(1.08)';show(b);b.style.opacity=0;b.style.transform='scale(1.08)';await wait(30);
+    tween(a,{transform:'scale(1.6)',opacity:0},1200,'cubic-bezier(.5,0,.8,.4)');await wait(500);await tween(b,{opacity:1,transform:'scale(1)'},1200,'ease-out');a.classList.remove('on')}
+};
+// ---- 闲时先下（11.02）：前面几幕放着、网空着的时候，把后面三个大场景要的文件悄悄下进浏览器缓存 ----
+// 只下载、不执行（不装 iframe），所以不会卡正在放的这一幕，暗房也不会提前读走圈了哪几张。她朋友那边一个请求一两秒，攒到转场再拿就是黑屏
+// 脚本地址要跟服务器改写出来的一字不差（x.js?v=版本）才用得上缓存；本地没有版本号，就用原地址
+const WARM=(()=>{const C=window.CONTENT,JV=window.FILM_JS||{},js=f=>f+(JV[f]?'?v='+JV[f]:''),P=f=>f&&f.photo,S=f=>f&&(f.thumb||f.photo),B=C.book||{};
+  return [
+    // 片头起：胶卷那幕
+    {at:0,to:3,list:()=>[js('lib/three.module.js'),'img/wood.jpg',...C.rolls.flatMap(r=>r.frames.map(S)),...C.rolls[1].frames.map(P)]},
+    // 冲印袋起：暗房（第 4 卷都可能被圈，八张都下）
+    {at:2,to:4,list:()=>[...['tray-lt.js','tray-lt-dive.js','tray-lt-flow.js'].map(js),...['col','nor_gl','rough'].map(k=>`img/steel/steel_${k}.jpg`),...C.rolls[3].frames.map(P)]},
+    // 暗房起：书
+    {at:4,to:6,list:()=>[
+      ...'bc-tex bc-card bc-book bc-desk bc-read bc-turn bc-candle bc-pages bc-popup bc-map bc-compass bc-petals bc-libcard bc-reel bc-collage bc-letters lib/GLTFLoader lib/BufferGeometryUtils'.split(' ').map(f=>js(f+'.js')),
+      ...['Allura','InstrumentSerif-italic','CourierPrime-normal','IMFell-normal'].map(f=>`font/${f}.woff2`),
+      'models/compass/seadogs_compass_1k.gltf','models/compass/seadogs_compass.bin',...['nor_gl','diff','arm'].map(k=>`models/compass/textures/seadogs_compass_${k}_1k.jpg`),
+      'models/projector/filmstrip_projector_8mm_1k.gltf','models/projector/filmstrip_projector_8mm.bin',...['nor_gl','diff','arm'].map(k=>`models/projector/textures/filmstrip_projector_8mm_${k}_1k.jpg`),
+      'img/leather_nor_gl.jpg','img/leather_rough.jpg','img/feather.jpg','img/ticket.webp','img/camera.webp','img/env_cafe.jpg',
+      ...'collage/bfly-brown.webp collage/bfly-orange.webp collage/bfly-yellow.webp collage/filmad.jpg collage/greyhound.webp collage/news.jpg collage/seventh-heaven.jpg collage/stamp-ca.jpg collage/stamp-ct.jpg collage/stamp-mi.jpg daisy/daisy-pressed.webp daisy/daisy-sprig.webp daisy/fmn-pressed.webp library/card-1916.jpg library/notice-paper.jpg library/notice-print.png library/pocket-1959.jpg library/stamper.webp map-china-1910.jpg fx/flame_02.png fx/flame_05.png fx/flame_06.png fx/smoke_01.png fx/smoke_02.png'.split(' ').map(n=>'img/'+n),
+      P(B.cover),P(B.theater),P(B.compass),...(B.collage||[]).map(P),...(B.map||[]).map(P),'img/reel/libreel.mp4']}]})();
+const warmQ=[],warmSeen=new Set();let warmRun=0;
+function warmNext(){while(warmRun<3&&warmQ.length){const u=warmQ.shift();warmRun++;
+  fetch(u,{priority:'low'}).then(r=>r.ok?r.blob():null).catch(()=>{}).finally(()=>{warmRun--;warmNext()})}}
+// 这一幕亮了三秒以后，把「从这里开始下、给后面哪一幕用」对得上的都排进去（从中间某幕开始放也一样）
+function warm(i){setTimeout(()=>{for(const w of WARM){if(w.done||i<w.at||i>=w.to)continue;w.done=true;
+  try{for(const u of w.list())if(u&&!warmSeen.has(u)){warmSeen.add(u);warmQ.push(u)}}catch(e){}}warmNext()},3000)}
+async function advance(fx){if(busy||cur+1>=SCENES.length)return;busy=true;
+  // 大场景还没加载好：先黑下去，黑着把它装好（three.js 起来要一会儿），再亮
+  if(!next||!next.dataset.ready){veil.className='veil';await tween(veil,{opacity:1},700,'ease-in');now.remove();
+    if(!next)preload(true);const lt=setTimeout(()=>veil.classList.add('wait'),1500);await loaded(next);clearTimeout(lt);veil.classList.remove('wait');await wait(700);show(next);await wait(250);await tween(veil,{opacity:0},900,'ease-out')}
+  else{const a=now;await (FX[fx]||FX.black)(a,next);a.remove()}
+  now=next;cur++;preload();warm(cur);busy=false}
+// ---- 音乐：一首接一首，放完从头 ----
+let mi=0,VOL=.7;try{const v=localStorage.getItem('aroll.vol');if(v!==null)VOL=+v}catch(e){}
+let ducked=false;
+const np=document.getElementById('np'),npT=document.getElementById('npT');let muted=false,started=false;
+function syncTracks(){mT.textContent=MUSIC[mi].title;document.querySelectorAll('iframe').forEach(f=>{try{f.contentWindow.postMessage({roll:'tracks',list:MUSIC.map(t=>t.title),cur:mi},'*')}catch(e){}})}
+function setTrack(i){mi=i;music.src=MUSIC[mi].src;npT.textContent=MUSIC[mi].title;syncTracks()}
+function playMusic(){if(!MUSIC.length||started)return;started=true;setTrack(mi);music.volume=0;music.muted=muted;music.play().catch(()=>{});fade(VOL,2500);np.classList.add('on')}
+music.addEventListener('ended',()=>{setTrack((mi+1)%MUSIC.length);music.play().catch(()=>{})});
+// 苹果（iPhone、iPad、Mac 的 Safari）只在人刚点下去的那一刻肯开始出声。歌是收音机念完几秒后才放的，那时候不算点了，整卷没歌（11.05 她 iPad 上）。
+// 办法：客人每点一下（哪一幕都行，roll-link.js 同步喊这里）：歌该放却没在放就当场放；还没轮到放歌，就用这个播放器放一小段静音，苹果认下它，后面自己放、换歌都不用再点
+const SILENT=URL.createObjectURL(new Blob([(()=>{const n=400,b=new DataView(new ArrayBuffer(44+n*2)),w=(o,s)=>[...s].forEach((c,i)=>b.setUint8(o+i,c.charCodeAt(0)));
+  w(0,'RIFF');b.setUint32(4,36+n*2,true);w(8,'WAVEfmt ');b.setUint32(16,16,true);b.setUint16(20,1,true);b.setUint16(22,1,true);b.setUint32(24,8000,true);b.setUint32(28,16000,true);b.setUint16(32,2,true);b.setUint16(34,16,true);w(36,'data');b.setUint32(40,n*2,true);return b.buffer})()],{type:'audio/wav'}));
+let unlocked=false,stopped=false;
+// 歌的时间多久没走了：iPad 微信里别的声音（打字机、撕纸）一响会把歌挤掉，有时不报 pause，看着在放、时间不动（11.05 朋友 iOS 15 第二首卡住后就没歌）
+let lastMove=performance.now(),lastT=-1;
+music.addEventListener('timeupdate',()=>{if(music.currentTime!==lastT){lastT=music.currentTime;lastMove=performance.now()}});
+music.addEventListener('playing',()=>{lastMove=performance.now()});
+window.unlockMusic=()=>{
+  if(started){if(hushed||stopped||fadeT0())return;
+    if(music.paused)music.play().catch(()=>{});
+    // 看着在放、三秒多时间没走：从停下的地方重新拿这首再放
+    else if(performance.now()-lastMove>3000){const t=music.currentTime;lastMove=performance.now();music.src=MUSIC[mi].src;
+      music.addEventListener('loadedmetadata',()=>{try{music.currentTime=t}catch(e){}},{once:true});music.play().catch(()=>{})}
+    return}
+  if(unlocked)return;unlocked=true;music.src=SILENT;const p=music.play();p&&p.then(()=>{if(!started)music.pause()}).catch(()=>{if(!started)unlocked=false})};
+['pointerup','touchend','click','keydown'].forEach(t=>addEventListener(t,()=>unlockMusic(),{capture:true,passive:true}));
+np.onclick=()=>{muted=!muted;music.muted=muted;np.classList.toggle('muted',muted)};
+// 设置栏：开关音乐（还没开始放的时候关掉，之后就不会响）；上一首/下一首
+const mOn=document.getElementById('mOn'),mT=document.getElementById('mT');mT.textContent=MUSIC[0]?MUSIC[0].title:'';
+function setMute(m){muted=m;music.muted=m;mOn.classList.toggle('off',m);mOn.textContent=m?'off':'on'}
+// 光圈点开/合上；点菜单外面合上
+const setEl=document.getElementById('set');document.getElementById('ap').onclick=e=>{e.stopPropagation();setEl.classList.toggle('open')};
+document.getElementById('menu').onclick=e=>e.stopPropagation();addEventListener('click',()=>setEl.classList.remove('open'));
+// 清晰度：存在浏览器里，下次打开还是这档；换了以后告诉每一幕
+const qOpt=document.getElementById('qOpt');
+function markQ(){let q='standard';try{q=localStorage.getItem('aroll.q')||q}catch(e){}qOpt.querySelectorAll('u').forEach(u=>u.classList.toggle('sel',u.dataset.q===q))}
+qOpt.querySelectorAll('u').forEach(u=>u.onclick=()=>{try{localStorage.setItem('aroll.q',u.dataset.q)}catch(e){}markQ();
+  document.querySelectorAll('iframe').forEach(f=>{try{f.contentWindow.postMessage({roll:'quality'},'*')}catch(e){}})});markQ();
+{const vol=document.getElementById('vol');const show=()=>{vol.value=Math.round(VOL*100);vol.style.setProperty('--v',vol.value+'%')};show();
+  vol.oninput=()=>{VOL=vol.value/100;vol.style.setProperty('--v',vol.value+'%');try{localStorage.setItem('aroll.vol',VOL)}catch(e){}
+    if(started&&!fadeT0()){music.volume=ducked?VOL*.3:VOL}}}
+mOn.onclick=()=>setMute(!muted);
+// 语言：存在浏览器里；换了就从这一幕重新装（每一幕装的时候才读语言）
+{const lOpt=document.getElementById('lOpt');lOpt.querySelectorAll('u').forEach(u=>{u.classList.toggle('sel',u.dataset.l===(window.ROLL_LANG||'en'));
+  u.onclick=()=>{if(u.dataset.l===(window.ROLL_LANG||'en'))return;try{localStorage.setItem('aroll.lang',u.dataset.l)}catch(e){}location.href=location.pathname+'?s='+cur}})}
+// 拍立得：看完照片墙才出现（同一个窗口里重看也还在）
+const polaRow=document.getElementById('polaRow');const polaOn=()=>{polaRow.hidden=false;try{sessionStorage.setItem('aroll.pola','1')}catch(e){}};
+try{if(sessionStorage.getItem('aroll.pola'))polaRow.hidden=false}catch(e){}
+document.getElementById('polaGo').onclick=()=>{setEl.classList.remove('open');POLA.open()};
+// 音效音量：只存下来，各幕自己从 roll-link.js 那边跟着变（storage 事件）
+{const sfx=document.getElementById('sfx');let v=1;try{const s=localStorage.getItem('aroll.sfx');if(s!==null)v=+s}catch(e){}
+  sfx.value=Math.round(v*100);sfx.style.setProperty('--v',sfx.value+'%');
+  sfx.oninput=()=>{sfx.style.setProperty('--v',sfx.value+'%');try{localStorage.setItem('aroll.sfx',sfx.value/100)}catch(e){}}}
+function skip(n){if(!MUSIC.length)return;pickTrack((mi+n+MUSIC.length)%MUSIC.length)}
+// 选一首：已经在放就马上换；主持人还没说完就先记着，开始放的时候从这首开始
+function pickTrack(i){if(started){setTrack(i);music.play().catch(()=>{})}else{mi=i;syncTracks()}}
+document.getElementById('mPrev').onclick=()=>skip(-1);document.getElementById('mNext').onclick=()=>skip(1);
+music.addEventListener('play',()=>{mT.textContent=MUSIC[mi].title});
+let fadeT,fading=false,hushed=false;const fadeT0=()=>fading;function fade(to,ms){clearInterval(fadeT);fading=true;const from=music.volume,t0=performance.now();fadeT=setInterval(()=>{const u=Math.min(1,(performance.now()-t0)/ms);music.volume=from+(to-from)*u;if(u>=1){clearInterval(fadeT);fading=false;if(to===0)music.pause()}},40)}
+addEventListener('message',e=>{const d=e.data;if(!d||!d.roll)return;
+  // 只听正在演的这一幕（和它里面套着的照片墙）喊 done；后台预加载的、已经演完的幕喊了不算，免得一下跳到片尾
+  const fromNow=now&&(e.source===now.contentWindow||(e.source&&e.source.parent===now.contentWindow));
+  if(d.roll==='prep'){if(fromNow&&!next)preload(true)}
+  else if(d.roll==='pola'){polaOn()}
+  else if(d.roll==='ready'){document.querySelectorAll('iframe').forEach(f=>{if(e.source===f.contentWindow&&f.sayReady)f.sayReady()})}
+  else if(d.roll==='done'){console.log('[roll] done',d.fx,'from',fromNow?SCENES[cur]:'(not current, ignored)');if(fromNow)advance(d.fx)}
+  else if(d.roll==='music'){if(d.cmd==='list')syncTracks();else if(String(d.cmd).startsWith('track:'))pickTrack(+d.cmd.slice(6));else if(d.cmd==='play')playMusic();else if(d.cmd==='kick'){if(cur>1&&cur<SCENES.length-1)playMusic()}else if(d.cmd==='duck'){ducked=true;fade(VOL*.3,800)}else if(d.cmd==='unduck'){ducked=false;fade(VOL,1200)}else if(d.cmd==='stop'){stopped=true;fade(0,2500);np.classList.remove('on')}
+    // 放映机放带声音的片子：歌先停，片子放完接着放（专属设置 reel.sound）
+    else if(d.cmd==='hush'){if(started&&!music.paused){hushed=true;fade(0,800)}}else if(d.cmd==='unhush'){if(hushed){hushed=false;music.play().catch(()=>{});fade(ducked?VOL*.3:VOL,1500)}}}
+  else if(d.roll==='restart'){location.href=location.pathname}});
+boot();
+</script>
+</body></html>

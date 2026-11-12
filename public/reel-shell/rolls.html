@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A Roll For Two · Rolls</title>
+<style>
+@font-face{font-family:'JB Mono';src:url(font/jbmono.woff2) format('woff2')}
+@font-face{font-family:'Fraunces';src:url(font/Fraunces-normal.woff2) format('woff2');font-weight:100 900}
+@font-face{font-family:'Fraunces';src:url(font/Fraunces-italic.woff2) format('woff2');font-weight:100 900;font-style:italic}
+@font-face{font-family:'Reenie';src:url(font/ReenieBeanie-normal.woff2) format('woff2')}
+:root{--cream:#f3e6d2;--ink:#040302;--red:#ee5546}
+html,body{margin:0;height:100%;background:var(--ink);overflow:hidden}
+#stage{position:absolute;left:50%;top:50%;width:1600px;height:1000px;background:var(--ink)}
+.mono{font:400 11px/1.7 'JB Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--cream)}
+.proj{position:absolute;left:280px;top:130px;width:1040px;height:694px;animation:jitter .5s steps(1) infinite}
+@keyframes jitter{0%{transform:translate(0,0)}25%{transform:translate(.2px,-.15px)}50%{transform:translate(-.15px,.2px)}75%{transform:translate(.15px,.1px)}}
+.proj .spill{position:absolute;inset:-50px;border-radius:80px;background:radial-gradient(closest-side,rgba(255,160,90,.15),transparent);filter:blur(60px)}
+.frame{position:absolute;inset:0;overflow:hidden;background:#0c0603;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1040 694'%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='9'/%3E%3C/filter%3E%3Crect x='18' y='18' width='1004' height='658' rx='30' fill='white' filter='url(%23b)'/%3E%3C/svg%3E") center/100% 100%;
+          mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1040 694'%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='9'/%3E%3C/filter%3E%3Crect x='18' y='18' width='1004' height='658' rx='30' fill='white' filter='url(%23b)'/%3E%3C/svg%3E") center/100% 100%}
+canvas#gl{position:absolute;inset:0;width:1040px;height:694px;display:block}
+.title{position:absolute;left:0;right:0;top:54px;text-align:center;color:var(--cream);pointer-events:none;transition:opacity .6s}
+.title h2{margin:0;font:300 40px/1 'Fraunces',serif;font-variation-settings:'opsz' 144,'SOFT' 100;letter-spacing:-.02em}
+.title h2 em{font-style:italic}
+.title p{margin:10px 0 0;font:italic 300 16px 'Fraunces',serif;opacity:.6}
+.hint{position:absolute;left:0;right:0;bottom:66px;text-align:center;font:400 34px/1 'Reenie',cursive;color:var(--red);pointer-events:none;transition:opacity .6s}
+.tag{position:absolute;pointer-events:none;opacity:0;transition:opacity .25s;transform:translate(-50%,-100%);text-align:center;white-space:nowrap}
+.tag b{display:block;font:italic 300 24px/1.1 'Fraunces',serif;text-transform:none;letter-spacing:0;margin-bottom:4px}
+.back{position:absolute;left:68px;bottom:54px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .4s}
+.focused .back{opacity:.7;pointer-events:auto}
+.focused .title,.focused .hint{opacity:0}
+.todark{position:absolute;right:76px;bottom:62px;font:400 36px/1 'Reenie',cursive;color:var(--red);transform:rotate(-4deg);opacity:0;pointer-events:none;transition:opacity 1s;cursor:pointer;z-index:6}
+.todark.on{opacity:1;pointer-events:auto}
+.focused .todark{opacity:0;pointer-events:none}
+.redout{position:absolute;inset:0;z-index:7;pointer-events:none;background:#000;opacity:0;transition:opacity .25s;overflow:hidden}
+/* 关灯以后黑里只剩一条片子的两排齿孔还透着光，慢慢往上走出画面 */
+.redout .perfs{position:absolute;left:-40px;right:-40px;top:100%;height:150px;opacity:0;filter:drop-shadow(0 0 6px rgba(255,190,120,.7)) blur(.3px)}
+.redout .perfs i{position:absolute;left:0;right:0;height:16px;background:repeating-linear-gradient(90deg,transparent 0 14px,rgba(255,214,160,.85) 14px 30px,transparent 30px 44px);
+  -webkit-mask:repeating-linear-gradient(90deg,#000 0 44px);border-radius:3px}
+.redout .perfs i:first-child{top:0}.redout .perfs i:last-child{bottom:0}
+.redout.go .perfs{animation:perfup 2s cubic-bezier(.45,0,.35,1) forwards}
+@keyframes perfup{0%{top:100%;opacity:0}15%{opacity:1}80%{opacity:1}100%{top:-30%;opacity:0}}
+/* 安全灯的红从底下慢慢浮上来 */
+.redout .rise{position:absolute;inset:0;background:radial-gradient(120% 80% at 50% 120%,rgba(150,18,6,.95),rgba(70,6,2,.6) 55%,transparent 85%);opacity:0;transform:translateY(30%)}
+.redout.go .rise{transition:opacity 1.6s ease 1.3s,transform 1.8s ease-out 1.3s;opacity:1;transform:translateY(0)}
+.hint2{position:absolute;left:0;right:0;bottom:24px;text-align:center;font:400 32px/1 'Reenie',cursive;color:var(--red);opacity:0;pointer-events:none;transition:opacity .6s .8s}
+.focused .hint2{opacity:1}
+.hint2.gone{opacity:0!important;transition-delay:0s}
+.corner{position:absolute;opacity:.5}
+/* 03 看片器旁边浮出来的那天 */
+.vcap{position:absolute;width:440px;text-align:center;color:var(--cream);opacity:0;transform:translate(-50%,-100%);transition:opacity .6s;pointer-events:none}
+.vcap.on{opacity:1}
+.vcap .mono{opacity:.6}
+.vcap p{margin:10px 0 0;font:italic 300 23px/1.35 'Fraunces',serif}
+/* 玩法说明：不加框，背后一团很淡的暖光，像台灯余光照到的一张小纸 */
+.how{position:absolute;left:28px;top:300px;width:224px;padding:26px 18px;color:var(--cream);opacity:0;transform:translateY(8px);transition:opacity 1s,transform 1s;pointer-events:none}
+.how::before{content:'';position:absolute;inset:-60px -40px;z-index:-1;background:radial-gradient(closest-side,rgba(255,150,70,.13),transparent);filter:blur(10px)}
+.how.on{opacity:1;transform:none;pointer-events:auto;cursor:pointer}
+.how .mono{opacity:.55;margin-bottom:14px}
+.how ol{margin:0;padding:0;list-style:none;counter-reset:s}
+.how li{counter-increment:s;position:relative;padding-left:26px;margin:0 0 12px;font:italic 300 17px/1.4 'Fraunces',serif;opacity:.9}
+.how li::before{content:counter(s);position:absolute;left:0;top:1px;font:400 11px/1.9 'JB Mono',monospace;opacity:.5}
+.how i{display:block;margin-top:6px;font:400 26px/1 'Reenie',cursive;font-style:normal;color:var(--red)}
+.howBtn{position:absolute;left:40px;top:150px;opacity:0;cursor:pointer;pointer-events:none;transition:opacity .8s;color:var(--cream)}
+.howBtn.on{opacity:.6;pointer-events:auto}
+.howBtn:hover{opacity:1}
+.howBtn b{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:10px;vertical-align:1px;background:#ffb070;box-shadow:0 0 10px 3px rgba(255,150,70,.55);animation:breathe 3s ease-in-out infinite}
+@keyframes breathe{50%{box-shadow:0 0 16px 6px rgba(255,150,70,.35)}}
+/* 03 指着拨杆的红笔箭头：箭头尖落在红球上 */
+.vtip{position:absolute;pointer-events:none;transform:translate(-26px,-74px);transition:opacity .8s;animation:nudge 1.6s ease-in-out infinite}
+.vtip.gone{opacity:0}
+.vtip svg{display:block;transform:scaleX(-1)}
+.vtip i{position:absolute;left:78px;top:-22px;font:400 32px/1 'Reenie',cursive;font-style:normal;color:var(--red);white-space:nowrap}
+@keyframes nudge{50%{margin-left:4px;margin-top:-3px}}
+.grain{position:absolute;inset:0;opacity:.2;mix-blend-mode:overlay;pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");animation:grain .4s steps(3) infinite}
+@keyframes grain{33%{background-position:40px 70px}66%{background-position:-60px 20px}}
+.vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 95% at 50% 50%,transparent 50%,rgba(2,1,0,.75) 100%)}
+</style></head>
+<body>
+<div id="stage">
+  <div class="proj">
+    <div class="spill"></div>
+    <div class="frame" id="frame">
+      <canvas id="gl"></canvas>
+      <div class="title"><h2>Four rolls, <em>one us</em></h2><p>every season we kept, wound up and waiting</p></div>
+      <div class="hint">pick one</div>
+      <div class="mono tag" id="tag"><b id="tagName"></b><span id="tagSub"></span></div>
+      <div class="mono back" id="back">← back to the table</div>
+      <div class="todark" id="todark">to the darkroom →</div><div class="redout" id="redout"><div class="perfs"><i></i><i></i></div><div class="rise"></div></div>
+      <div class="hint2" id="hint2">drag to pull it out, tap one to develop</div>
+      <div class="vcap" id="vcap"></div>
+      <div class="vtip gone" id="vtip"><svg width="120" height="90" viewBox="0 0 120 90"><path d="M8 10 C40 6 78 22 96 66" fill="none" stroke="#ee5546" stroke-width="2.4" stroke-linecap="round"/><path d="M84 58 L97 70 L101 52" fill="none" stroke="#ee5546" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><i>press me</i></div>
+      <div class="mono corner" style="left:68px;top:58px">Scene 04 — The rolls</div>
+      <div class="mono corner" style="right:68px;top:58px;text-align:right">4 rolls · 96 frames</div>
+      <div class="grain"></div><div class="vig"></div>
+    </div>
+  </div>
+  <!-- 玩法说明：在放映格子外面的黑里，一点暖光 -->
+  <div class="how" id="how"><div class="mono">How to play · <span id="howNo"></span></div><ol id="howList"></ol><i id="howNote"></i></div>
+  <div class="mono howBtn" id="howBtn"><b></b>how to play</div>
+</div>
+<script src="zh.js?v=tnqgtm"></script>
+<script src="content.js?v=29994fe04a"></script>
+<script src="roll-link.js?v=to1cu6"></script>
+<script type="module">
+import * as THREE from './lib/three.module.js?v=tn9zuj';
+const s=document.getElementById('stage');
+let k=1;
+const fit=()=>{k=Math.min(innerWidth/1600,innerHeight/1000);s.style.transform=`translate(-50%,-50%) scale(${k})`};
+fit();addEventListener('resize',fit);
+
+// 四卷：客人可以改名字、日期和颜色；每卷八格，照片、日期、一句话
+// play 是这一卷多出来的那样玩法：pull 点格显影 / light 举到灯前 / viewer 看片器 / sheet 印样上圈
+// 照片、日期、卷名、背面那句从 content.js 来；每卷的颜色、玩法、位置是这一幕自己的
+const STYLE=[
+  {iso:'200',bg:'#e6d8bd',ink:'#b5301e',band:'#b5301e',pos:[-2.5,-.35],rot:.35,play:'pull',hint:'drag to pull it out, tap one to develop'},
+  {iso:'400',bg:'#cf5f26',ink:'#1b0f08',band:'#1b0f08',pos:[-.75,.95],rot:-.5,play:'light',hint:'pull one out, hold it up to the light'},
+  {iso:'160',bg:'#1f3a30',ink:'#eadcbf',band:'#c9a45a',pos:[1.05,-.75],rot:.15,play:'viewer',hint:'press the lever, one frame at a time'},
+  {iso:'800',bg:'#141110',ink:'#d8b26a',band:'#d8b26a',pos:[2.75,.7],rot:-.25,play:'sheet',hint:'circle the ones to print. a heart just means you love it.'},
+];
+// 客人写的字放进网页时原样显示：写了 I <3 you、A&B 不会吞掉一截（11.03）
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const ROLLS=CONTENT.rolls.map((r,i)=>({no:String(i+1).padStart(2,'0'),name:r.name,dates:r.dates,...STYLE[i],
+  // 全部先用小图开场（11.02：以前第 2 卷要先等 8 张大图，一幕黑好久）；第 2 卷要举到灯前看，大图在后台拿，到了就换（big）
+  frames:r.frames.map(f=>({pic:CONTENT.small(f),big:STYLE[i].play==='light'?f.photo:null,src:f,date:f.date,line:f.line||''}))}));
+const PICS=[...new Set(ROLLS.flatMap(r=>r.frames.map(f=>f.pic)))];
+
+// 客人写的中文也等字体到了再画进贴图（11.03）
+await Promise.all([ROLL.zhReady(),document.fonts.load("300 80px Fraunces"),document.fonts.load("italic 300 80px Fraunces"),document.fonts.load("20px 'JB Mono'")]);
+const img=src=>ROLL.img(src);
+const pics=await Promise.all(PICS.map(p=>img(p).then(i=>[p,i]))).then(Object.fromEntries);
+// 第 2 卷的大图：一张一张在后台拿，拿到就顶替小图（打开第 2 卷时画的就是大图）
+{let q=Promise.resolve();ROLLS.forEach(r=>r.frames.forEach(f=>{if(f.big&&f.big!==f.pic)q=q.then(()=>img(f.big).then(i=>{if(!i.missing)pics[f.pic]=i}))}))}
+
+// ---- 场景 ----
+const cv=document.getElementById('gl');
+const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+renderer.setPixelRatio(ROLL.pr());renderer.setSize(1040,694,false);ROLL.onQuality(()=>{renderer.setPixelRatio(ROLL.pr());renderer.setSize(1040,694,false)});
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+const scene=new THREE.Scene();scene.background=new THREE.Color("#0b0705");
+const cam=new THREE.PerspectiveCamera(32,1040/694,.1,100);
+const HOME={pos:new THREE.Vector3(0,7,5.4),look:new THREE.Vector3(0,0,.15)};
+cam.position.copy(HOME.pos);cam.lookAt(HOME.look);
+
+// 木桌，压成暗的棕红
+const tl=new THREE.TextureLoader();
+const wood=tl.load('img/wood.jpg');wood.colorSpace=THREE.SRGBColorSpace;wood.wrapS=wood.wrapT=THREE.RepeatWrapping;wood.repeat.set(3,2);
+const table=new THREE.Mesh(new THREE.PlaneGeometry(22,15),new THREE.MeshStandardMaterial({map:wood,color:"#6e4a38",roughness:.85}));
+table.rotation.x=-Math.PI/2;table.receiveShadow=true;scene.add(table);
+
+// 台灯从上面偏前打下来，暖的；一点点环境光
+scene.add(new THREE.AmbientLight('#ffcfa0',.18));
+const lamp=new THREE.SpotLight("#ffd2a0",140,30,.62,.95,2);lamp.position.set(.6,8.5,2.2);lamp.target.position.set(0,0,0);
+lamp.castShadow=true;lamp.shadow.mapSize.set(1024,1024);lamp.shadow.radius=6;lamp.shadow.bias=-.0004;scene.add(lamp,lamp.target);
+// 选中时台灯挪过来照着片子
+const lampHome=lamp.position.clone(),lampAt=new THREE.Vector3(),fill=new THREE.PointLight("#ffb47a",0,8,2);fill.position.set(-1,2.2,4.5);scene.add(fill);
+const rim=new THREE.DirectionalLight('#ff9a5a',.35);rim.position.set(-6,3,-5);scene.add(rim);
+
+// ---- 胶卷罐 ----
+// 标签画在一张长条上，绕罐身一圈；字沿着罐子的长轴走
+function labelTex(r){
+  const W=1024,H=512,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
+  x.fillStyle=r.bg;x.fillRect(0,0,W,H);
+  // 罐身上下两道色带
+  x.fillStyle=r.band;x.fillRect(0,0,W,26);x.fillRect(0,H-26,W,26);
+  // 正面一份、背面一份
+  for(const cx of [W*.25,W*.75]){
+    x.save();x.translate(cx,H/2);x.rotate(Math.PI/2);x.fillStyle=r.ink;x.textAlign='center';
+    // 卷名量一下：标签一圈只有 512 高，写长了（英文十几个字母、中文五个字以上）就出界被切掉，放不下就把字缩小（11.03）
+    let fs=104;x.font=`italic 300 ${fs}px Fraunces`;while(fs>36&&x.measureText(r.name).width>430){fs-=4;x.font=`italic 300 ${fs}px Fraunces`}x.fillText(r.name,0,10,430);
+    x.font="400 26px 'JB Mono'";x.globalAlpha=.85;x.fillText(`ROLL ${r.no} · ${r.iso} · 24 EXP`,0,62);
+    x.restore();
+    x.save();x.translate(cx-150,H/2);x.rotate(Math.PI/2);x.fillStyle=r.ink;x.globalAlpha=.7;x.textAlign='center';x.font="400 20px 'JB Mono'";
+    x.fillText(r.dates.toUpperCase(),0,0);x.restore();
+  }
+  // 一点磨损和纸纹
+  for(let i=0;i<1600;i++){x.fillStyle=`rgba(0,0,0,${Math.random()*.06})`;x.fillRect(Math.random()*W,Math.random()*H,2,2)}
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t;
+}
+const metal=new THREE.MeshStandardMaterial({color:'#b9b1a5',metalness:.92,roughness:.32});
+const dark=new THREE.MeshStandardMaterial({color:'#1a1512',metalness:.5,roughness:.6});
+const felt=new THREE.MeshStandardMaterial({color:'#0e0b0a',roughness:1});
+const R=.38,L=1.05;
+function canister(r){
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(R,R,L,64,1,true),new THREE.MeshStandardMaterial({map:labelTex(r),roughness:.55,metalness:.15}));
+  const capT=new THREE.Mesh(new THREE.CylinderGeometry(R+.025,R+.025,.09,64),metal);capT.position.y=L/2+.04;
+  const capB=capT.clone();capB.position.y=-L/2-.04;
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(R+.01,.012,8,64),metal);ring.rotation.x=Math.PI/2;ring.position.y=L/2-.02;
+  const ring2=ring.clone();ring2.position.y=-L/2+.02;
+  const spool=new THREE.Mesh(new THREE.CylinderGeometry(.1,.1,.16,24),dark);spool.position.y=L/2+.16;
+  const spoolTip=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.05,20),metal);spoolTip.position.y=L/2+.26;
+  // 出片口：罐身侧面一条黑绒
+  const lip=new THREE.Mesh(new THREE.BoxGeometry(.16,L*.86,.07),felt);lip.position.set(0,0,R+.005);
+  [body,capT,capB,spool,spoolTip,lip].forEach(m=>{m.castShadow=true;m.receiveShadow=true});
+  g.add(body,capT,capB,ring,ring2,spool,spoolTip,lip);g.userData.spool=[spool,spoolTip];
+  // 躺在桌上：长轴横过来
+  const holder=new THREE.Group();g.rotation.z=Math.PI/2;holder.add(g);
+  holder.position.set(r.pos[0],R+.03,r.pos[1]);holder.rotation.y=r.rot;
+  holder.userData={roll:r,lift:0,base:holder.position.clone(),baseRot:r.rot,inner:g};
+  return holder;
+}
+
+// ---- 拉出来的负片：橙色片基，齿孔镂空，影像反相 ----
+// 片子从罐口往外走，最先出来的是第 1 格，所以画布上把第 1 格放在最右边
+// 片子比八格多一截空白片尾，最后一格也能整个拉出罐口（看片器那卷要用）
+const N=8,S=N+1,FW=300,FH=440;   // 一格的画布尺寸，和片子在三维里的宽高比一致，不拉变形
+const fc=document.createElement('canvas');fc.width=FW*S;fc.height=FH;const fx=fc.getContext('2d');
+const slotX=i=>(S-1-i)*FW;   // 第 i 格在画布上的位置
+const IX=18,IY=62,IW=FW-36,IH=FH-124;
+const cover=(x,im,ox,oy,w,h)=>{const sc=Math.max(w/im.width,h/im.height);x.drawImage(im,ox+(w-im.width*sc)/2,oy+(h-im.height*sc)/2,im.width*sc,im.height*sc)};
+const NEG='invert(1) sepia(1) saturate(2.3) hue-rotate(-14deg) brightness(.8) contrast(.85)',POS='sepia(.25) saturate(1.05) contrast(1.05) brightness(.95)';
+// 每卷每一格显影到哪了；显完的记下来，下一幕显影盘从这里接
+const DEV=ROLLS.map(()=>new Array(N).fill(0));
+try{const sv=JSON.parse(sessionStorage.getItem('aroll.dev')||'null');if(sv)sv.forEach((a,r)=>a.forEach((v,i)=>{if(DEV[r])DEV[r][i]=v?1:0}))}catch(e){}
+const saveDev=()=>{try{sessionStorage.setItem('aroll.dev',JSON.stringify(DEV.map(a=>a.map(v=>v>=1?1:0))))}catch(e){}};
+let cur=ROLLS[0],dev=DEV[0];const undev=new Set();
+// 显影一帧一帧重画会卡，所以打开一卷时先把片基、每格负片、每格正片各画好一张，之后只是叠透明度
+const mkC=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c};
+const baseC=mkC(FW*S,FH),NEGC=[],POSC=[];
+// 颗粒：一小块噪点平铺，叠在片基和画面上
+const grainC=mkC(128,128);{const x=grainC.getContext('2d'),d=x.createImageData(128,128);for(let i=0;i<d.data.length;i+=4){const v=Math.random()*255;d.data[i]=d.data[i+1]=d.data[i+2]=v;d.data[i+3]=26}x.putImageData(d,0,0)}
+function buildRoll(){
+  const x=baseC.getContext('2d'),W=baseC.width;x.globalCompositeOperation='source-over';x.clearRect(0,0,W,FH);
+  // 片基：橙色，上下边缘深一点，中间有一道很淡的反光
+  x.fillStyle='#c4642a';x.fillRect(0,0,W,FH);
+  const g=x.createLinearGradient(0,0,0,FH);g.addColorStop(0,'rgba(80,25,0,.4)');g.addColorStop(.12,'rgba(80,25,0,.1)');g.addColorStop(.5,'rgba(255,205,150,.14)');g.addColorStop(.88,'rgba(80,25,0,.1)');g.addColorStop(1,'rgba(80,25,0,.4)');x.fillStyle=g;x.fillRect(0,0,W,FH);
+  // 片基的浓淡不是一整块，顺着片长慢慢起伏
+  for(let i=0;i<14;i++){const cx=Math.random()*W,r=200+Math.random()*400,rg=x.createRadialGradient(cx,FH/2,0,cx,FH/2,r);rg.addColorStop(0,`rgba(${Math.random()<.5?'255,190,130':'90,30,5'},.08)`);rg.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=rg;x.fillRect(cx-r,0,r*2,FH)}
+  x.fillStyle=x.createPattern(grainC,'repeat');x.fillRect(0,0,W,FH);
+  // 每格画面外面一圈深一点的片框
+  for(let i=0;i<N;i++){x.fillStyle='rgba(60,18,2,.35)';x.beginPath();x.roundRect(slotX(i)+IX-5,IY-5,IW+10,IH+10,6);x.fill()}
+  // 边上印的字：上边片名和箭头，下边格号
+  x.font="400 13px 'JB Mono'";x.fillStyle='#ffd99c';
+  for(let i=0;i<N;i++){const ox=slotX(i);x.globalAlpha=.55;x.fillText(`◂ ${String(i*2+1).padStart(2,'0')}  DARKROOM SEVEN · ${cur.iso}`,ox+IX,IY-12);
+    x.globalAlpha=.8;x.font="400 15px 'JB Mono'";x.fillText(`${cur.name.toUpperCase()} ${cur.iso}  ▸ ${i+1}  ▸ ${i+1}A`,ox+IX,FH-14);x.font="400 13px 'JB Mono'"}
+  x.globalAlpha=1;
+  // 顺着片长的细划痕和灰
+  for(let i=0;i<22;i++){const y=20+Math.random()*(FH-40),x0=Math.random()*W,len=200+Math.random()*1400;x.strokeStyle=`rgba(255,230,190,${.05+Math.random()*.12})`;x.lineWidth=Math.random()<.8?.7:1.4;x.beginPath();x.moveTo(x0,y);x.lineTo(x0+len,y+(Math.random()-.5)*3);x.stroke()}
+  for(let i=0;i<160;i++){x.fillStyle=`rgba(${Math.random()<.6?'40,10,0':'255,235,200'},${.15+Math.random()*.35})`;x.beginPath();x.arc(Math.random()*W,Math.random()*FH,Math.random()*1.6+.3,0,7);x.fill()}
+  // 齿孔挖空
+  x.globalCompositeOperation='destination-out';
+  for(let px=10;px<W;px+=34){x.beginPath();x.roundRect(px,14,19,28,4);x.roundRect(px,FH-42,19,28,4);x.fill()}
+  x.globalCompositeOperation='source-over';
+  // 每格的负片和正片
+  cur.frames.forEach((f,i)=>{const im=pics[f.pic];
+    const n=NEGC[i]=mkC(IW,IH),nx=n.getContext('2d');nx.filter=NEG;CONTENT.drawCrop(nx,im,f.src,0,0,IW,IH);nx.filter='none';nx.fillStyle='rgba(185,80,25,.4)';nx.fillRect(0,0,IW,IH);
+    const p=POSC[i]=mkC(IW,IH),px=p.getContext('2d');px.filter=POS;CONTENT.drawCrop(px,im,f.src,0,0,IW,IH);px.filter='none';
+    for(const c of [nx,px]){c.fillStyle=c.createPattern(grainC,'repeat');c.fillRect(0,0,IW,IH);
+      const v=c.createRadialGradient(IW/2,IH/2,IH*.3,IW/2,IH/2,IH*.75);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(30,10,0,.28)');c.fillStyle=v;c.fillRect(0,0,IW,IH)}})}
+// 一格的画面：负片打底，正片按 dv 叠上去
+function frameInto(x,i,ox,oy,dv){x.globalAlpha=1;x.drawImage(NEGC[i],ox,oy);if(dv>0){x.globalAlpha=Math.min(1,dv);x.drawImage(POSC[i],ox,oy);x.globalAlpha=1}}
+const drawFrame=i=>frameInto(fx,i,slotX(i)+IX,IY,dev[i]);
+function paintFilm(){fx.clearRect(0,0,fc.width,FH);fx.drawImage(baseC,0,0);for(let i=0;i<N;i++)drawFrame(i)}
+buildRoll();paintFilm();
+const filmTex=new THREE.CanvasTexture(fc);filmTex.colorSpace=THREE.SRGBColorSpace;filmTex.anisotropy=8;
+const FILM_LEN=S*.65,FILM_W=.95;
+const filmGeo=new THREE.PlaneGeometry(FILM_LEN,FILM_W,140,1);
+// 竖着的一条片带，离开罐口时往外鼓一点，后面轻轻起伏，像真的软片
+{const p=filmGeo.attributes.position;for(let i=0;i<p.count;i++){const u=(p.getX(i)+FILM_LEN/2)/FILM_LEN;p.setZ(i,Math.sin(u*Math.PI)*.3*Math.exp(-u*1.2)+Math.sin(u*Math.PI*4)*.03)}filmGeo.computeVertexNormals()}
+filmGeo.translate(FILM_LEN/2,0,0);
+// 醋酸片基有一层亮亮的膜，灯扫过去会有一道反光
+const filmMat=new THREE.MeshPhysicalMaterial({map:filmTex,transparent:true,alphaTest:.4,side:THREE.DoubleSide,roughness:.45,metalness:0,clearcoat:.7,clearcoatRoughness:.22,emissive:'#5a2008',emissiveIntensity:.35});
+const film=new THREE.Mesh(filmGeo,filmMat);film.castShadow=true;film.visible=false;film.scale.x=.001;scene.add(film);
+// 拉出来多少（0..1）。贴图只露出最外面那一截，所以往外拉是「露出更多格」，不是把画面拉长
+let pull=0,pullT=0;
+const setPullView=()=>{const p=Math.max(.001,pull);film.scale.x=p;filmTex.repeat.x=p;filmTex.offset.x=1-p};
+
+const cans=ROLLS.map(r=>{const h=canister(r);h.userData.ft=0;scene.add(h);return h});
+const STAND_Y=L/2+.09;
+// 点开的那卷挪到前面这个位置，其它的往后退
+const STAGE=new THREE.Vector3(-2.2,0,1.3);
+
+// ---- 声音：拉过一格「咔哒」一下 ----
+let ac;
+const tick=()=>{try{ac=ac||new AudioContext();const t=ac.currentTime,b=ac.createBuffer(1,ac.sampleRate*.03,ac.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,6);
+  const s=ac.createBufferSource();s.buffer=b;const f=ac.createBiquadFilter();f.type='bandpass';f.frequency.value=2600;f.Q.value=2;const g=ac.createGain();g.gain.value=.5;
+  s.connect(f).connect(g).connect(ac.destination);s.start(t)}catch(e){}};
+
+// ---- 交互 ----
+const ray=new THREE.Raycaster(),m=new THREE.Vector2();let hover=null,focus=null,closing=false;
+const fr=document.getElementById('frame'),tag=document.getElementById('tag'),hint2=document.getElementById('hint2');
+const local=e=>{const r=fr.getBoundingClientRect();return[(e.clientX-r.left)/k,(e.clientY-r.top)/k]};
+const aim=e=>{const [x,y]=local(e);m.set(x/1040*2-1,-(y/694)*2+1);ray.setFromCamera(m,cam)};
+const pick=e=>{aim(e);const hit=ray.intersectObjects(cans,true)[0];if(!hit)return null;let o=hit.object;while(o&&!cans.includes(o))o=o.parent;return o};
+// 片子上点到的是第几格
+const frameAt=e=>{aim(e);const hit=ray.intersectObject(film)[0];if(!hit||!hit.uv)return -1;const u=filmTex.offset.x+hit.uv.x*filmTex.repeat.x,i=S-1-Math.floor(u*S);return i<N?i:-1};
+// 拉片的阻尼：每到整格附近手感变沉，像卡进齿孔；松手再吸到整格
+const detent=raw=>raw-Math.sin(2*Math.PI*raw*S)/(2*Math.PI*S)*.93;
+const feedMin=()=>cur.play==='viewer'?2/S:1/S+.02;
+const snap=()=>{pullT=Math.max(feedMin(),Math.min(1,Math.round(pullT*S)/S))};
+const SRGB=THREE.SRGBColorSpace;
+// 一整格（带齿孔和片基），dv 是正片浮出来多少；举起来那一格和看片器都用它
+function slotCanvas(x,i,dv){x.clearRect(0,0,FW,FH);x.drawImage(baseC,slotX(i),0,FW,FH,0,0,FW,FH);frameInto(x,i,IX,IY,dv)}
+
+// ---- 02 slow days：按住一格，它被举到灯前，透着光负片慢慢变成正片 ----
+const hc=document.createElement('canvas');hc.width=FW;hc.height=FH;const hx=hc.getContext('2d');
+const heldTex=new THREE.CanvasTexture(hc);heldTex.colorSpace=SRGB;
+const held=new THREE.Mesh(new THREE.PlaneGeometry(.65*1.25,.95*1.25),new THREE.MeshBasicMaterial({map:heldTex,transparent:true,alphaTest:.05,depthWrite:false,side:THREE.DoubleSide,toneMapped:false}));
+held.visible=false;scene.add(held);
+// 灯：举起来的那一格背后一团暖光
+const glowC=document.createElement('canvas');glowC.width=glowC.height=256;{const g=glowC.getContext('2d'),r=g.createRadialGradient(128,128,0,128,128,128);
+  r.addColorStop(0,'rgba(255,236,200,1)');r.addColorStop(.25,'rgba(255,190,120,.65)');r.addColorStop(.6,'rgba(255,130,60,.18)');r.addColorStop(1,'rgba(255,120,50,0)');g.fillStyle=r;g.fillRect(0,0,256,256)}
+const glow=new THREE.Mesh(new THREE.PlaneGeometry(3.2,3.2),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(glowC),transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,toneMapped:false}));
+scene.add(glow);
+const _v=new THREE.Vector3();
+window.__rolls={state:()=>({want,circ,tool,strokes:STROKES[3].length,drag,hold,pull,pullT,roll:cur.no,ft:focus&&focus.userData.ft})};
+let hold=null;   // {i, h:举到灯前看了多久, up:举起来的进度, on:手还按着}
+const frameWorld=(i,v)=>{const p=Math.max(.001,pull),uc=(S-1-i+.5)/S;return v.set(film.position.x+(uc-1+p)*FILM_LEN,STAND_Y,film.position.z+.08)};
+const HOLD_AT=()=>new THREE.Vector3(STAGE.x+1.45,STAND_Y+.3,STAGE.z+1.35),GLOW_AT=()=>new THREE.Vector3(STAGE.x+1.6,STAND_Y+.5,STAGE.z+.55);
+
+// ---- 03 far away：小看片器，片子从它肚子里穿过去，按拨杆过一格 ----
+const GX=1.5*.65;   // 看片器的片门离罐口一格半
+const viewer=new THREE.Group();viewer.visible=false;scene.add(viewer);
+// 圆角的块：电木机身、黄铜片框都用它
+function rbox(w,h,d,r){const s=new THREE.Shape(),x=-w/2+r,y=-h/2+r,W=w-2*r,H=h-2*r;
+  s.moveTo(x,y-r);s.lineTo(x+W,y-r);s.quadraticCurveTo(x+W+r,y-r,x+W+r,y);s.lineTo(x+W+r,y+H);s.quadraticCurveTo(x+W+r,y+H+r,x+W,y+H+r);
+  s.lineTo(x,y+H+r);s.quadraticCurveTo(x-r,y+H+r,x-r,y+H);s.lineTo(x-r,y);s.quadraticCurveTo(x-r,y-r,x,y-r);
+  const g=new THREE.ExtrudeGeometry(s,{depth:d-r,bevelEnabled:true,bevelSize:r*.5,bevelThickness:r*.5,bevelSegments:4,curveSegments:8});g.translate(0,0,-(d-r)/2);return g}
+// 跟 far away 罐子一个颜色：墨绿电木+黄铜
+const bake=new THREE.MeshPhysicalMaterial({color:'#1d342b',roughness:.38,metalness:.05,clearcoat:.6,clearcoatRoughness:.3});
+const brass=new THREE.MeshStandardMaterial({color:'#c9a45a',metalness:.85,roughness:.3});
+{const body=new THREE.Mesh(rbox(1.02,1.12,.5,.1),bake);body.castShadow=body.receiveShadow=true;
+ // 片窗外面一圈黄铜框，框里面一圈黑
+ const bez=new THREE.Mesh(rbox(.74,.88,.04,.05),brass);bez.position.set(0,.06,.27);
+ const inner=new THREE.Mesh(new THREE.PlaneGeometry(.66,.8),new THREE.MeshStandardMaterial({color:'#080605',roughness:.8}));inner.position.set(0,.06,.293);
+ // 底座和四只小脚
+ const base=new THREE.Mesh(rbox(1.14,.08,.62,.03),bake);base.position.y=-.6;base.receiveShadow=base.castShadow=true;
+ [[-.47,-.24],[.47,-.24],[-.47,.24],[.47,.24]].forEach(([x,z])=>{const f=new THREE.Mesh(new THREE.CylinderGeometry(.045,.05,.05,16),brass);f.position.set(x,-.66,z);viewer.add(f)});
+ // 顶上一排散热缝
+ for(let i=0;i<6;i++){const v=new THREE.Mesh(new THREE.BoxGeometry(.5,.012,.03),new THREE.MeshStandardMaterial({color:'#050403'}));v.position.set(0,.565,-.15+i*.06);viewer.add(v)}
+ // 片窗底下一块黄铜铭牌
+ const pc=document.createElement('canvas');pc.width=512;pc.height=96;const p=pc.getContext('2d');p.fillStyle='#b8924b';p.fillRect(0,0,512,96);
+ p.fillStyle='rgba(40,25,5,.85)';p.textAlign='center';p.font="italic 300 40px Fraunces";p.fillText('far away',256,46);p.font="400 18px 'JB Mono'";p.fillText('SLIDE VIEWER · No.3',256,78);
+ const pt=new THREE.CanvasTexture(pc);pt.colorSpace=THREE.SRGBColorSpace;
+ const plate=new THREE.Mesh(new THREE.PlaneGeometry(.5,.094),new THREE.MeshStandardMaterial({map:pt,metalness:.7,roughness:.35}));plate.position.set(0,-.46,.296);
+ // 片子进出的两条缝
+ const slotL=new THREE.Mesh(new THREE.BoxGeometry(.02,1,.06),new THREE.MeshBasicMaterial({color:'#000'}));slotL.position.set(-.52,0,.02);const slotR=slotL.clone();slotR.position.x=.52;
+ viewer.add(body,bez,inner,base,plate,slotL,slotR)}
+const vc=document.createElement('canvas');vc.width=FW;vc.height=FH;const vx=vc.getContext('2d');
+const vTex=new THREE.CanvasTexture(vc);vTex.colorSpace=SRGB;
+// 片窗只露出画面那一块，背后有灯透过来
+vTex.repeat.set(IW/FW,IH/FH);vTex.offset.set(IX/FW,1-(IY+IH)/FH);
+const vWin=new THREE.Mesh(new THREE.PlaneGeometry(.6,.72),new THREE.MeshBasicMaterial({map:vTex,toneMapped:false,color:'#ffe6c8'}));vWin.position.set(0,.06,.3);viewer.add(vWin);
+// 片窗透出来的光落在框上一圈
+const vHalo=new THREE.Mesh(new THREE.PlaneGeometry(1.3,1.4),new THREE.MeshBasicMaterial({map:glow.material.map,transparent:true,opacity:.35,blending:THREE.AdditiveBlending,depthWrite:false,toneMapped:false}));vHalo.position.set(0,.06,.31);viewer.add(vHalo);
+const lever=new THREE.Group();lever.position.set(.6,.32,.05);viewer.add(lever);
+{const arm=new THREE.Mesh(new THREE.CylinderGeometry(.022,.022,.42,12),brass);arm.rotation.x=Math.PI/2;arm.position.z=.2;
+ const knob=new THREE.Mesh(new THREE.SphereGeometry(.075,24,16),new THREE.MeshPhysicalMaterial({color:'#b5301e',roughness:.3,clearcoat:.8}));knob.position.z=.43;
+ const hinge=new THREE.Mesh(new THREE.CylinderGeometry(.065,.065,.08,20),brass);hinge.rotation.z=Math.PI/2;
+ [arm,knob,hinge].forEach(o=>o.castShadow=true);lever.add(arm,knob,hinge);lever.userData.knob=knob}
+let leverT=1,gateShown=-2,vDir=1,vtipArmed=false;
+const gateFrame=()=>S-1-Math.floor((1-pull+GX/FILM_LEN)*S+.001);
+const vcap=document.getElementById('vcap'),vtip=document.getElementById('vtip');
+// 拨杆只往一个方向走：一格一格往前，到头了再按就一格一格倒回去，倒到第一格又往前
+function pressLever(){if(leverT<.6)return;leverT=0;hint2.classList.add('gone');vtip.classList.add('gone');
+  const k=Math.round(pullT*S);
+  const was=vDir;if(vDir>0&&k>=S)vDir=-1;else if(vDir<0&&k<=2)vDir=1;
+  pullT=Math.max(2/S,Math.min(1,(k+vDir)/S));clunk();
+  // 换方向那一下，小提示再冒出来说一声
+  if(was!==vDir){vtip.querySelector('i').textContent=vDir>0?'and again':'winding back';vtip.classList.remove('gone');clearTimeout(vtip._t);vtip._t=setTimeout(()=>vtip.classList.add('gone'),2600)}}
+const clunk=()=>{try{ac=ac||new AudioContext();const t=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();o.type='triangle';o.frequency.setValueAtTime(180,t);o.frequency.exponentialRampToValueAtTime(70,t+.09);
+  g.gain.setValueAtTime(.35,t);g.gain.exponentialRampToValueAtTime(.001,t+.12);o.connect(g).connect(ac.destination);o.start(t);o.stop(t+.13)}catch(e){}};
+
+// ---- 04 still us：桌上一张印样和三支笔。红笔圈、爱心笔画心，做了记号的那格显影；铅笔随手画，不管显影 ----
+const SW=1350,SH=875,sc=document.createElement('canvas');sc.width=SW;sc.height=SH;const sx=sc.getContext('2d');
+const sTex=new THREE.CanvasTexture(sc);sTex.colorSpace=SRGB;sTex.anisotropy=8;
+const sheet=new THREE.Mesh(new THREE.PlaneGeometry(2.3,2.3*SH/SW),new THREE.MeshStandardMaterial({map:sTex,roughness:.9,color:"#c9bca9"}));
+sheet.rotation.x=-Math.PI/2;sheet.rotation.z=.05;sheet.receiveShadow=true;sheet.visible=false;scene.add(sheet);
+const SHEET_AT=()=>new THREE.Vector3(STAGE.x+1.4,.004,STAGE.z+1.45);
+const CW=210,CH=250,CG=24,CX0=(SW-(4*CW+3*CG))/2,CYS=[150,500];
+const cell=i=>[CX0+(i%4)*(CW+CG),CYS[i>>2]];
+// want[i]：这一格做的记号（0 / 'circle' / 'heart'）；circ[i]：记号画到哪了
+const circ=new Array(N).fill(0),want=new Array(N).fill(0);
+const MARKS=ROLLS.map(()=>new Array(N).fill(0)),STROKES=ROLLS.map(()=>[]);
+let tool='circle',stroke=null;
+// 每个记号手抖得不一样，但每次画都一样
+const rng=seed=>{let s=seed%9973;return()=>(s=(s*7919+17)%9973)/9973};
+// 纸、片条、八格正片只在打开这一卷时画一次，画记号时每帧只叠记号
+const paper=document.createElement('canvas');paper.width=SW;paper.height=SH;
+{const x=paper.getContext('2d');x.fillStyle='#efe8db';x.fillRect(0,0,SW,SH);
+ for(let i=0;i<5000;i++){x.fillStyle=`rgba(90,60,30,${Math.random()*.05})`;x.fillRect(Math.random()*SW,Math.random()*SH,2,2)}}
+const sheetBase=document.createElement('canvas');sheetBase.width=SW;sheetBase.height=SH;
+function buildSheet(){
+  const x=sheetBase.getContext('2d');x.drawImage(paper,0,0);
+  x.fillStyle='#2a211b';x.font="400 22px 'JB Mono'";x.fillText(`${cur.name.toUpperCase()} · ISO ${cur.iso} · CONTACT SHEET`,CX0,96);
+  x.textAlign='right';x.fillText(`ROLL ${cur.no}`,SW-CX0,96);x.textAlign='left';
+  for(const y of CYS){x.fillStyle='#0d0907';x.fillRect(CX0-30,y-40,4*CW+3*CG+60,CH+80);
+    x.fillStyle='rgba(255,210,150,.35)';for(let px=CX0-24;px<CX0+4*CW+3*CG+24;px+=30){x.fillRect(px,y-30,14,18);x.fillRect(px,y+CH+14,14,18)}}
+  cur.frames.forEach((f,i)=>{const [cx,cy]=cell(i);x.save();x.beginPath();x.rect(cx,cy,CW,CH);x.clip();x.filter=POS;CONTENT.drawCrop(x,pics[f.pic],f.src,cx,cy,CW,CH);x.restore();x.filter='none';
+    x.fillStyle='rgba(255,215,160,.7)';x.font="400 14px 'JB Mono'";x.fillText(`▸ ${i+1}  ${f.date}`,cx+4,cy+CH+12)})}
+// 一笔一笔描出来：pts 是整笔的点，p 是画到哪（0..1），粗细跟着起笔收笔变
+function ink(x,pts,p,color,w){const n=Math.max(2,Math.floor(pts.length*p));x.strokeStyle=color;x.lineCap=x.lineJoin='round';
+  for(let i=1;i<n;i++){const t=i/pts.length;x.lineWidth=w*(.55+.45*Math.sin(Math.min(1,t*1.15)*Math.PI));x.beginPath();x.moveTo(...pts[i-1]);x.lineTo(...pts[i]);x.stroke()}}
+// 潦草的圈：起笔偏一点，绕一圈半，圈不圆、两头对不上
+function circlePts(i){const [cx,cy]=cell(i),r=rng(ROLLS.indexOf(cur)*131+i*37+7);
+  const ox=cx+CW/2+(r()-.5)*24,oy=cy+CH/2+(r()-.5)*20,rx=CW*.6+r()*22,ry=CH*.56+r()*20,a0=-2.4+r()*.8,tilt=(r()-.5)*.5,turns=1.25+r()*.35,pts=[];
+  const k1=r()*6,k2=r()*6;
+  for(let a=0;a<=Math.PI*2*turns;a+=.05){const wob=1+Math.sin(a*2+k1)*.07+Math.sin(a*5+k2)*.025+a*.03;
+    const ex=Math.cos(a0+a)*rx*wob,ey=Math.sin(a0+a)*ry*wob;pts.push([ox+ex*Math.cos(tilt)-ey*Math.sin(tilt),oy+ex*Math.sin(tilt)+ey*Math.cos(tilt)])}
+  return pts}
+// 手写的小爱心：歪在这一格右上角，一笔画完，尾巴拖出去一点
+function heartPts(i){const [cx,cy]=cell(i),r=rng(ROLLS.indexOf(cur)*71+i*19+3);
+  const ox=cx+CW-26+(r()-.5)*16,oy=cy+40+(r()-.5)*14,s=2.7+r()*.6,rot=(r()-.5)*.6,pts=[];
+  for(let t=0;t<=Math.PI*2+.35;t+=.06){const hx=16*Math.pow(Math.sin(t),3),hy=-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t));
+    const jx=hx*s+(r()-.5)*2.2,jy=hy*s+(r()-.5)*2.2;pts.push([ox+jx*Math.cos(rot)-jy*Math.sin(rot),oy+jx*Math.sin(rot)+jy*Math.cos(rot)])}
+  return pts}
+const MARK_COL={circle:'#d4332a',heart:'#e0405c'};
+function paintSheet(){
+  const x=sx;x.drawImage(sheetBase,0,0);x.save();
+  // 铅笔：灰灰的，有点透
+  x.globalAlpha=.8;STROKES[ROLLS.indexOf(cur)].forEach(s=>ink(x,s,1,'#2f2a26',6));x.globalAlpha=.92;
+  circ.forEach((p,i)=>{if(p<=0||!want[i])return;want[i]==='heart'?ink(x,heartPts(i),p,MARK_COL.heart,7):ink(x,circlePts(i),p,MARK_COL.circle,9)});
+  x.restore();sTex.needsUpdate=true}
+const sheetUV=e=>{aim(e);const hit=ray.intersectObject(sheet)[0];return hit&&hit.uv?[hit.uv.x*SW,(1-hit.uv.y)*SH]:null};
+const cellAt=e=>{const uv=sheetUV(e);if(!uv)return -1;const [px,py]=uv;
+  for(let i=0;i<N;i++){const [cx,cy]=cell(i);if(px>cx-10&&px<cx+CW+10&&py>cy-10&&py<cy+CH+10)return i}return -1};
+// 三支笔的光标
+const cur32=(body,tip,hot)=>`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Cpath d='M3 29 L6 21 L24 3 L29 8 L11 26 Z' fill='${body}' stroke='%23140c08' stroke-width='1.5'/%3E%3Cpath d='M3 29 L6 21 L11 26 Z' fill='${tip}'/%3E%3C/svg%3E") ${hot}, crosshair`;
+const CURSOR={circle:cur32('%23d4332a','%23140c08','2 30'),heart:cur32('%23efe2cc','%23e0405c','2 30'),draw:cur32('%23d9b25a','%233b3631','2 30')};
+// 做记号 / 换记号 / 擦掉。圈到哪张，片子自己滑到哪张，让人看着它在灯下浮出来
+function markCell(i){hint2.classList.add('gone');const M=MARKS[ROLLS.indexOf(cur)];
+  if(want[i]===tool){want[i]=M[i]=0;circ[i]=0;undev.add(i);saveDev()}
+  else{const fresh=!want[i];want[i]=M[i]=tool;circ[i]=0;undev.delete(i);if(dev[i]===0||fresh&&dev[i]<1)dev[i]=Math.max(dev[i],.001);
+    pullT=Math.max(pullT,Math.min(1,(i+1)/S+.02));scribble()}
+  // 圈了哪几格也记下来：看片台上照着红圈，照片墙上只有这几张发光
+  try{sessionStorage.setItem('aroll.marks',JSON.stringify(MARKS))}catch(e){}
+  paintSheet()}
+
+// 三支笔：平时躺在第四卷罐子上下，点第四卷时跟着滚到印样右边
+function pen(body,cap,tip,hex){const g=new THREE.Group();
+  const b=new THREE.Mesh(hex?new THREE.CylinderGeometry(.04,.04,.78,6):new THREE.CylinderGeometry(.045,.045,.62,20),new THREE.MeshPhysicalMaterial({color:body,roughness:.4,clearcoat:.5}));
+  const c=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,hex?.05:.22,20),new THREE.MeshStandardMaterial({color:cap,roughness:.35,metalness:hex?.7:.1}));
+  c.position.y=hex?.4:.4;
+  const t=new THREE.Mesh(new THREE.ConeGeometry(hex?.04:.045,hex?.16:.12,hex?6:20),new THREE.MeshStandardMaterial({color:hex?'#e3c9a0':'#1a1512',roughness:.6}));t.position.y=hex?-.47:-.37;t.rotation.x=Math.PI;
+  const n=new THREE.Mesh(new THREE.ConeGeometry(.012,.04,10),new THREE.MeshStandardMaterial({color:tip}));n.position.y=hex?-.54:-.44;n.rotation.x=Math.PI;
+  [b,c,t,n].forEach(m=>{m.castShadow=true;g.add(m)});
+  const h=new THREE.Group();g.rotation.x=Math.PI/2;h.add(g);scene.add(h);return h}
+const PENS=[['circle',pen('#141110','#d4332a','#d4332a')],['heart',pen('#efe2cc','#e0405c','#e0405c')],['draw',pen('#d9b25a','#8f8f8f','#3b3631',true)]];
+// 平时的位置（第四卷罐子上下）和打开后的位置（印样右边一排）
+const can4=ROLLS[3].pos;
+PENS.forEach(([k,h],j)=>{h.userData={tool:k,home:new THREE.Vector3(can4[0]+(j-1)*.3,.05,can4[1]+(j===1?-.75:.72)),homeRot:-.25+(j-1)*.4,lift:0}});
+const penAt=(j)=>new THREE.Vector3(STAGE.x+2.95+j*.2,.05,STAGE.z+1.5+(j%2)*.08);
+const pickPen=e=>{aim(e);const hit=ray.intersectObjects(PENS.map(p=>p[1]),true)[0];if(!hit)return null;let o=hit.object;while(o&&!o.userData.tool)o=o.parent;return o};
+// 红笔划过纸的沙沙一下
+const scribble=()=>{try{ac=ac||new AudioContext();const t=ac.currentTime,b=ac.createBuffer(1,ac.sampleRate*.5,ac.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*.5*Math.sin(Math.PI*i/d.length);
+  const s=ac.createBufferSource();s.buffer=b;const f=ac.createBiquadFilter();f.type='highpass';f.frequency.value=3200;const g=ac.createGain();g.gain.value=.12;
+  s.connect(f).connect(g).connect(ac.destination);s.start(t)}catch(e){}};
+
+let drag=null;
+
+fr.addEventListener('pointermove',e=>{
+  // 铅笔在印样上画
+  if(stroke){const uv=sheetUV(e);if(uv){stroke.push(uv);paintSheet()}return}
+  if(drag){const [x]=local(e);if(Math.abs(x-drag.x)>6){drag.moved=true;clearTimeout(drag.timer)}
+    if(!hold)pullT=Math.max(feedMin()-.02,Math.min(1,detent(drag.p+(x-drag.x)/780)));return}
+  if(focus){if(closing)return;
+    if(cur.play==='sheet'){if(pickPen(e)){fr.style.cursor='pointer';return}if(tool==='draw'?sheetUV(e):cellAt(e)>=0){fr.style.cursor=CURSOR[tool];return}}
+    if(cur.play==='viewer'){aim(e);if(ray.intersectObject(lever,true).length){fr.style.cursor='pointer';return}}
+    fr.style.cursor=frameAt(e)>=0?'grab':'';return}
+  hover=pick(e);fr.style.cursor=hover?'pointer':'';
+  if(hover){const [x,y]=local(e);const r=hover.userData.roll;tag.style.left=x+'px';tag.style.top=(y-26)+'px';tag.style.opacity=.9;
+    document.getElementById('tagName').textContent=r.name;document.getElementById('tagSub').textContent=`Roll ${r.no} · ${r.dates}`}else tag.style.opacity=0});
+fr.addEventListener('pointerdown',e=>{if(!focus||closing||focus.userData.ft<.85)return;
+  if(cur.play==='sheet'){const p=pickPen(e);if(p){tool=p.userData.tool;scribble();return}
+    if(tool==='draw'){const uv=sheetUV(e);if(uv){stroke=[uv];STROKES[ROLLS.indexOf(cur)].push(stroke);hint2.classList.add('gone');try{fr.setPointerCapture(e.pointerId)}catch(_){}return}}
+    else{const c=cellAt(e);if(c>=0){markCell(c);return}}}
+  // 看片器那卷片子只认拨杆，不能用手拖
+  if(cur.play==='viewer'){aim(e);if(ray.intersectObject(lever,true).length)pressLever();return}
+  const i=frameAt(e);if(i<0)return;drag={x:local(e)[0],p:pullT,i,moved:false,t:performance.now()};try{fr.setPointerCapture(e.pointerId)}catch(_){}
+  // 02：按住不动一小会儿，就把这一格举起来
+  if(cur.play==='light')drag.timer=setTimeout(()=>{if(drag&&!drag.moved&&!hold){hold={i:drag.i,h:dev[drag.i]>=1?1:0,up:0,on:true};hint2.classList.add('gone')}},220)});
+fr.addEventListener('pointerup',e=>{if(stroke){stroke=null;return}if(!drag)return;const d=drag;drag=null;clearTimeout(d.timer);
+  if(hold){hold.on=false;return}
+  // 01：没怎么拖就是「点」，这一格开始显影
+  if(cur.play==='pull'&&!d.moved&&performance.now()-d.t<350&&dev[d.i]===0){dev[d.i]=.001;hint2.classList.add('gone')}
+  else snap()});
+fr.addEventListener('wheel',e=>{if(!focus||closing||hold)return;e.preventDefault();
+  if(cur.play==='viewer'){if(e.deltaY>20)pressLever();return}
+  pullT=Math.max(feedMin(),Math.min(1,pullT+e.deltaY*.0011));clearTimeout(fr._snap);fr._snap=setTimeout(snap,260)},{passive:false});
+fr.addEventListener('click',e=>{if(focus)return;const c=pick(e);if(c)setFocus(c)});
+document.getElementById('back').addEventListener('click',e=>{e.stopPropagation();setFocus(null)});
+addEventListener('keydown',e=>{if(e.key==='Escape')setFocus(null)});
+
+// ---- 玩法说明：打开一卷先在左边浮十几秒，然后收成左上角一个小按钮，点开再看 ----
+const HOW={
+  pull:{list:['Drag the film out of the can, one frame at a time.','Tap any frame and it will develop.','This roll is just for looking. Prints come from roll 04.'],note:'take your time'},
+  light:{list:['Drag the film out of the can.','Press and hold a frame. It rises to the light.','Keep holding until the picture appears.'],note:'like we used to'},
+  viewer:{list:['Tap the red lever to see the next frame.','Each frame keeps its date and a line.','After the last frame, the film winds back.'],note:'no skipping ahead'},
+  sheet:{list:['Tap a pen on the right to switch.','Red pen: circle the ones you want printed.','Heart: the ones you love. They develop, but stay off the print list.','Pencil: draw anywhere. Mark a frame again to undo.'],note:'keep the good ones'}};
+const how=document.getElementById('how'),howBtn=document.getElementById('howBtn');let howT=0;
+// 一打开这一卷就摊开，等他真动手了（底下那行红字收起来）再过几秒收到左上角；以前浮十几秒自己收，朋友们都没看到（11.02）
+let howAuto=false;
+function showHow(on,auto){clearTimeout(howT);how.classList.toggle('on',on);howBtn.classList.toggle('on',!on&&!!focus&&!closing);howAuto=on&&!!auto;
+  if(on&&(!auto||hint2.classList.contains('gone')))howT=setTimeout(()=>showHow(false),auto?6000:12000)}
+new MutationObserver(()=>{if(howAuto&&hint2.classList.contains('gone')){howAuto=false;clearTimeout(howT);howT=setTimeout(()=>showHow(false),4000)}}).observe(hint2,{attributes:true,attributeFilter:['class']});
+function setHow(){const h=HOW[cur.play];document.getElementById('howNo').textContent=`Roll ${cur.no}`;
+  document.getElementById('howList').innerHTML=h.list.map(s=>`<li>${s}</li>`).join('');document.getElementById('howNote').textContent=h.note;
+  howBtn.classList.remove('on');clearTimeout(howT);howT=setTimeout(()=>showHow(true,true),1200)}
+how.addEventListener('click',()=>showHow(false));howBtn.addEventListener('click',()=>showHow(true));
+
+let camFrom=null,camTo=null,camT=1;
+// 点一卷：罐子立起来，出片口转向右边，片子从口里往右送；镜头从正面推过去
+// 回桌面：先把片子卷回罐子里，卷完了罐子才躺回去
+function setFocus(c){
+  if(!c){if(!focus||closing)return;closing=true;pullT=0;fr.classList.remove('focused');hold=null;vcap.classList.remove('on');vtip.classList.add('gone');vtipArmed=false;clearTimeout(howT);how.classList.remove('on');howBtn.classList.remove('on');return}
+  focus=c;tag.style.opacity=0;fr.classList.add('focused');hover=null;hint2.classList.remove('gone');
+  const ri=cans.indexOf(c);cur=ROLLS[ri];dev=DEV[ri];hint2.textContent=cur.hint;setHow();buildRoll();paintFilm();filmTex.needsUpdate=true;undev.clear();
+  vx.fillStyle='#3a2414';vx.fillRect(0,0,FW,FH);vTex.needsUpdate=true;vcap.classList.remove('on');
+  want.fill(0);circ.fill(0);if(cur.play==='sheet'){MARKS[ri].forEach((m,i)=>{want[i]=m;circ[i]=m?1:0});buildSheet();paintSheet()}
+  gateShown=-2;vDir=1;vtipArmed=cur.play==='viewer';vtip.querySelector('i').textContent='press me';vtip.classList.add('gone');
+  camFrom={pos:cam.position.clone(),look:curLook.clone()};
+  film.position.set(STAGE.x+R+.02,STAND_Y,STAGE.z);pull=0;pullT=0;setPullView();film.visible=false;
+  viewer.position.set(film.position.x+GX,STAND_Y,STAGE.z+.05);
+  sheet.position.copy(SHEET_AT());
+  // 印样那卷镜头抬高往下看，纸和片子都在画里
+  camTo=cur.play==='sheet'
+    ?{pos:new THREE.Vector3(STAGE.x+1.7,3.9,STAGE.z+4.5),look:new THREE.Vector3(STAGE.x+1.65,.25,STAGE.z+1.05)}
+    :{pos:new THREE.Vector3(STAGE.x+1.6,STAND_Y+.6,STAGE.z+4.7),look:new THREE.Vector3(STAGE.x+1.45,STAND_Y-.05,STAGE.z)};camT=0}
+function release(){closing=false;focus=null;film.visible=false;saveDev();
+  camFrom={pos:cam.position.clone(),look:curLook.clone()};camTo={pos:HOME.pos.clone(),look:HOME.look.clone()};camT=0}
+
+// ---- 动 ----
+const curLook=HOME.look.clone();const clock=new THREE.Clock();
+// 从冲印袋滚进来：壳子亮出这一幕时才开始滚
+let enterAt=new URLSearchParams(location.search).get('enter')==='bag'?1e9:null;if(enterAt)ROLL.onGo(()=>enterAt=clock.elapsedTime+.2);
+if(ROLL.in){const td=document.getElementById('todark');
+  // 四卷每卷都至少显出一格才给去暗房（11.02 她朋友第一卷看完就差点点走了）
+  setInterval(()=>td.classList.toggle('on',DEV.every(a=>a.some(v=>v>=1))),600);
+  td.onclick=()=>{td.classList.remove('on');ROLL.prep();const ro=document.getElementById('redout');
+    // 台灯啪地灭；黑里一排齿孔亮着往上走，走出画面以后安全灯的红从底下浮上来，再进暗房
+    ro.style.opacity=1;document.querySelectorAll('.below>*').forEach(e=>{e.style.transition='opacity .3s';e.style.opacity=0});setTimeout(()=>ro.classList.add('go'),300);setTimeout(()=>ROLL.done('cross'),3600)}}
+const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+// ?focus=1..4 直接停在某一卷拉开的样子，方便看静帧
+{const q=+new URLSearchParams(location.search).get("focus");if(q){setFocus(cans[q-1]);cans[q-1].userData.ft=1;camT=.999;pull=pullT=cur.play==='viewer'?2/S:.75;setPullView()}}
+let lastFrame=0;
+const loop=fd=>{const dt=fd||Math.min(clock.getDelta(),.1),t=clock.elapsedTime;
+  cans.forEach((c,i)=>{const u=c.userData;const want=(c===hover&&!focus)?1:0;u.lift+=(want-u.lift)*Math.min(1,dt*8);
+    // ft：这一卷立起来的进度
+    u.ft+=((c===focus?1:0)-u.ft)*Math.min(1,dt*3);const f=ease(Math.min(1,u.ft));
+    c.position.y=u.base.y+u.lift*.18+(STAND_Y-u.base.y)*f+Math.sin(f*Math.PI)*.35;
+    // 选中的挪到台前，没选中的往后退
+    const away=(focus&&c!==focus)?1:0;u.aw=(u.aw||0)+(away-(u.aw||0))*Math.min(1,dt*3);
+    c.position.x=u.base.x+(STAGE.x-u.base.x)*f;c.position.z=u.base.z+(STAGE.z-u.base.z)*f-u.aw*2.2;
+    c.rotation.y=u.baseRot+u.lift*.12+(Math.PI/2-u.baseRot)*f;
+    u.inner.rotation.z=Math.PI/2*(1-f);
+    u.inner.rotation.x=(c===hover&&!focus)?Math.sin(t*2)*.04:0;
+    if(enterAt!==null&&!focus){const p=Math.max(0,Math.min(1,(t-enterAt-i*.22)/1.7)),k=Math.pow(1-p,3),d=4.2*k;
+      c.position.x+=Math.sin(c.rotation.y)*d;c.position.z+=Math.cos(c.rotation.y)*d;u.inner.rotation.order='ZYX';u.inner.rotation.y=-d/R;
+      if(i===3&&p>=1)enterAt=null}});
+  // 片子：罐子站稳了先自己送出一格，后面靠滚轮/拖
+  if(focus&&!closing&&focus.userData.ft>.9&&pullT<1/S+.02&&!drag)pullT=1/S+.04;
+  const before=pull;pull+=(pullT-pull)*Math.min(1,dt*(closing?3.2:4));setPullView();
+  if(focus)focus.userData.inner.userData.spool.forEach(s=>s.rotation.y+=(pull-before)*-40);   // 片子进出，罐顶的轴跟着转
+  const fi=Math.floor(pull*S+.05);if(fi!==lastFrame&&focus){if(fi>lastFrame)tick();lastFrame=fi}
+  if(closing&&pull<.015)release();
+  // 显影
+  // 罐子站到台前了片子才出来
+  if(focus&&!closing&&!film.visible&&focus.userData.ft>.88)film.visible=true;
+  // 显影一秒半；取消的那格慢慢退回负片
+  let changed=false;dev.forEach((v,i)=>{
+    if(undev.has(i)){dev[i]=Math.max(0,v-dt/.9);changed=true;if(dev[i]===0)undev.delete(i)}
+    else if(v>0&&v<1){dev[i]=Math.min(1,v+dt/1.5);changed=true;if(dev[i]>=1)saveDev()}});
+  if(changed){for(let i=0;i<N;i++)drawFrame(i);filmTex.needsUpdate=true}
+  // 02：举到灯前。手按着就往灯那边举，看够了负片就变正片，松手放回片子上
+  let holdA=0;
+  if(hold){const H=hold;H.up+=((H.on?1:0)-H.up)*Math.min(1,dt*(H.on?3.5:7));holdA=ease(Math.min(1,H.up));
+    if(H.on&&H.up>.7&&H.h<1){H.h=Math.min(1,H.h+dt/2.4);if(H.h>=1&&dev[H.i]<1){dev[H.i]=1;paintFilm();filmTex.needsUpdate=true;saveDev();tick()}}
+    held.position.lerpVectors(frameWorld(H.i,_v),HOLD_AT(),holdA);held.scale.setScalar(.8+.12*holdA);
+    held.lookAt(cam.position);held.rotation.z+=Math.sin(t*1.7)*.025*holdA;
+    if(H.drawn!==H.h){slotCanvas(hx,H.i,H.h);heldTex.needsUpdate=true;H.drawn=H.h}
+    held.material.opacity=H.on?1:Math.min(1,H.up*2.5);   // 放回去时边落边化进片子里，不和片子叠着
+    const b=.6+1.1*H.h*holdA;held.material.color.setRGB(b,b*.93,b*.84);held.visible=true;
+    glow.position.copy(GLOW_AT());glow.lookAt(cam.position);
+    if(!H.on&&H.up<.06){hold=null;held.visible=false}}
+  glow.material.opacity+=(holdA*.95-glow.material.opacity)*Math.min(1,dt*6);
+  // 03：看片器从上面落下来；拨杆按下去弹回来；片门里是哪格就亮哪格，旁边浮出那天的字
+  {const u=viewer.userData,on=focus&&cur.play==='viewer'&&!closing?1:0;u.a=(u.a||0)+(on-(u.a||0))*Math.min(1,dt*3);
+   viewer.visible=u.a>.01;viewer.position.y=STAND_Y+(1-ease(Math.min(1,u.a)))*2.4;
+   leverT=Math.min(1,leverT+dt*3.2);lever.rotation.x=Math.sin(leverT*Math.PI)*.75;
+   if(on&&u.a>.9&&Math.abs(pull-pullT)<.004){const g=gateFrame();if(g!==gateShown){gateShown=g;
+     if(g>=0&&g<N){slotCanvas(vx,g,1);const f=cur.frames[g];vcap.classList.remove('on');
+       setTimeout(()=>{vcap.innerHTML=`<span class="mono">${esc(f.date)} · frame ${String(g+1).padStart(2,'0')}</span><p>${esc(f.line)}</p>`;vcap.classList.add('on')},250);
+       if(dev[g]===0)dev[g]=.001}
+     else{vx.fillStyle='#3a2414';vx.fillRect(0,0,FW,FH);vcap.classList.remove('on')}
+     vTex.needsUpdate=true}}
+   if(viewer.visible){_v.set(viewer.position.x,STAND_Y+.72,viewer.position.z).project(cam);vcap.style.left=((_v.x+1)/2*1040)+'px';vcap.style.top=((1-_v.y)/2*694)+'px';
+     lever.userData.knob.getWorldPosition(_v).project(cam);vtip.style.left=((_v.x+1)/2*1040)+'px';vtip.style.top=((1-_v.y)/2*694)+'px';
+     // 看片器落稳了，箭头才出来指着拨杆
+     if(vtipArmed&&u.a>.95){vtipArmed=false;vtip.classList.remove('gone')}}}
+  // 04：印样从前面滑进来；红圈一笔一笔画出来
+  {const u=sheet.userData,on=focus&&cur.play==='sheet'&&!closing?1:0;u.a=(u.a||0)+(on-(u.a||0))*Math.min(1,dt*3);
+   sheet.visible=u.a>.01;sheet.position.z=SHEET_AT().z+(1-ease(Math.min(1,u.a)))*2.6;
+   let ch=false;circ.forEach((p,i)=>{if(want[i]&&p<1){circ[i]=Math.min(1,p+dt/(want[i]==='heart'?.5:.75));ch=true}});if(ch)paintSheet()}
+  // 三支笔跟着第四卷：一边挪一边在桌上滚；拿在手里的那支抬起来斜一点
+  {const c4=cans[3].userData,f4=ease(Math.min(1,c4.ft)),aw=c4.aw||0;
+   PENS.forEach(([k,h],j)=>{const u=h.userData,sel=focus===cans[3]&&tool===k&&!closing?1:0;u.lift+=(sel-u.lift)*Math.min(1,dt*6);
+     h.position.lerpVectors(u.home,penAt(j),f4);h.position.z-=aw*2.2;h.position.y=.05+Math.sin(f4*Math.PI)*.12+u.lift*.12;
+     h.rotation.y=u.homeRot*(1-f4);h.rotation.z=u.lift*.35;h.children[0].rotation.y=f4*7+j})}
+  if(camT<1){camT=Math.min(1,camT+dt/1.6);const e=ease(camT);
+    cam.position.lerpVectors(camFrom.pos,camTo.pos,e);curLook.lerpVectors(camFrom.look,camTo.look,e)}
+  {const ff=focus?Math.min(1,focus.userData.ft):0;lampAt.set(STAGE.x+1.4,0,STAGE.z).multiplyScalar(ff);lamp.target.position.copy(lampAt);
+   lamp.position.set(lampHome.x+(STAGE.x+1.2-lampHome.x)*ff,lampHome.y-2.5*ff,lampHome.z+(STAGE.z+1.5-lampHome.z)*ff);fill.intensity=ff*6}
+  // 灯有一点点呼吸
+  lamp.intensity=(140+Math.sin(t*1.3)*3+Math.sin(t*7.1)*1.2)*(1-.55*holdA);
+  cam.lookAt(curLook);renderer.render(scene,cam)};
+renderer.setAnimationLoop(()=>loop());
+// 第一帧画出来了才告诉壳子可以亮（以前 iframe 一 load 就亮，模块还在等，客人看黑框）
+setTimeout(()=>ROLL.ready(),120);
+// 面板收起来时 rAF 会停，测试用：__rolls.step(帧数) 手动往前走
+window.__rolls.step=n=>{for(let i=0;i<n;i++)loop(1/30)};
+</script>
+</body></html>

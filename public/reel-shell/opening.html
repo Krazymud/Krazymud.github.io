@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A Roll For Two · Opening</title>
+<style>
+@font-face{font-family:'JB Mono';src:url(font/jbmono.woff2) format('woff2')}
+@font-face{font-family:'Fraunces';src:url(font/Fraunces-normal.woff2) format('woff2');font-weight:100 900}
+@font-face{font-family:'Fraunces';src:url(font/Fraunces-italic.woff2) format('woff2');font-weight:100 900;font-style:italic}
+@font-face{font-family:'Reenie';src:url(font/ReenieBeanie-normal.woff2) format('woff2')}
+:root{--cream:#f3e6d2;--ink:#040302;--red:#ee5546}
+html,body{margin:0;height:100%;background:var(--ink);overflow:hidden}
+/* 1600×1000 的舞台，按窗口缩放 */
+#stage{position:absolute;left:50%;top:50%;width:1600px;height:1000px;background:var(--ink)}
+/* 放映的格子：很暗，带着放映机那种轻轻的抖 */
+.proj{position:absolute;left:280px;top:130px;width:1040px;height:694px;animation:jitter .5s steps(1) infinite}
+@keyframes jitter{0%{transform:translate(0,0)}25%{transform:translate(.2px,-.15px)}50%{transform:translate(-.15px,.2px)}75%{transform:translate(.15px,.1px)}}
+.proj .spill{position:absolute;inset:-50px;border-radius:80px;background:radial-gradient(closest-side,rgba(255,150,80,.18),transparent);filter:blur(60px)}
+.frame{position:absolute;inset:0;overflow:hidden;background:radial-gradient(120% 100% at 45% 60%,#140b06,#080503 70%);animation:breath 4.5s steps(1) infinite;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1040 694'%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='9'/%3E%3C/filter%3E%3Crect x='18' y='18' width='1004' height='658' rx='30' fill='white' filter='url(%23b)'/%3E%3C/svg%3E") center/100% 100%;
+          mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1040 694'%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='9'/%3E%3C/filter%3E%3Crect x='18' y='18' width='1004' height='658' rx='30' fill='white' filter='url(%23b)'/%3E%3C/svg%3E") center/100% 100%}
+/* 灯泡的亮度一跳一跳，很轻 */
+@keyframes breath{0%,100%{filter:brightness(1)}23%{filter:brightness(.97)}24%{filter:brightness(1)}61%{filter:brightness(.985)}62%{filter:brightness(1)}}
+
+/* 右边竖着走的黑白胶片 */
+.strip{position:absolute;left:730px;top:0;width:230px;height:100%;overflow:hidden;transform:rotate(1.2deg);transform-origin:50% 50%}
+.belt{position:absolute;left:0;top:0;width:230px;animation:roll 40s linear infinite}
+@keyframes roll{from{transform:translateY(-50%)}to{transform:translateY(0)}}
+.fr{position:relative;width:230px;height:170px;background:
+    linear-gradient(#2e2a26 0 11px,transparent 11px) 8px 6px/10px 19px repeat-y,
+    linear-gradient(#2e2a26 0 11px,transparent 11px) calc(100% - 8px) 6px/10px 19px repeat-y,
+    linear-gradient(90deg,#0b0a09,#151311 50%,#0b0a09)}
+.fr .img{position:absolute;left:34px;right:34px;top:8px;bottom:8px;border-radius:2px;background:#222 center/cover;
+  filter:grayscale(1) contrast(1.08) brightness(.82)}
+.fr .no{position:absolute;right:22px;bottom:6px;writing-mode:vertical-rl;font:400 6px/1 'JB Mono',monospace;letter-spacing:.14em;color:#b9b2a6;opacity:.45}
+.strip::after{content:"";position:absolute;inset:0;background:linear-gradient(#080503,transparent 18%,transparent 82%,#080503)}
+
+/* 一束光打在入口上，范围大，刚好够到胶片的一半 */
+.beam{position:absolute;left:-100px;top:198px;width:960px;height:640px;pointer-events:none;mix-blend-mode:screen;
+  background:radial-gradient(closest-side,rgba(255,206,150,.15),rgba(255,170,100,.065) 45%,rgba(255,150,80,.02) 75%,transparent);
+  animation:sway 9s ease-in-out infinite}
+@keyframes sway{50%{transform:translate(8px,-4px) scale(1.02)}}
+/* 光外面再压一层黑，让胶片另一半沉在暗里 */
+.shadow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(560px 400px at 380px 518px,transparent 40%,rgba(4,2,1,.55) 100%)}
+
+/* 偶尔兹拉一下的漏光 */
+.zap{position:absolute;pointer-events:none;mix-blend-mode:screen;opacity:0;filter:blur(30px)}
+.zap.z1{right:-120px;top:-60px;width:360px;height:820px;background:linear-gradient(90deg,transparent,rgba(255,110,40,.75) 45%,rgba(255,200,120,.9) 70%,transparent);animation:zap 9s linear infinite}
+.zap.z2{left:-140px;top:180px;width:300px;height:500px;background:radial-gradient(closest-side,rgba(230,70,30,.8),transparent);animation:zap 13s linear -6s infinite}
+@keyframes zap{0%,86%,100%{opacity:0}87%{opacity:.55}88%{opacity:.08}89%{opacity:.7}90.5%{opacity:.15}91%{opacity:.4}93%{opacity:0}}
+/* 一闪而过的竖划痕 */
+.scratch{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,240,220,.35);opacity:0;animation:scr 7s steps(1) infinite}
+@keyframes scr{0%,70%,100%{opacity:0}71%{opacity:1;transform:translateX(0)}72%{opacity:.5;transform:translateX(3px)}73%{opacity:0}}
+
+/* 背景的纹理：幕布织纹 + 乳剂斑驳，叠在光上面用 overlay，光到哪纹理显到哪，暗处自己没了 */
+/* 纹理绕开右边的胶片，不盖在片子上 */
+.weave{position:absolute;inset:0;pointer-events:none;-webkit-mask:linear-gradient(90deg,#000 0 712px,transparent 726px 968px,#000 982px);mask:linear-gradient(90deg,#000 0 712px,transparent 726px 968px,#000 982px);opacity:.5;mix-blend-mode:overlay;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='turbulence' baseFrequency='.9 .06' numOctaves='2' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 .86  0 0 0 0 .7  1.8 0 0 0 -.75'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23w)'/%3E%3C/svg%3E"),
+             url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='turbulence' baseFrequency='.06 .9' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 .86  0 0 0 0 .7  1.8 0 0 0 -.75'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23w)'/%3E%3C/svg%3E")}
+.mottle{position:absolute;inset:-60px;pointer-events:none;-webkit-mask:linear-gradient(90deg,#000 0 772px,transparent 786px 1028px,#000 1042px);mask:linear-gradient(90deg,#000 0 772px,transparent 786px 1028px,#000 1042px);opacity:.9;mix-blend-mode:overlay;animation:mottle 1.6s steps(2) infinite;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='400'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.008 .012' numOctaves='4' seed='11'/%3E%3CfeColorMatrix values='0 0 0 0 .55  0 0 0 0 .32  0 0 0 0 .16  0 0 0 1.3 -.35'/%3E%3C/filter%3E%3Crect width='600' height='400' filter='url(%23m)'/%3E%3C/svg%3E") center/cover}
+@keyframes mottle{50%{transform:translate(3px,-2px)}}
+/* 胶片上的灰和毛发：每一下换个地方，像片子在过 */
+.specks{position:absolute;inset:0;pointer-events:none}
+.specks i{position:absolute;background:rgba(240,225,200,.55);border-radius:50%;opacity:0}
+.specks .h{background:none;border-radius:50%;border:1px solid transparent;border-top-color:rgba(240,225,200,.4)}
+.grain{position:absolute;inset:0;opacity:.2;mix-blend-mode:overlay;pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");animation:grain .4s steps(3) infinite}
+@keyframes grain{33%{background-position:40px 70px}66%{background-position:-60px 20px}}
+.vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 95% at 50% 50%,transparent 50%,rgba(2,1,0,.7) 100%)}
+
+.mono{font:400 11px/1.7 'JB Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--cream)}
+.log{position:absolute;left:68px;top:58px;opacity:.55;white-space:pre}
+.log b{font-weight:400;opacity:.6}
+/* 标题让出右边给胶片，放在左边那块的中间 */
+.title{position:absolute;left:60px;width:640px;top:250px;text-align:center;color:var(--cream);text-shadow:0 0 40px rgba(0,0,0,.6)}
+.title h1{margin:0;font:300 116px/.9 'Fraunces',serif;font-variation-settings:'opsz' 144,'SOFT' 100;letter-spacing:-.03em}
+.title h1 em{font-style:italic;font-weight:300}
+.title .sub{margin-top:20px;font:italic 300 20px 'Fraunces',serif;opacity:.65}
+.mark{position:absolute;left:230px;top:470px;width:300px;height:96px;cursor:pointer;display:grid;place-items:center}
+.mark span{font:400 42px/1 'Reenie',cursive;color:var(--red);transform:rotate(-4deg)}
+.mark svg{position:absolute;inset:-6px;overflow:visible}
+.mark path{stroke-dasharray:640;stroke-dashoffset:640;transition:stroke-dashoffset .7s ease}
+.mark:hover path{stroke-dashoffset:0}
+.corner{position:absolute;opacity:.45}
+.corner.bl{left:68px;bottom:54px}
+.corner.br{right:340px;bottom:54px;text-align:right}
+
+/* 默认标题居中（?l 回到靠左），胶片压在标题右半边底下 */
+.center .title{left:0;width:100%}
+.center .mark{left:370px}
+.center .beam{left:40px}
+.center .shadow{background:radial-gradient(560px 400px at 520px 518px,transparent 40%,rgba(4,2,1,.55) 100%)}
+.center .strip{opacity:.7}
+
+
+/* 空间感：身后放映机打过来的光锥、地上的反光、离镜头很近的虚焦光斑、鼠标一动前后层错开 */
+.cone{position:absolute;inset:0;pointer-events:none;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 1000'%3E%3Cfilter id='b' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeGaussianBlur stdDeviation='40'/%3E%3C/filter%3E%3Cpolygon points='320,170 1280,170 1280,800 830,1060 770,1060 320,800' fill='white' filter='url(%23b)'/%3E%3C/svg%3E") 0 0/100% 100%;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 1000'%3E%3Cfilter id='b' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeGaussianBlur stdDeviation='40'/%3E%3C/filter%3E%3Cpolygon points='320,170 1280,170 1280,800 830,1060 770,1060 320,800' fill='white' filter='url(%23b)'/%3E%3C/svg%3E") 0 0/100% 100%;
+  background:linear-gradient(to top,rgba(255,205,150,.05),rgba(255,190,130,.02) 50%,transparent 85%)}
+.cone i{position:absolute;width:3px;height:3px;border-radius:50%;background:rgba(255,226,190,.55);filter:blur(.6px);animation:float linear infinite}
+@keyframes float{0%{transform:translate(0,0);opacity:0}15%{opacity:1}85%{opacity:.8}100%{transform:translate(var(--dx),-260px);opacity:0}}
+.floor{position:absolute;left:330px;top:846px;width:940px;height:90px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(closest-side,rgba(255,170,100,.09),transparent);filter:blur(14px)}
+.bokeh{position:absolute;border-radius:50%;pointer-events:none;z-index:15;filter:blur(16px);
+  background:radial-gradient(circle,rgba(255,190,120,.22),rgba(255,160,90,.08) 55%,transparent 70%)}
+.px{transition:translate .9s cubic-bezier(.2,.7,.3,1)}
+.mote{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(255,200,140,.4),rgba(255,170,90,0) 70%);filter:blur(2px)}
+.black{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity 1.6s ease;z-index:20}
+#stage.rolling .proj{animation:off 1s steps(1) forwards}
+#stage.rolling .black{opacity:1;transition-delay:.7s}
+/* 串成一卷：不黑场，胶片转快，接着壳子用光圈把这一幕收掉 */
+#stage.rollfast .belt{animation-duration:2.2s}
+@keyframes off{0%{opacity:1}12%{opacity:.4}20%{opacity:1}34%{opacity:.6}44%{opacity:1}}
+</style></head>
+<body>
+<div id="stage">
+  <div class="floor px" data-d="4"></div>
+  <div class="cone px" id="cone" data-d="2"></div>
+  <div class="proj">
+    <div class="spill"></div>
+    <div class="frame">
+      <div class="strip px" data-d="-3"><div class="belt" id="belt"></div></div>
+      <div class="shadow"></div>
+      <div class="beam"></div>
+      <div class="mottle"></div><div class="weave"></div>
+      <div class="zap z1"></div><div class="zap z2"></div>
+      <div class="scratch" style="left:312px"></div>
+      <div class="scratch" style="left:688px;animation-delay:-3.2s;animation-duration:9s"></div>
+
+<div class="mono log">A ROLL FOR TWO  v.01  ──  <span data-c="both">TT &amp; CLAUDE</span>
+400 · 24 EXP · REEL 1/4
+<b>threading film ............. ok
+warming the lamp ........... ok
+frames found ............... 24</b></div>
+
+      <div class="title px" data-d="5"><h1>A Roll <em>for Two</em></h1><div class="sub">a love story in twenty-four frames</div></div>
+      <div class="mark go px" data-d="6">
+        <svg viewBox="0 0 220 90" preserveAspectRatio="none" fill="none"><path d="M30 52 C 20 18, 120 4, 186 22 C 222 34, 210 74, 140 80 C 80 86, 18 76, 22 46 C 26 28, 70 14, 120 14" stroke="#e0473a" stroke-width="3" stroke-linecap="round"/></svg>
+        <span>roll it, darling</span>
+      </div>
+      <div class="mono corner bl" data-c="since">Since<br>May 2026</div>
+      <div class="mono corner br" data-c="runtime">Running time<br>165 days &amp; counting</div>
+      <div class="specks" id="specks"></div>
+      <div class="grain"></div><div class="vig"></div>
+    </div>
+  </div>
+  <div class="mote" style="left:180px;top:220px;width:22px;height:22px"></div>
+  <div class="mote" style="left:1390px;top:160px;width:16px;height:16px;opacity:.6"></div>
+  <div class="mote" style="left:1260px;top:800px;width:28px;height:28px;opacity:.4"></div>
+  <div class="bokeh px" data-d="26" style="left:-80px;top:640px;width:300px;height:300px"></div>
+  <div class="bokeh px" data-d="30" style="left:1380px;top:60px;width:220px;height:220px;opacity:.7"></div>
+  <div class="bokeh px" data-d="22" style="left:1240px;top:780px;width:140px;height:140px;opacity:.6"></div>
+  <div class="black"></div>
+</div>
+
+<script src="zh.js?v=tnqgtm"></script>
+<script src="content.js?v=29994fe04a"></script>
+<script src="roll-link.js?v=to1cu6"></script>
+<script>
+const s=document.getElementById('stage');
+const fit=()=>{const k=Math.min(innerWidth/1600,innerHeight/1000);s.style.transform=`translate(-50%,-50%) scale(${k})`};
+fit();addEventListener('resize',fit);
+// 专属设置（服务器 custom.json）：片头大小标题。h1 是我们自己写的，可以带 <em>；比原来 A Roll for Two 宽就一点点缩字（原来的刚好不碰右边胶片）
+if(window.CUSTOM?.title){const T=document.querySelector('.title'),h=T.querySelector('h1'),c=CUSTOM.title;
+  if(c.h1){h.innerHTML=c.h1;h.style.whiteSpace='nowrap';const shrink=()=>{let f=116;h.style.fontSize='';h.style.width='max-content';const mine=h.innerHTML;h.innerHTML='A Roll <em>for Two</em>';const W=h.offsetWidth;h.innerHTML=mine;
+    while(h.offsetWidth>W&&f>40){f-=2;h.style.fontSize=f+'px'}h.style.width=''};shrink();document.fonts.ready.then(shrink)}
+  if(c.sub)T.querySelector('.sub').textContent=c.sub}
+// 她定了标题居中；?l 是靠左的旧版
+if(!new URLSearchParams(location.search).has('l'))s.classList.add('center');
+// 胶片排两遍，往下走到一半刚好接回开头
+// 名字、Since、Running time 从 content 来（天数每天自己长）
+{const C=CONTENT,[y,m]=C.since.split('-').map(Number);const MONL=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+ document.querySelectorAll('[data-c]').forEach(el=>{const k=el.dataset.c;
+   if(k==='since')el.innerHTML='Since<br>'+MONL[m-1]+' '+y;else if(k==='runtime')el.innerHTML='Running time<br>'+C.days()+' days &amp; counting';
+   else if(k==='both')el.textContent=C.names.both.toUpperCase()})}
+const pics=CONTENT.picks.opening;
+const belt=document.getElementById('belt');
+for(let r=0;r<2;r++)pics.forEach((p,i)=>{const f=document.createElement('div');f.className='fr';
+  f.innerHTML=`<div class="img"></div><span class="no">▸ ${i+9}A</span>`;belt.appendChild(f);CONTENT.cropBg(f.firstChild,p,CONTENT.small(p))});
+// 灰尘和毛发：每 120ms 随机亮几颗，偶尔一根毛
+const sp=document.getElementById('specks');
+const dots=[...Array(14)].map((_,i)=>{const d=document.createElement('i');if(i>11)d.className='h';sp.appendChild(d);return d});
+setInterval(()=>dots.forEach((d,i)=>{const show=Math.random()<(i>11?.06:.22);d.style.opacity=show?(.3+Math.random()*.5):0;if(!show)return;
+  const hair=i>11,w=hair?40+Math.random()*80:1+Math.random()*3.5;d.style.left=Math.random()*1000+'px';d.style.top=Math.random()*660+'px';
+  d.style.width=w+'px';d.style.height=(hair?w*.6:w*(.6+Math.random()*.8))+'px';d.style.transform='rotate('+(Math.random()*360)+'deg)'}),120);
+// 光锥里慢慢往上飘的灰
+const cone=document.getElementById('cone');
+for(let i=0;i<26;i++){const d=document.createElement('i');const y=Math.random();
+  d.style.left=(560+Math.random()*480)+'px';d.style.top=(560+y*420)+'px';d.style.setProperty('--dx',(Math.random()*80-40)+'px');
+  const sz=1+Math.random()*3;d.style.width=d.style.height=sz+'px';
+  d.style.animationDuration=(9+Math.random()*10)+'s';d.style.animationDelay=(-Math.random()*18)+'s';cone.appendChild(d)}
+// 视差：鼠标往哪边，近的层挪得多，远的挪得少
+const layers=[...document.querySelectorAll('.px')];
+addEventListener('mousemove',e=>{const mx=e.clientX/innerWidth-.5,my=e.clientY/innerHeight-.5;
+  layers.forEach(l=>{const d=+l.dataset.d;l.style.translate=(-mx*d*3.2)+'px '+(-my*d*2.2)+'px'})});
+document.querySelectorAll('.go').forEach(g=>g.onclick=()=>{if(ROLL.in){if(s.classList.contains('rollfast'))return;s.classList.add('rollfast');setTimeout(()=>ROLL.done('iris'),900);return}
+  s.classList.add('rolling');setTimeout(()=>s.classList.remove('rolling'),3200);
+  setTimeout(()=>ROLL.done('iris'),2400)});
+</script>
+</body></html>

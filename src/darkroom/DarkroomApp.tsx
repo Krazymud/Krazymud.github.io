@@ -8,8 +8,8 @@ import { fetchVaultBytes, loadVaultFile, unlockWithKey, unlockWithPassphrase, ty
 import type { WebStore } from '../vault/webStore'
 import type { VaultFile } from '../vault/types'
 import { UnlockGate } from './overlays/UnlockGate'
-import { ReelStage } from './reel/ReelStage'
-import { DeskCounts, VaultBridge } from './VaultBridge'
+import { ReelShellHost } from './reel/ReelShellHost'
+import { VaultBridge } from './VaultBridge'
 
 type DarkroomState =
   | { status: 'loading' }
@@ -125,9 +125,8 @@ export function DarkroomApp({ fetchBytes = fetchVaultBytes, keyStore, webStore }
     case 'ready':
       return (
         <VaultBridge session={state.session} file={state.file} fetchBytes={fetchBytes} onLock={lock} webStore={webStore}>
-          <div data-testid="darkroom-ready" className="relative">
-            <ReelStage />
-            <DeskCounts />
+          <div data-testid="darkroom-ready" className="relative min-h-dvh">
+            <ReelShellHost />
           </div>
         </VaultBridge>
       )
