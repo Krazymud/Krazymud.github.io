@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
-import { isOptionalUpload, putWithRetries, remoteMatchesLocal, uploadOrder } from './sync-cos-site.ts'
+import {
+  cacheControl,
+  isHtmlEntry,
+  isOptionalUpload,
+  purgeUrlList,
+  putWithRetries,
+  remoteMatchesLocal,
+  uploadOrder,
+} from './sync-cos-site.ts'
 
 describe('putWithRetries', () => {
   it('retries UserNetworkTooSlow then succeeds', async () => {
@@ -73,6 +81,27 @@ describe('uploadOrder', () => {
     expect(ordered.slice(0, 2)).toEqual(['assets/index-abc.js', 'darkroom/music/satie-gymnopedie-1.mp3'])
     expect(ordered[2]).toBe('index.html')
     expect(ordered[3]).toBe('vault/blobs/a.bin')
+  })
+})
+
+describe('cacheControl / html put policy', () => {
+  it('marks all HTML and reel-shell scripts no-cache', () => {
+    expect(cacheControl('index.html')).toBe('no-cache')
+    expect(cacheControl('reel-shell/opening.html')).toBe('no-cache')
+    expect(cacheControl('reel-shell/roll-link.js')).toBe('no-cache')
+    expect(cacheControl('assets/index-abc.js')).toMatch(/immutable/)
+  })
+
+  it('forces PUT for every html path', () => {
+    expect(isHtmlEntry('index.html')).toBe(true)
+    expect(isHtmlEntry('reel-shell/opening.html')).toBe(true)
+    expect(isHtmlEntry('reel-shell/roll-link.js')).toBe(false)
+  })
+
+  it('lists reel-shell URLs for CDN purge hints', () => {
+    const urls = purgeUrlList('erinamae.site')
+    expect(urls).toContain('https://erinamae.site/reel-shell/opening.html')
+    expect(urls).toContain('https://erinamae.site/reel-shell/roll-link.js')
   })
 })
 
