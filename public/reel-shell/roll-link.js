@@ -1,14 +1,27 @@
 // 串成一卷时，每一幕跟外面的壳子（roll.html）说话：演完了、放音乐、重来
 // 单独打开某一幕的时候 in=false，这些都不做，onGo 立刻执行
+// 壳可能嵌在站点 React iframe 里：此时 top 是宿主页，不是壳。消息必须发给带 FILM_V 的壳窗口。
+function rollShell(){
+  try{
+    let w=window.parent;
+    for(let i=0;i<5&&w&&w!==window;i++){
+      if(w.FILM_V!=null)return w;
+      if(!w.parent||w.parent===w)break;
+      w=w.parent;
+    }
+  }catch(e){}
+  return window.top;
+}
 window.ROLL={
   in:window.top!==window,
-  done(fx){if(this.in)top.postMessage({roll:'done',fx},'*')},
+  shell:rollShell,
+  done(fx){if(this.in)rollShell().postMessage({roll:'done',fx},'*')},
   // 快演完了：让壳子先把下一幕装起来（大场景不会提前加载）
-  prep(){if(this.in)top.postMessage({roll:'prep'},'*')},
+  prep(){if(this.in)rollShell().postMessage({roll:'prep'},'*')},
   // 东西都装好、第一帧画出来了（书这种要等模型的大场景用：iframe 的 load 早就到了，可画面还是黑的）
-  ready(){if(this.in)top.postMessage({roll:'ready'},'*')},
-  music(cmd){if(this.in)top.postMessage({roll:'music',cmd},'*')},
-  restart(){if(this.in)top.postMessage({roll:'restart'},'*');else location.href='opening.html'},
+  ready(){if(this.in)rollShell().postMessage({roll:'ready'},'*')},
+  music(cmd){if(this.in)rollShell().postMessage({roll:'music',cmd},'*')},
+  restart(){if(this.in)rollShell().postMessage({roll:'restart'},'*');else location.href='opening.html'},
   // 壳子把这一幕亮出来的时候才开始（提前在后台加载好，但别提前演）
   // 清晰度：smooth 1 倍、standard 1.5 倍、sharp 2 倍（画布像素和屏幕像素的比）
   pr(){let q='standard';try{q=localStorage.getItem('aroll.q')||q}catch(e){}return {smooth:1,standard:1.5,sharp:2}[q]||1.5},
@@ -161,9 +174,9 @@ if(window.top!==window&&window.parent===window.top){let live=window.ROLL.went;ad
   const fd=Object.getOwnPropertyDescriptor(P,'font');Object.defineProperty(P,'font',{configurable:true,get(){return fd.get.call(this)},set(v){fd.set.call(this,famC(v))}});
   window.ROLL.tr=tr})();
 // 第一次在这一幕里点一下，就跟壳子喊一声：从中间某一幕开始放的时候（换了语言重装、?s= 直接打开），收音机那幕没演，音乐还没开始，壳子听到就把音乐接上
-if(window.top!==window)addEventListener('pointerdown',()=>top.postMessage({roll:'music',cmd:'kick'},'*'),{once:true,capture:true});
+if(window.top!==window)addEventListener('pointerdown',()=>rollShell().postMessage({roll:'music',cmd:'kick'},'*'),{once:true,capture:true});
 // 每点一下都同步喊壳子 unlockMusic：苹果只认点下去那一刻开始的声音，postMessage 一转手就不算了（同源，直接调得到）
-if(window.top!==window)['pointerup','touchend','click','keydown'].forEach(t=>addEventListener(t,()=>{try{top.unlockMusic&&top.unlockMusic()}catch(e){}},{capture:true,passive:true}));
+if(window.top!==window)['pointerup','touchend','click','keydown'].forEach(t=>addEventListener(t,()=>{try{const s=rollShell();s.unlockMusic&&s.unlockMusic()}catch(e){}},{capture:true,passive:true}));
 // 每一幕都不让选字、复制、右键、拖图，点来点去不会误选中东西；输入框照常能打字
 (()=>{const st=document.createElement('style');
   st.textContent='*{-webkit-user-select:none;user-select:none;-webkit-user-drag:none;-webkit-touch-callout:none}input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text}';
