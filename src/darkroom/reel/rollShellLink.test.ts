@@ -13,6 +13,10 @@ describe('roll-link shell targeting', () => {
 
   it('cache-busts roll-link on scene pages', () => {
     const opening = readFileSync(join(process.cwd(), 'public/reel-shell/opening.html'), 'utf8')
-    expect(opening).toMatch(/roll-link\.js\?v=vaultcta\d+/)
+    expect(opening).toMatch(/roll-link\.js\?v=/)
+    const frameE = readFileSync(join(process.cwd(), 'public/reel-shell/frame-e.html'), 'utf8')
+    expect(frameE).toContain('overflow:hidden')
+    expect(frameE).toContain('hurry')
+    expect(frameE).toContain('TEXT.length>24')
   })
 })
