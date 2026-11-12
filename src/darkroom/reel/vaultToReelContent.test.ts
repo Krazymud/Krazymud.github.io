@@ -34,13 +34,17 @@ describe('vaultToReelContent', () => {
       urls,
     })
     expect(content.names.both).toBe('暗房')
+    expect(content.__vault).toBe(true)
     expect(content.rolls).toHaveLength(4)
     expect(content.rolls.every((r) => r.frames.length === 8)).toBe(true)
     expect(content.letter).toContain('你好')
+    expect(content.letter).toContain('信')
+    expect(content.rolls[0].name).toBe('想做的事')
     expect(content.ticket.back.some((l) => l.includes('冲一张') || l.includes('想做的事'))).toBe(true)
     const blob = JSON.stringify(content)
     expect(blob).not.toMatch(/Tong|CCC|u\/[0-9a-f]{8}/)
     expect(content.rolls[0].frames[0].photo).toBe('blob:a')
+    expect(content.picks.opening[0].photo).toBe('blob:a')
   })
 
   it('pads empty vault with sample img paths', () => {

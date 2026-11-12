@@ -56,6 +56,21 @@ iframe.on{opacity:1;pointer-events:auto}
 .np.muted{text-decoration:line-through}
 </style></head>
 <body>
+<script>
+/* Site entry is erinamae.site (/). /reel-shell is an embedded asset path only. */
+(function(){
+  try {
+    if (window.top === window) {
+      var q = new URLSearchParams(location.search);
+      if (!q.get('embed') && !sessionStorage.getItem('reel-vault-content')) {
+        location.replace('/');
+        return;
+      }
+    }
+  } catch (e) {}
+})();
+</script>
+
 <div class="veil" id="veil"></div>
 <audio id="music" preload="auto"></audio>
 <div class="set" id="set">
@@ -268,6 +283,30 @@ addEventListener('message',e=>{const d=e.data;if(!d||!d.roll)return;
     // 放映机放带声音的片子：歌先停，片子放完接着放（专属设置 reel.sound）
     else if(d.cmd==='hush'){if(started&&!music.paused){hushed=true;fade(0,800)}}else if(d.cmd==='unhush'){if(hushed){hushed=false;music.play().catch(()=>{});fade(ducked?VOL*.3:VOL,1500)}}}
   else if(d.roll==='restart'){location.href=location.pathname}});
-boot();
+function startReel(){if(window.__reelStarted)return;window.__reelStarted=1;boot()}
+(function(){
+  const needVault = new URLSearchParams(location.search).has('vault') || new URLSearchParams(location.search).has('embed');
+  if(!needVault){startReel();return}
+  if(window.CONTENT && window.CONTENT.__vault){startReel();return}
+  const t0=Date.now();
+  const tick=()=>{
+    try{
+      if(window.CONTENT && window.CONTENT.__vault){startReel();return}
+      const raw=sessionStorage.getItem('reel-vault-content');
+      if(raw){
+        const data=JSON.parse(raw);
+        if(data){window.CONTENT=data;if(data.__lang)window.ROLL_LANG=data.__lang}
+      }
+      if(window.CONTENT && window.CONTENT.__vault){startReel();return}
+    }catch(e){}
+    if(Date.now()-t0>8000){startReel();return}
+    setTimeout(tick,50)
+  };
+  addEventListener('message',e=>{
+    const d=e.data;if(!d||d.roll!=='vault-content'||!d.content)return;
+    window.CONTENT=d.content;if(d.content.__lang)window.ROLL_LANG=d.content.__lang;startReel()
+  });
+  tick();
+})();
 </script>
 </body></html>

@@ -11,7 +11,9 @@ Vendored (scrubbed) from [blackpeng21-lang/a-roll-for-two](https://github.com/bl
 
 ## Local additions
 
-- `vault-bridge.js` — reads `sessionStorage['reel-vault-content']` into `window.CONTENT` before `content.js`
+- `vault-bridge.js` — inherits `top`/`parent` CONTENT or `sessionStorage['reel-vault-content']` before `content.js` (required on every scene page; nested iframes otherwise fall back to sample film)
+- Scene HTML loads `vault-bridge.js` immediately before `content.js`
+- `index.html` redirects top-level visits to `/` (site entry is erinamae.site); embed via `?embed=1` / `?vault=1` from the Darkroom host
 - MUSIC paths in `index.html` point at `/darkroom/music/*.mp3`
 
 Re-run `scripts/vendor-reel-shell.sh` only from a fresh clone when updating the shell; always re-apply scrub steps.
