@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDarkroomVault } from '../VaultBridge'
 import { vaultToReelContent, type ReelPhotoUrls } from './vaultToReelContent'
-import type { ListContent } from '../../vault/types'
+import type { ListContent, ListEntry, NoteEntry, PhotoEntry } from '../../vault/types'
 
 const STORAGE_KEY = 'reel-vault-content'
 const SHELL_SRC = '/reel-shell/index.html?vault=1&embed=1'
+const BLOB_MS = 5_000
+const BUILD_MS = 12_000
 
 function decodeText(bytes: Uint8Array): string {
   return new TextDecoder().decode(bytes)
@@ -27,6 +29,22 @@ function manifestKey(photos: { hash: string }[], notes: { hash: string }[], list
   ].join('|')
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('timeout')), ms)
+    promise.then(
+      (v) => {
+        clearTimeout(t)
+        resolve(v)
+      },
+      (e) => {
+        clearTimeout(t)
+        reject(e)
+      },
+    )
+  })
+}
+
 export function ReelShellHost() {
   const { photos, notes, lists, readBlob, loading, lock } = useDarkroomVault()
   const [payload, setPayload] = useState<{ json: string; key: string } | null>(null)
@@ -35,7 +53,6 @@ export function ReelShellHost() {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const key = useMemo(() => manifestKey(photos, notes, lists), [photos, notes, lists])
 
-  // Revoke object URLs only when the host unmounts (not on every rebuild).
   useEffect(() => {
     return () => {
       for (const u of blobUrls.current) URL.revokeObjectURL(u)
@@ -51,38 +68,62 @@ export function ReelShellHost() {
   useEffect(() => {
     let alive = true
     ;(async () => {
-      if (loading) {
-        setPayload(null)
-        return
-      }
-      try {
-        for (const u of blobUrls.current) URL.revokeObjectURL(u)
-        blobUrls.current = []
-        const urls: ReelPhotoUrls = {}
-        for (const p of photos) {
-          const [thumbBytes, fullBytes] = await Promise.all([
-            readBlob(p.thumb).catch(() => readBlob(p.full)),
-            readBlob(p.full).catch(() => readBlob(p.thumb)),
-          ])
-          const thumb = URL.createObjectURL(new Blob([thumbBytes as BlobPart]))
-          const full = URL.createObjectURL(new Blob([fullBytes as BlobPart]))
-          blobUrls.current.push(thumb, full)
-          urls[p.hash] = { photo: thumb, thumb, full }
-          urls[p.source] = urls[p.hash]
+      if (loading) return
+
+      const urls: ReelPhotoUrls = {}
+      const collected: string[] = []
+      const read = async (name: string) => {
+        try {
+          return await withTimeout(readBlob(name), BLOB_MS)
+        } catch {
+          return null
         }
+      }
+
+      const build = async () => {
+        await Promise.all(
+          photos.map(async (p: PhotoEntry) => {
+            const [thumbBytes, fullBytes] = await Promise.all([
+              read(p.thumb).then((b) => b ?? read(p.full)),
+              read(p.full).then((b) => b ?? read(p.thumb)),
+            ])
+            if (!thumbBytes && !fullBytes) return
+            const thumb = URL.createObjectURL(new Blob([(thumbBytes ?? fullBytes) as BlobPart]))
+            const full = URL.createObjectURL(new Blob([(fullBytes ?? thumbBytes) as BlobPart]))
+            collected.push(thumb, full)
+            urls[p.hash] = { photo: thumb, thumb, full }
+            urls[p.source] = urls[p.hash]
+          }),
+        )
         const notePayload = await Promise.all(
-          notes.map(async (entry) => ({
+          notes.map(async (entry: NoteEntry) => ({
             entry,
-            text: decodeText(await readBlob(entry.blob).catch(() => new Uint8Array())),
+            text: decodeText((await read(entry.blob)) ?? new Uint8Array()),
           })),
         )
         const listPayload = await Promise.all(
-          lists.map(async (entry) => ({
+          lists.map(async (entry: ListEntry) => ({
             entry,
-            content: parseList(await readBlob(entry.blob).catch(() => new Uint8Array())),
+            content: parseList((await read(entry.blob)) ?? new Uint8Array()),
           })),
         )
-        const content = vaultToReelContent({ photos, notes: notePayload, lists: listPayload, urls })
+        return vaultToReelContent({ photos, notes: notePayload, lists: listPayload, urls })
+      }
+
+      try {
+        let content
+        try {
+          content = await withTimeout(build(), BUILD_MS)
+        } catch {
+          content = vaultToReelContent({
+            photos,
+            notes: notes.map((entry) => ({ entry, text: '' })),
+            lists: lists.map((entry) => ({ entry, content: { items: [] } })),
+            urls,
+          })
+        }
+        for (const u of blobUrls.current) URL.revokeObjectURL(u)
+        blobUrls.current = collected
         const json = JSON.stringify(content)
         sessionStorage.setItem(STORAGE_KEY, json)
         if (alive) {
@@ -90,13 +131,38 @@ export function ReelShellHost() {
           setPayload({ json, key })
         }
       } catch (e) {
-        if (alive) setError(e instanceof Error ? e.message : 'reel failed')
+        for (const u of collected) URL.revokeObjectURL(u)
+        if (!alive) return
+        try {
+          const content = vaultToReelContent({ photos: [], notes: [], lists: [], urls: {} })
+          const json = JSON.stringify(content)
+          sessionStorage.setItem(STORAGE_KEY, json)
+          setError(null)
+          setPayload({ json, key: `${key}-empty` })
+        } catch {
+          setError(e instanceof Error ? e.message : 'reel failed')
+        }
       }
     })()
     return () => {
       alive = false
     }
   }, [photos, notes, lists, readBlob, loading, key])
+
+  useEffect(() => {
+    if (!loading || payload) return
+    const t = window.setTimeout(() => {
+      const content = vaultToReelContent({ photos: [], notes: [], lists: [], urls: {} })
+      const json = JSON.stringify(content)
+      try {
+        sessionStorage.setItem(STORAGE_KEY, json)
+      } catch {
+        /* ignore */
+      }
+      setPayload({ json, key: 'hydrate-timeout' })
+    }, BUILD_MS)
+    return () => clearTimeout(t)
+  }, [loading, payload])
 
   const pushContent = () => {
     const win = iframeRef.current?.contentWindow
