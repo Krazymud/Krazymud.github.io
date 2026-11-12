@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A Roll For Two · Tray</title>
+<style>
+@font-face{font-family:'JB Mono';src:url(font/jbmono.woff2) format('woff2')}
+@font-face{font-family:'Fraunces';src:url(font/Fraunces-normal.woff2) format('woff2');font-weight:100 900}
+@font-face{font-family:'Fraunces';src:url(font/Fraunces-italic.woff2) format('woff2');font-weight:100 900;font-style:italic}
+@font-face{font-family:'Reenie';src:url(font/ReenieBeanie-normal.woff2) format('woff2')}
+:root{--cream:#f3e6d2;--ink:#040302;--red:#ee5546}
+html,body{margin:0;height:100%;background:var(--ink);overflow:hidden}
+#stage{position:absolute;left:50%;top:50%;width:1600px;height:1000px;background:var(--ink)}
+.mono{font:400 11px/1.7 'JB Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--cream)}
+.proj{position:absolute;left:280px;top:130px;width:1040px;height:694px}
+.proj .spill{position:absolute;inset:-50px;border-radius:80px;background:radial-gradient(closest-side,rgba(255,120,60,.14),transparent);filter:blur(60px)}
+.frame{position:absolute;inset:0;overflow:hidden;background:#0c0603;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1040 694'%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='9'/%3E%3C/filter%3E%3Crect x='18' y='18' width='1004' height='658' rx='30' fill='white' filter='url(%23b)'/%3E%3C/svg%3E") center/100% 100%;
+          mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1040 694'%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='9'/%3E%3C/filter%3E%3Crect x='18' y='18' width='1004' height='658' rx='30' fill='white' filter='url(%23b)'/%3E%3C/svg%3E") center/100% 100%}
+canvas#gl{position:absolute;inset:0;width:1040px;height:694px;display:block}
+.corner{position:absolute;opacity:.5}
+.hint{position:absolute;left:0;right:0;bottom:24px;text-align:center;font:400 30px/1 'Reenie',cursive;color:var(--red);pointer-events:none;transition:opacity .8s}
+.hint.gone{opacity:0}
+/* 全挂完：桌上红笔一句 all dry，点它去照片墙 */
+.dry{position:absolute;left:110px;bottom:130px;font:400 52px/1 'Reenie',cursive;color:var(--red);transform:rotate(-5deg);opacity:0;pointer-events:none;transition:opacity 1.2s;cursor:pointer}
+.dry.on{opacity:1;pointer-events:auto}
+.dry span{display:block;position:relative;font-size:30px;margin:6px 0 0 40px;width:max-content}
+/* 下划线：红铅笔随手画的一道，抖一点、头重尾轻；all dry 出来以后一笔画过去，鼠标放上去再描一遍、更重一点 */
+/* 第一张晾上去以后：红铅笔一个弯箭头指着它 + 一句 psst, flip me.；客人点过任何一张就收掉 */
+.peek{position:absolute;left:0;top:0;width:170px;height:120px;pointer-events:none;opacity:0;transition:opacity .9s;font:400 30px/1 'Reenie',cursive;color:var(--red)}
+.peek.on{opacity:1}
+.peek span{position:absolute;left:70px;top:54px;white-space:nowrap;transform:rotate(-6deg)}
+.peek svg{position:absolute;left:0;top:0;width:90px;height:70px;overflow:visible}
+.peek path{fill:none;stroke:var(--red);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:140;stroke-dashoffset:140;transition:stroke-dashoffset .8s ease-out .3s}
+.peek.on path{stroke-dashoffset:0}
+.peek.on{animation:nudge 1.6s ease-in-out 1.4s infinite}
+@keyframes nudge{50%{translate:-5px -4px}}
+.dry svg.ul{position:absolute;left:-6px;top:28px;width:calc(100% + 14px);height:16px;overflow:visible}
+.dry svg.ul path{fill:none;stroke:var(--red);stroke-linecap:round;stroke-dasharray:260;stroke-dashoffset:260;transition:stroke-dashoffset .9s cubic-bezier(.6,.05,.3,1) 1.1s,stroke-width .3s}
+.dry svg.ul path.b{opacity:.45;transition-delay:1.35s}
+.dry.on svg.ul path{stroke-dashoffset:0}
+.dry:hover svg.ul path.a{stroke-width:3.4}
+iframe.next{position:fixed;inset:0;width:100%;height:100%;border:0;opacity:0;pointer-events:none;background:transparent;will-change:opacity}
+iframe.next.on{opacity:1;pointer-events:auto}
+.grain{position:absolute;inset:0;opacity:.2;mix-blend-mode:overlay;pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");animation:grain .4s steps(3) infinite}
+@keyframes grain{33%{background-position:40px 70px}66%{background-position:-60px 20px}}
+.vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 95% at 50% 50%,transparent 50%,rgba(2,1,0,.75) 100%)}
+</style></head>
+<body>
+<div id="stage">
+  <div class="proj">
+    <div class="spill"></div>
+    <div class="frame" id="frame">
+      <canvas id="gl"></canvas>
+      <div class="mono corner" style="left:68px;top:58px">Scene 05 — The tray</div>
+      <div class="mono corner" style="right:68px;top:58px;text-align:right" id="count"></div>
+      <div class="hint" id="hint"></div>
+      <div class="peek" id="peek"><svg viewBox="0 0 90 70"><filter id="pencil2" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="1.4"/></filter>
+        <path filter="url(#pencil2)" d="M74 58 C 60 50, 40 44, 22 26 C 18 22, 15 18, 12 12 M12 12 L 13 26 M12 12 L 25 15"/></svg><span>psst, flip me.</span></div>
+      <div class="dry" id="dry">all dry.<span>to the wall →<svg class="ul" viewBox="0 0 200 16" preserveAspectRatio="none">
+        <!-- 铅笔的毛边：一点噪声把线边推得不齐 -->
+        <filter id="pencil" x="-5%" y="-80%" width="110%" height="260%"><feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="1.6"/></filter>
+        <path class="a" filter="url(#pencil)" stroke-width="2.6" d="M2 9 C 30 6.5, 58 10.5, 92 8.2 S 150 6.8, 176 9.4 S 194 8.6, 198 7.2"/>
+        <path class="b" filter="url(#pencil)" stroke-width="1.2" d="M8 11 C 44 9.4, 80 12, 120 10.2 S 170 9.6, 192 10.8"/>
+      </svg></span></div>
+      <div class="grain"></div><div class="vig"></div>
+    </div>
+  </div>
+</div>
+<script src="zh.js?v=tnqgtm"></script>
+<script src="content.js?v=29994fe04a"></script>
+<script src="roll-link.js?v=to1cu6"></script>
+<script type="module">
+import * as THREE from './lib/three.module.js?v=tn9zuj';
+// 看片台的两个脚本跟 three 一起拿（11.02：以前等照片到齐才 import，再串着拿 dive、flow，跨境多黑三四秒）
+import {addLightTable} from './tray-lt.js?v=tnpf3k';
+import {flow} from './tray-lt-flow.js?v=tnqdf9';
+const s=document.getElementById('stage');let k=1;
+const fit=()=>{k=Math.min(innerWidth/1600,innerHeight/1000);s.style.transform=`translate(-50%,-50%) scale(${k})`};fit();addEventListener('resize',fit);
+
+// 四卷的照片、日期、背面的话从 content.js 来；颜色是这一幕自己的
+const INK=[['#e6d8bd','#b5301e'],['#cf5f26','#1b0f08'],['#1f3a30','#eadcbf'],['#141110','#d8b26a']];
+const ROLLS=CONTENT.rolls.map((r,i)=>({no:String(i+1).padStart(2,'0'),name:r.name,bg:INK[i][0],ink:INK[i][1],dates:r.frames.map(f=>f.date)}));
+// 上一幕显过的格子；直接打开这页没有的话，先拿每卷头两格
+let devd=null;try{devd=JSON.parse(sessionStorage.getItem('aroll.dev')||'null')}catch(e){}
+// 印样上红笔圈过、画过心的格子（marks[卷][格]），圈过的就算显过
+let marks=null;try{marks=JSON.parse(sessionStorage.getItem('aroll.marks')||'null')}catch(e){}
+// 她定的（10.31）：只洗第 4 卷印样上画了圈的；爱心只是喜欢，不送洗；前三卷都不进暗房。一张没圈就洗第 4 卷前 3 张
+const CIRC=ROLLS[3].dates.map((_,i)=>!!(marks&&marks[3]&&marks[3][i]==='circle')),ANY=CIRC.some(Boolean);
+const QUEUE=[];ROLLS.forEach((r,ri)=>r.dates.forEach((d,i)=>{const mk=ri===3&&CIRC[i];if(ri===3&&(ANY?mk:i<3)){const fr=CONTENT.rolls[ri].frames[i];QUEUE.push({ri,i,mk,fr,pic:fr.photo,full:CONTENT.full(fr),date:d,roll:r.name,back:fr.line||''})}}));
+// 最多洗八张：超了先让没圈过的让位，圈过的一定留下，顺序不变
+{const extra=QUEUE.length-8;if(extra>0){let drop=extra;for(let j=QUEUE.length-1;j>=0&&drop>0;j--)if(!QUEUE[j].mk){QUEUE.splice(j,1);drop--}QUEUE.length=Math.min(8,QUEUE.length)}}
+
+// 客人写的中文也等字体到了再画进贴图（11.03）
+await Promise.all([ROLL.zhReady(),document.fonts.load("300 80px Fraunces"),document.fonts.load("italic 300 80px Fraunces"),document.fonts.load("20px 'JB Mono'"),document.fonts.load("40px Reenie")]);
+const img=src=>ROLL.img(src);
+const pics=await Promise.all([...new Set(QUEUE.map(q=>q.pic))].map(p=>img(p).then(i=>[p,i]))).then(Object.fromEntries);
+// 原片不等：先用压过的那张开场，原片在后台拿，到了放大镜里看的就是原片（11.02 她朋友等了快一分钟才进来）
+// 一张一张拿（11.02：以前几张三千多像素的原片同时下，把照片墙和书要的东西都挤慢了）
+const fulls={};{let ch=Promise.resolve();QUEUE.forEach(q=>{if(q.full!==q.pic&&!(q.pic in fulls)){fulls[q.pic]=null;ch=ch.then(()=>img(q.full).then(i=>{if(!i.missing)fulls[q.pic]=i}))}})}
+const full=new Proxy(pics,{get:(t,k)=>fulls[k]||t[k]});
+
+// ---- 场景：同一张木桌，台灯换成暗房安全灯（橘红、更暗）----
+const cv=document.getElementById('gl');
+const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+renderer.setPixelRatio(ROLL.pr());renderer.setSize(1040,694,false);ROLL.onQuality(()=>{renderer.setPixelRatio(ROLL.pr());renderer.setSize(1040,694,false)});
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;
+const scene=new THREE.Scene();scene.background=new THREE.Color('#090403');
+// 房间反光：拿一间小黑屋拍一张全景当倒影——左上角那块安全灯玻璃最亮，头顶一条暗暖的光，四周黑红的墙；
+// 金属盘、药水、湿相纸、胶卷罐盖子上能看见的那块橘红亮光，就是这盏灯
+{const room=new THREE.Scene();room.background=new THREE.Color('#120504');
+ const panel=(w,h,color,k,pos)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:new THREE.Color(color).multiplyScalar(k),side:THREE.DoubleSide}));m.position.copy(pos);m.lookAt(0,0,0);room.add(m)};
+ panel(2.6,1.7,'#ff6a2c',9,new THREE.Vector3(-4.5,5.5,-3));     // 安全灯
+ panel(6,1.4,'#ff9a5a',2.4,new THREE.Vector3(1,7,2));            // 头顶一条暖光
+ panel(14,3,'#5a1c0c',1.3,new THREE.Vector3(0,1.5,-8));
+ panel(9,.5,'#ffb070',.9,new THREE.Vector3(0,4.8,-6.4));       // 镜头看水面时正好反到的那条暖光：波一动它就扭          // 远处的墙
+ panel(14,3,'#4a160a',1.1,new THREE.Vector3(0,1.5,9));
+ const pm=new THREE.PMREMGenerator(renderer);scene.environment=pm.fromScene(room,.02).texture;pm.dispose()}
+const cam=new THREE.PerspectiveCamera(32,1040/694,.1,100);
+// ?lt：草稿——看片台摆在正前面，盘子往后挪
+const LT=new URLSearchParams(location.search).has('lt');let ltDone=!LT,CAM0=[4.0,6.2];
+cam.position.set(0,4.0,6.2);const LOOK=new THREE.Vector3(0,.7,-.7);if(LT){cam.position.set(.15,4.3,6.5);LOOK.set(-.15,.15,1.45)}cam.lookAt(LOOK);
+const tl=new THREE.TextureLoader(),SRGB=THREE.SRGBColorSpace;
+const wood=tl.load('img/wood.jpg');wood.colorSpace=SRGB;wood.wrapS=wood.wrapT=THREE.RepeatWrapping;wood.repeat.set(3,2);
+const table=new THREE.Mesh(new THREE.PlaneGeometry(22,15),new THREE.MeshStandardMaterial({map:wood,color:'#6e4a38',roughness:.85}));
+table.rotation.x=-Math.PI/2;table.receiveShadow=true;scene.add(table);
+if(LT){table.scale.y=1.7;wood.repeat.set(3,3.4)}  // 盘子往后挪了，桌子也往后接长一截，镜头别看到桌沿
+scene.add(new THREE.AmbientLight('#ffb080',.4));
+const safe=new THREE.SpotLight('#ff8a45',150,30,.75,.9,2);safe.position.set(-1.6,7,1.2);safe.target.position.set(0,0,0);
+safe.castShadow=true;safe.shadow.mapSize.set(1024,1024);safe.shadow.radius=8;safe.shadow.bias=-.0004;scene.add(safe,safe.target);
+const warm=new THREE.PointLight('#ffc490',9,8,2);warm.position.set(1.2,2.2,2.6);scene.add(warm);
+// 安全灯本体：左上角一盏，灯罩前面是一块发光的橘红玻璃
+{const g=new THREE.Group();const box=new THREE.Mesh(new THREE.BoxGeometry(.9,.6,.4),new THREE.MeshStandardMaterial({color:'#15100d',roughness:.5,metalness:.4}));
+ const glass=new THREE.Mesh(new THREE.PlaneGeometry(.74,.46),new THREE.MeshBasicMaterial({color:'#ff6a2c',toneMapped:false}));glass.position.z=.201;
+ g.add(box,glass);g.position.set(-2.9,3.05,-1.6);g.rotation.set(-.35,.35,0);scene.add(g)}
+
+// ---- 不锈钢浅盘：圆角、往外斜的矮墙、口沿卷一道边；拉丝不锈钢贴图（ambientCG Metal009，CC0） ----
+const TW=2.5,TD=1.85,TH=.2,TX=LT?.35:.1,TZ=LT?-.75:.45;
+const steelT=['col','nor_gl','rough'].map(k=>{const t=tl.load(`img/steel/steel_${k}.jpg`);t.wrapS=t.wrapT=THREE.RepeatWrapping;if(k==='col')t.colorSpace=SRGB;return t});
+const steelMat=(rx,ry)=>{const m=new THREE.MeshStandardMaterial({color:'#efeae4',metalness:1,roughness:.55,side:THREE.DoubleSide,envMapIntensity:2.2});
+  [['map',0],['normalMap',1],['roughnessMap',2]].forEach(([k,i])=>{const t=steelT[i].clone();t.repeat.set(rx,ry);t.needsUpdate=true;m[k]=t});m.normalScale.set(.6,.6);return m};
+const tray=new THREE.Group();tray.position.set(TX,0,TZ);scene.add(tray);
+// 盘底那一圈圆角矩形（往外偏 o 就是更大一圈、圆角也跟着变大）
+const BW=TW/2-.17,BDp=TD/2-.17,BR=.12;
+const perim=(()=>{const pts=[],arc=(cx,cz,a0)=>{for(let i=0;i<=8;i++){const a=a0+i/8*Math.PI/2;pts.push([cx+Math.cos(a)*BR,cz+Math.sin(a)*BR,Math.cos(a),Math.sin(a)])}};
+  // 逆着走一圈：右上角 → 左上 → 左下 → 右下，每个角 9 个点，直边自己连起来
+  arc(BW-BR,-(BDp-BR),-Math.PI/2);arc(BW-BR,BDp-BR,0);arc(-(BW-BR),BDp-BR,Math.PI/2);arc(-(BW-BR),-(BDp-BR),Math.PI);
+  // 直边中间多插几个点，拉丝贴图才不会被拉歪
+  const out=[];for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length];out.push(a);const L=Math.hypot(b[0]-a[0],b[1]-a[1]);if(L>.1){const n=Math.ceil(L/.12);for(let k=1;k<n;k++){const t=k/n;out.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2],a[3]])}}}
+  return out})();
+// 截面：盘底一点小圆角 → 斜墙 → 口沿往外卷一圈
+const RR=.024,prof=[[0,.004],[.01,.007],[.02,.016],[.03,.03]];
+for(let i=1;i<=6;i++){const t=i/6;prof.push([.03+.14*t,.03+(TH-.03)*t])}
+for(let i=1;i<=10;i++){const a=Math.PI-i/10*(Math.PI+.5);prof.push([.17+RR+Math.cos(a)*RR,TH+Math.sin(a)*RR])}
+{const P=perim.length+1,J=prof.length,pos=[],uv=[],idx=[];let pl=0;const plen=[0];for(let i=1;i<P;i++){const a=perim[i-1],b=perim[i%perim.length];pl+=Math.hypot(b[0]-a[0],b[1]-a[1]);plen.push(pl)}
+ const vlen=[0];for(let j=1;j<J;j++)vlen.push(vlen[j-1]+Math.hypot(prof[j][0]-prof[j-1][0],prof[j][1]-prof[j-1][1]));
+ for(let j=0;j<J;j++)for(let i=0;i<P;i++){const p=perim[i%perim.length],[o,y]=prof[j];pos.push(p[0]+p[2]*o,y,p[1]+p[3]*o);uv.push(plen[i],vlen[j])}
+ for(let j=0;j<J-1;j++)for(let i=0;i<P-1;i++){const a=j*P+i,b=a+1,c=a+P,d=c+1;idx.push(a,c,b,b,c,d)}
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geo.setIndex(idx);geo.computeVertexNormals();
+ const wall=new THREE.Mesh(geo,steelMat(.9,2.2));wall.castShadow=wall.receiveShadow=true;tray.add(wall);
+ // 盘底：同一个圆角矩形，拉丝顺着长边走
+ const sh=new THREE.Shape();sh.moveTo(perim[0][0],perim[0][1]);perim.forEach(p=>sh.lineTo(p[0],p[1]));
+ const bg=new THREE.ShapeGeometry(sh);bg.rotateX(Math.PI/2);{const u=bg.attributes.uv;for(let i=0;i<u.count;i++){u.setXY(i,u.getX(i)*.6,u.getY(i)*.6)}}
+ const bottom=new THREE.Mesh(bg,steelMat(1,1));bottom.position.y=.004;bottom.receiveShadow=true;tray.add(bottom)}
+// 药水：一张细密的面（四个角按盘子的圆角裁掉），顶点每帧起伏；颜色很淡、透得见底下的相纸，靠反光看出是水
+const LIQ_Y=.13,LO=.03+.14*(LIQ_Y-.03)/(TH-.03)-.004;
+const LW=2*(BW+LO),LD=2*(BDp+LO),liqGeo=new THREE.PlaneGeometry(LW,LD,96,72);liqGeo.rotateX(-Math.PI/2);
+const liqBase=liqGeo.attributes.position.array.slice();
+const liqAlpha=(()=>{const c=document.createElement('canvas');c.width=512;c.height=Math.round(512*LD/LW);const x=c.getContext('2d'),r=(BR+LO)/LW*512;
+  x.fillStyle='#000';x.fillRect(0,0,c.width,c.height);x.fillStyle='#fff';x.beginPath();x.roundRect(0,0,c.width,c.height,r);x.fill();return new THREE.CanvasTexture(c)})();
+liqGeo.setAttribute('color',new THREE.Float32BufferAttribute(new Float32Array(liqGeo.attributes.position.count*3).fill(1),3));
+const liquid=new THREE.Mesh(liqGeo,new THREE.MeshPhysicalMaterial({vertexColors:true,color:'#7a4422',transparent:true,opacity:.42,alphaMap:liqAlpha,roughness:.02,metalness:0,ior:1.33,specularIntensity:1,clearcoat:1,clearcoatRoughness:.02,envMapIntensity:1.8,depthWrite:false}));
+liquid.position.y=LIQ_Y;liquid.renderOrder=2;tray.add(liquid);
+// 水面：每个格点一个高度，按波动方程往四周传，碰到盘壁弹回来，慢慢衰减；
+// 东西碰到水（相纸入水、夹子伸进去、水珠落下、相纸出水）就在那一点按一下 poke(x,z,深浅,半径)，一圈圈荡开
+const NX=97,NZ=73,dX=LW/(NX-1),dZ=LD/(NZ-1);
+let wH=new Float32Array(NX*NZ),wP=new Float32Array(NX*NZ),wN=new Float32Array(NX*NZ);
+// 圆角外面那几格当成墙（波碰到就回来）
+const wet=new Uint8Array(NX*NZ);{const rr=BR+LO;for(let j=0;j<NZ;j++)for(let i=0;i<NX;i++){const x=-LW/2+i*dX,z=-LD/2+j*dZ,cx=Math.max(Math.abs(x)-(LW/2-rr),0),cz=Math.max(Math.abs(z)-(LD/2-rr),0);wet[j*NX+i]=Math.hypot(cx,cz)<rr-.01&&i>0&&j>0&&i<NX-1&&j<NZ-1?1:0}}
+// 世界坐标 → 盘子里的格子；r 是半径（世界单位），amp 正的往上拱、负的往下按
+function poke(wx,wz,amp,r=.06){const x=wx-TX,z=wz-TZ,ci=(x+LW/2)/dX,cj=(z+LD/2)/dZ,R=Math.ceil(r/dX)+1;
+  for(let j=Math.max(1,Math.floor(cj-R));j<=Math.min(NZ-2,Math.ceil(cj+R));j++)for(let i=Math.max(1,Math.floor(ci-R));i<=Math.min(NX-2,Math.ceil(ci+R));i++){
+    const d=Math.hypot((i-ci)*dX,(j-cj)*dZ);if(d<r&&wet[j*NX+i]){wH[j*NX+i]+=amp*.5*(1+Math.cos(Math.PI*d/r))}}}
+// 一条线（比如相纸的一条边）一路按下去
+function pokeLine(ax,az,bx,bz,amp,r=.05){const n=Math.max(2,Math.ceil(Math.hypot(bx-ax,bz-az)/(r*.7)));for(let k=0;k<=n;k++){const t=k/n;poke(ax+(bx-ax)*t,az+(bz-az)*t,amp/n*3,r)}}
+// 相纸平躺在水里时四条边（世界坐标），按它的姿势算
+const _e=[new THREE.Vector3(),new THREE.Vector3(),new THREE.Vector3(),new THREE.Vector3()];
+function pokeOutline(pr,amp){[[-1,-1],[1,-1],[1,1],[-1,1]].forEach(([sx,sy],k)=>{_e[k].set(sx*PW/2,sy*PH/2,0);pr.g.localToWorld(_e[k])});
+  for(let k=0;k<4;k++){const a=_e[k],b=_e[(k+1)%4];pokeLine(a.x,a.z,b.x,b.z,amp)}}
+const C2=.22,DAMP=.988;
+function waterStep(){for(let j=1;j<NZ-1;j++)for(let i=1;i<NX-1;i++){const k=j*NX+i;if(!wet[k]){wN[k]=0;continue}
+    // 邻居是墙就当它和自己一样高（反射）
+    const h=wH[k],l=wet[k-1]?wH[k-1]:h,r=wet[k+1]?wH[k+1]:h,u=wet[k-NX]?wH[k-NX]:h,d=wet[k+NX]?wH[k+NX]:h;
+    wN[k]=(2*h-wP[k]+C2*(l+r+u+d-4*h))*DAMP}
+  const t=wP;wP=wH;wH=wN;wN=t}
+function ripple(t){for(let s=0;s<2;s++)waterStep();
+  const p=liqGeo.attributes.position;for(let i=0;i<p.count;i++){const x=liqBase[i*3],z=liqBase[i*3+2];
+    // 底下一层很轻的自己荡（屋里有人走动那种），上面叠着真的波纹
+    p.array[i*3+1]=(Math.sin(x*3.1+t*1.3)*.0018+Math.sin(z*4.2-t*1.05+x)*.0015)+Math.max(-.018,Math.min(.018,wH[i]))}
+  // 波峰聚光、波谷散光：按弯曲程度给水面一点明暗，像水波在盘底投的光纹
+  const col=liqGeo.attributes.color;for(let k=0;k<col.count;k++){let c=1;if(wet[k]){const lap=wH[k-1]+wH[k+1]+wH[k-NX]+wH[k+NX]-4*wH[k];c=Math.max(.65,Math.min(1.6,1-lap*120))}col.array[k*3]=col.array[k*3+1]=col.array[k*3+2]=c}col.needsUpdate=true;
+  p.needsUpdate=true;liqGeo.computeVertexNormals()}
+
+// ---- 竹夹子：两片竹条，尾巴上一颗铆钉一个铁圈连着，头上套红橡胶；能张开合上 ----
+// 本地 -z 是夹头那头；每片竹条挂在尾巴的支点上，openTongs(k) 让两片绕支点张开
+const TL=1.15,tongs=new THREE.Group();scene.add(tongs);const blades=[];
+{const bc=document.createElement('canvas');bc.width=64;bc.height=512;const x=bc.getContext('2d');x.fillStyle='#c9a46a';x.fillRect(0,0,64,512);
+ // 竹纤维：顺着长的细线，深浅不一；隔一段一道竹节
+ for(let i=0;i<70;i++){x.strokeStyle=`rgba(${Math.random()<.5?'120,85,40':'235,205,150'},${.15+Math.random()*.25})`;x.lineWidth=.6+Math.random()*1.2;const px=Math.random()*64;x.beginPath();x.moveTo(px,0);x.lineTo(px+(Math.random()-.5)*3,512);x.stroke()}
+ [150,380].forEach(y=>{x.fillStyle='rgba(110,75,35,.55)';x.fillRect(0,y,64,5);x.fillStyle='rgba(240,215,165,.4)';x.fillRect(0,y+5,64,2)});
+ const bt=new THREE.CanvasTexture(bc);bt.colorSpace=SRGB;
+ const bam=new THREE.MeshStandardMaterial({map:bt,roughness:.55,envMapIntensity:.5}),rub=new THREE.MeshStandardMaterial({color:'#9e2a1e',roughness:.6,envMapIntensity:.4});
+ const steelS=new THREE.MeshStandardMaterial({color:'#b8b0a4',metalness:1,roughness:.35,envMapIntensity:1.2});
+ [-1,1].forEach(sd=>{const piv=new THREE.Group();piv.position.set(sd*.022,0,TL/2);tongs.add(piv);
+   const st=new THREE.Mesh(new THREE.BoxGeometry(.068,.018,TL-.06),bam);st.position.z=-(TL-.06)/2;st.castShadow=true;piv.add(st);
+   // 橡胶头：一截圆头套子，比竹片略宽，往里收一点好夹住纸
+   const tip=new THREE.Mesh(new THREE.CapsuleGeometry(.03,.11,4,10),rub);tip.rotation.x=Math.PI/2;tip.position.set(-sd*.008,0,-TL+.1);tip.castShadow=true;piv.add(tip);
+   blades.push({piv,sd})});
+ const rivet=new THREE.Mesh(new THREE.CylinderGeometry(.016,.016,.06,12),steelS);rivet.position.z=TL/2-.03;tongs.add(rivet);
+ const ring=new THREE.Mesh(new THREE.TorusGeometry(.055,.008,8,24),steelS);ring.position.z=TL/2+.035;ring.rotation.x=Math.PI/2;tongs.add(ring)}
+function openTongs(k){blades.forEach(({piv,sd})=>{piv.rotation.y=-sd*(.02+.07*k)})}
+openTongs(0);
+// 平时：夹头泡在药水里靠着右边那面墙，竹身搭在口沿那道卷边上，尾巴翘在盘外（夹子哪儿都不穿进盘子）
+const TONGS_REST=(()=>{const tip=new THREE.Vector3(TX+BW-.32,.075,TZ+BDp-.42),rim=new THREE.Vector3(TX+BW-.12,TH+RR+.009,TZ+BDp+.17+RR);
+  const dir=tip.clone().sub(rim).normalize(),c=tip.clone().addScaledVector(dir,-TL/2+.02);
+  const q=new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,-1),dir);return {pos:c,rot:new THREE.Euler().setFromQuaternion(q)}})();
+tongs.position.copy(TONGS_REST.pos);tongs.rotation.copy(TONGS_REST.rot);
+
+if(LT){
+  // 台上摆的就是待会儿要洗的那几张（上一幕显过的），取景位置错开一点，免得同一张照片的两格一模一样
+  // 以前按顺序轮流裁中间、偏左、偏右，会把脸切掉；现在跟着客人调的横版裁切走（没调过就是正中间）
+  const frames=QUEUE.map(q=>[q.pic,q.fr,0]);
+  // 印样上圈过的那几格，片子上用红蜡笔照样圈出来；放大镜先摆在第一张圈过的上面，提示也只领着看圈过的
+  const circled=QUEUE.map((q,j)=>q.mk?j:-1).filter(j=>j>=0);
+  const lt=addLightTable({scene,pics,full,picks:[],at:new THREE.Vector3(-.25,0,2.15),frames});
+  if(frames.length)lt.place(circled.length?circled[0]:Math.min(1,frames.length-1),.08);
+  // 看完走到盘子跟前：镜头和盘子的相对位置跟原来那一幕一样
+  lt.flow=flow({lt,cam,LOOK,canvas:cv,frameEl:document.getElementById('frame'),picks:circled.length?circled:frames.map((_,i)=>i),
+    trayView:{pos:new THREE.Vector3(TX-.1,4.0,TZ+5.75),look:new THREE.Vector3(TX-.1,.7,TZ-1.15)},
+    onDone:()=>{CAM0=[4.0,TZ+5.75];ltDone=true;window.__ltSay&&window.__ltSay()}});
+  window.__lt=lt}
+// ---- 冲印师傅的工作条：贴在桌上，手写一行 don't rush this one（和冲印袋那句呼应，别改）----
+{const c=document.createElement('canvas');c.width=640;c.height=300;const x=c.getContext('2d');
+ x.fillStyle='#ece3d2';x.fillRect(0,0,640,300);for(let i=0;i<1800;i++){x.fillStyle=`rgba(90,60,30,${Math.random()*.06})`;x.fillRect(Math.random()*640,Math.random()*300,2,2)}
+ x.fillStyle='#2a211b';x.font="400 22px 'JB Mono'";x.fillText('DARKROOM SEVEN · BENCH 2',36,52);
+ x.font="400 30px 'JB Mono'";x.fillText('DEVELOPER  20°C',36,112);x.fillText('1:30 · AGITATE GENTLY',36,156);
+ x.strokeStyle='rgba(42,33,27,.35)';x.beginPath();x.moveTo(36,180);x.lineTo(604,180);x.stroke();
+ x.fillStyle='#c62f24';x.font="400 58px Reenie";x.save();x.translate(60,252);x.rotate(-.04);x.fillText("don't rush this one",0,0);x.restore();
+ // 胶带
+ x.fillStyle='rgba(235,220,180,.75)';x.save();x.translate(560,10);x.rotate(.3);x.fillRect(-60,-14,120,30);x.restore();
+ const t=new THREE.CanvasTexture(c);t.colorSpace=SRGB;t.anisotropy=8;
+ const note=new THREE.Mesh(new THREE.PlaneGeometry(1.15,.54),new THREE.MeshStandardMaterial({map:t,roughness:.95}));note.rotation.set(-Math.PI/2,0,.28);note.position.set(-2.35,.004,1.55);note.receiveShadow=true;scene.add(note)}
+
+// ---- 四卷罐子立在盘子右边：跟上一幕 rolls.html 同一个罐子（标签、金属盖、细环、轴、黑绒出片口），只是立着 ----
+// 卷名之外的两样（色带、ISO、日期那行）也跟 rolls.html 对齐，改的时候两边一起改
+const ROLL_EXTRA=[{band:'#b5301e',iso:'200',span:'May — Jun 2026'},{band:'#1b0f08',iso:'400',span:'Jul — Aug 2026'},{band:'#c9a45a',iso:'160',span:'Sep 2026'},{band:'#d8b26a',iso:'800',span:'Oct 2026 — '}];
+function labelTex(r,ex){const W=1024,H=512,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
+  x.fillStyle=r.bg;x.fillRect(0,0,W,H);x.fillStyle=ex.band;x.fillRect(0,0,W,26);x.fillRect(0,H-26,W,26);
+  for(const cx of [W*.25,W*.75]){x.save();x.translate(cx,H/2);x.rotate(Math.PI/2);x.fillStyle=r.ink;x.textAlign='center';
+    x.font="italic 300 104px Fraunces";x.fillText(r.name,0,10);x.font="400 26px 'JB Mono'";x.globalAlpha=.85;x.fillText(`ROLL ${r.no} · ${ex.iso} · 24 EXP`,0,62);x.restore();
+    x.save();x.translate(cx-150,H/2);x.rotate(Math.PI/2);x.fillStyle=r.ink;x.globalAlpha=.7;x.textAlign='center';x.font="400 20px 'JB Mono'";x.fillText(ex.span.toUpperCase(),0,0);x.restore()}
+  for(let i=0;i<1600;i++){x.fillStyle=`rgba(0,0,0,${Math.random()*.06})`;x.fillRect(Math.random()*W,Math.random()*H,2,2)}
+  const t=new THREE.CanvasTexture(c);t.colorSpace=SRGB;t.anisotropy=8;return t}
+const metal=new THREE.MeshStandardMaterial({color:'#b9b1a5',metalness:.92,roughness:.32});
+const darkM=new THREE.MeshStandardMaterial({color:'#1a1512',metalness:.5,roughness:.6}),felt=new THREE.MeshStandardMaterial({color:'#0e0b0a',roughness:1});
+ROLLS.forEach((r,i)=>{const R=.38,L=1.05,g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(R,R,L,64,1,true),new THREE.MeshStandardMaterial({map:labelTex(r,ROLL_EXTRA[i]),roughness:.55,metalness:.15}));
+  const capT=new THREE.Mesh(new THREE.CylinderGeometry(R+.025,R+.025,.09,64),metal);capT.position.y=L/2+.04;const capB=capT.clone();capB.position.y=-L/2-.04;
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(R+.01,.012,8,64),metal);ring.rotation.x=Math.PI/2;ring.position.y=L/2-.02;const ring2=ring.clone();ring2.position.y=-L/2+.02;
+  const spool=new THREE.Mesh(new THREE.CylinderGeometry(.1,.1,.16,24),darkM);spool.position.y=L/2+.16;
+  const spoolTip=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.05,20),metal);spoolTip.position.y=L/2+.26;
+  const lip=new THREE.Mesh(new THREE.BoxGeometry(.16,L*.86,.07),felt);lip.position.set(0,0,R+.005);
+  [body,capT,capB,spool,spoolTip,lip].forEach(m=>{m.castShadow=true;m.receiveShadow=true});g.add(body,capT,capB,ring,ring2,spool,spoolTip,lip);
+  const h=new THREE.Group();h.add(g);h.scale.setScalar(.6);// 立着摆在盘子右边，像刚冲完放一边
+  const [px,pz]=[[1.95,-.85],[2.3,-.45],[1.98,-.05],[2.32,.35]][i];h.position.set(px,(L/2+.085)*.6,pz);h.rotation.y=i*1.3+.6;scene.add(h)});
+
+// ---- 晾绳：上面横一根，夹着晾干的相纸 ----
+const LINE_Y=1.8,LINE_Z=-2.3;
+// 绳子往右一直伸出画面，转场时顺着它走到照片墙
+// 绳子走过最后一张照片就到头了，转场时照片墙从这个线头接着往下牵；粗细做成和墙上红线一样（约 2.4px）
+const ROPE_END=12,ROPE_L=ROPE_END+9;
+const rope=new THREE.Mesh(new THREE.CylinderGeometry(.0055,.0055,ROPE_L,8),new THREE.MeshBasicMaterial({color:'#4a3a2c',toneMapped:false}));rope.rotation.z=Math.PI/2;rope.position.set(ROPE_END-ROPE_L/2,LINE_Y,LINE_Z);scene.add(rope);
+
+// ---- 相纸：正面是白边黑白照（暖调），背面手写日期和一句话 ----
+const PW=.92,PH=1.15,CW2=460,CH2=575,BD=28;
+const cover=(x,im,ox,oy,w,h)=>{const sc=Math.max(w/im.width,h/im.height);x.drawImage(im,ox+(w-im.width*sc)/2,oy+(h-im.height*sc)/2,im.width*sc,im.height*sc)};
+const paperC=(()=>{const c=document.createElement('canvas');c.width=CW2;c.height=CH2;const x=c.getContext('2d');x.fillStyle='#f3eee5';x.fillRect(0,0,CW2,CH2);
+  for(let i=0;i<1500;i++){x.fillStyle=`rgba(120,90,60,${Math.random()*.05})`;x.fillRect(Math.random()*CW2,Math.random()*CH2,2,2)}return c})();
+function makePrint(q){
+  const pos=document.createElement('canvas');pos.width=CW2-2*BD;pos.height=CH2-2*BD;{const x=pos.getContext('2d');x.filter='grayscale(1) sepia(.28) contrast(1.12) brightness(.96)';CONTENT.drawCrop(x,pics[q.pic],q.fr,0,0,pos.width,pos.height)}
+  const fc=document.createElement('canvas');fc.width=CW2;fc.height=CH2;const ft=new THREE.CanvasTexture(fc);ft.colorSpace=SRGB;ft.anisotropy=8;
+  const bc=document.createElement('canvas');bc.width=CW2;bc.height=CH2;{const x=bc.getContext('2d');x.drawImage(paperC,0,0);
+    x.fillStyle='rgba(40,30,20,.55)';x.font="400 18px 'JB Mono'";x.fillText(`${q.roll.toUpperCase()} · FRAME ${String(q.i+1).padStart(2,'0')}`,40,60);
+    x.fillStyle='#2a211b';x.font="400 64px Reenie";x.fillText(q.date.replace('.','/'),40,150);
+    x.font="400 40px Reenie";const words=/[\u2E80-\u9FFF]/.test(q.back)?q.back.match(/[A-Za-z0-9]+|./g)||[]:q.back.split(' '),sep=/[\u2E80-\u9FFF]/.test(q.back)?'':' ';let line='',y=230;for(const w of words){const t=line?line+sep+w:w;if(x.measureText(t).width>380){x.fillText(line,40,y);line=w;y+=46}else line=t}x.fillText(line,40,y)}
+  const bt=new THREE.CanvasTexture(bc);bt.colorSpace=SRGB;
+  const g=new THREE.Group(),inner=new THREE.Group();g.add(inner);
+  // 凑到眼前那张背着灯，自己透一点光才看得清字
+  // 相纸是湿的：表面一层水膜（clearcoat 很亮很滑），wet 从 1 慢慢降到 0 就是晾干（挂上绳以后）
+  const mat=m=>new THREE.MeshPhysicalMaterial({map:m,roughness:.38,clearcoat:0,clearcoatRoughness:.06,side:THREE.FrontSide,emissive:'#ffffff',emissiveMap:m,emissiveIntensity:0,envMapIntensity:1});
+  // 纸面分格，泡软了会有一点点起伏
+  const pgeo=()=>{const g=new THREE.PlaneGeometry(PW,PH,18,22),p=g.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i);p.setZ(i,Math.sin(x*5.1+y*2.3)*.006+Math.sin(y*7.3)*.004)}g.computeVertexNormals();return g};
+  const front=new THREE.Mesh(pgeo(),mat(ft)),back=new THREE.Mesh(pgeo(),mat(bt));back.rotation.y=Math.PI;
+  front.castShadow=back.castShadow=true;front.receiveShadow=true;inner.add(front,back);scene.add(g);
+  const pr={q,g,inner,front,back,fc,ft,pos,p:-1,flip:0,flipTo:0,flipAt:0,stage:'in',t:0,sway:Math.random()*6};front.userData.pr=back.userData.pr=pr;
+  develop(pr,0);return pr}
+// 显影：先是一张白纸，暗的地方最先浮出来，然后中间调，最后才是亮处的脸
+function develop(pr,p,force){if(!force&&Math.abs(pr.p-p)<.004)return;pr.p=p;const x=pr.fc.getContext('2d');x.drawImage(paperC,0,0);
+  x.drawImage(pr.pos,BD,BD);x.globalCompositeOperation='lighten';const T=Math.round(255*(1-p));x.fillStyle=`rgb(${T},${T-3},${T-8})`;x.fillRect(BD,BD,pr.pos.width,pr.pos.height);
+  x.globalCompositeOperation='source-over';wetLayer(pr,x);pr.ft.needsUpdate=true}
+function wetLayer(pr,x){const w=pr.wet??1;if(w<=.01)return;x.save();
+  // 边上吸了水：一圈往里淡的深色
+  const e=26;for(const [x0,y0,x1,y1,gx,gy] of [[0,0,CW2,e,0,1],[0,CH2-e,CW2,CH2,0,-1],[0,0,e,CH2,1,0],[CW2-e,0,CW2,CH2,-1,0]]){const g=x.createLinearGradient(gx>0?0:gx<0?CW2:0,gy>0?0:gy<0?CH2:0,gx>0?e:gx<0?CW2-e:0,gy>0?e:gy<0?CH2-e:0);
+    g.addColorStop(0,`rgba(70,45,25,${.32*w})`);g.addColorStop(1,'rgba(70,45,25,0)');x.fillStyle=g;x.fillRect(x0,y0,x1-x0,y1-y0)}
+  // 水往下流过的几道亮痕（每张纸自己的位置，第一次画的时候定下来）
+  // 亮痕和水珠是出了水才有的
+  if(!pr.lifted){x.restore();return}
+  pr.runs=pr.runs||Array.from({length:5},()=>({x:30+Math.random()*(CW2-60),y0:Math.random()*CH2*.4,len:CH2*(.25+Math.random()*.5),wd:2+Math.random()*3}));
+  pr.runs.forEach(r=>{const g=x.createLinearGradient(0,r.y0,0,r.y0+r.len);g.addColorStop(0,'rgba(255,248,235,0)');g.addColorStop(.5,`rgba(255,248,235,${.22*w})`);g.addColorStop(1,'rgba(255,248,235,0)');x.fillStyle=g;x.fillRect(r.x,r.y0,r.wd,r.len)});
+  // 底边挂着的水珠：亮点 + 下沿一道暗边
+  pr.beads=pr.beads||Array.from({length:7},()=>({x:20+Math.random()*(CW2-40),y:CH2-6-Math.random()*14,r:3+Math.random()*4}));
+  pr.beads.forEach(b=>{x.fillStyle=`rgba(60,35,20,${.35*w})`;x.beginPath();x.ellipse(b.x,b.y+1.5,b.r,b.r*1.2,0,0,Math.PI*2);x.fill();x.fillStyle=`rgba(255,250,240,${.7*w})`;x.beginPath();x.ellipse(b.x-b.r*.3,b.y-b.r*.3,b.r*.35,b.r*.35,0,0,Math.PI*2);x.fill()});
+  x.restore()}
+
+// ---- 一步一步都是你自己点：点那摞纸 → 相纸滑进盘里显影 → 竹夹子亮了点它 → 挂上晾绳 → 下一张 ----
+const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+// 最多八张，显了几张就挂几张，不顶掉；多了就挨着挂
+const TOTAL=Math.min(8,QUEUE.length);QUEUE.length=TOTAL;
+// 挂上绳的照片缩一点（HS），间距总比照片宽一截，晃起来也碰不到隔壁那张
+const HS=.74,GAP=Math.min(1.05,6.2/Math.max(1,TOTAL)),slotX=j=>-GAP*(TOTAL-1)/2+j*GAP,HANG_Y=LINE_Y-PH*HS/2-.04;
+const prints=[];let taken=0,hung=0,active=null,phase='idle',looking=null;
+// 纸沉在药水底下一截（水面 .13），波纹再大也盖得住它
+const IN_AT=new THREE.Vector3(TX-.1,.055,TZ+.02);
+const DUR={in:1.3,dev:5,grab:1.1,lift:1.3,fly:1.6,look:.9};
+// 第一张慢慢显 5 秒，后面的 2.5 秒
+const devDur=()=>taken<=1?3.5:1.6;
+// 夹子夹纸的姿势：竖着朝下，两片竹子一前一后（本地 x 对着纸面的法线），纸夹在两片中间
+const REST_Q=new THREE.Quaternion().setFromEuler(TONGS_REST.rot),GRIP_Q=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3(0,0,1),new THREE.Vector3(1,0,0),new THREE.Vector3(0,1,0)));
+// 夹头夹进纸边多深；纸上边那一点（世界坐标）→ 夹子中心该在哪
+const BITE=.07,gripCenter=(pr,up,out)=>{out.set(0,PH/2-BITE,0);pr.g.localToWorld(out);out.y+=TL/2-.05+up;return out};
+const _c=new THREE.Vector3(),_qa=new THREE.Quaternion();
+const _a=new THREE.Vector3(),_b=new THREE.Vector3(),_q=new THREE.Quaternion();
+const FLAT=new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,.1)),UP=new THREE.Quaternion().setFromEuler(new THREE.Euler(-.15,0,0)),HANG=new THREE.Quaternion();
+
+// 左手边一摞白相纸，最上面一张红笔写着还剩几张
+const STACK_AT=new THREE.Vector3(TX-TW/2-.85,0,TZ+.15);
+const stack=new THREE.Group();stack.position.copy(STACK_AT);stack.rotation.y=.14;scene.add(stack);
+const sheetM=new THREE.MeshStandardMaterial({color:'#efe9de',roughness:.8});
+const layers=[];for(let i=0;i<TOTAL;i++){const l=new THREE.Mesh(new THREE.BoxGeometry(PW,.014,PH),sheetM);l.position.set((Math.random()-.5)*.04,.008+i*.016,(Math.random()-.5)*.04);l.rotation.y=(Math.random()-.5)*.06;l.castShadow=l.receiveShadow=true;stack.add(l);layers.push(l)}
+const tagC=document.createElement('canvas');tagC.width=CW2;tagC.height=CH2;const tagT=new THREE.CanvasTexture(tagC);tagT.colorSpace=SRGB;
+const tag=new THREE.Mesh(new THREE.PlaneGeometry(PW,PH),new THREE.MeshStandardMaterial({map:tagT,roughness:.8}));tag.rotation.x=-Math.PI/2;tag.receiveShadow=true;stack.add(tag);
+function paintTag(){const left=TOTAL-taken,x=tagC.getContext('2d');x.drawImage(paperC,0,0);
+  if(left>0){x.fillStyle='#c62f24';x.font="400 92px Reenie";{const w=x.measureText(`yours: ${left}`).width;if(70+w>CW2-50)x.font=`400 ${Math.floor(92*(CW2-120)/w)}px Reenie`}x.save();x.translate(70,300);x.rotate(-.08);x.fillText(`yours: ${left}`,0,0);x.restore();
+    x.fillStyle='rgba(40,30,20,.5)';x.font="400 18px 'JB Mono'";x.fillText('DARKROOM SEVEN · RC PAPER',60,80)}
+  tagT.needsUpdate=true;const top=layers[left-1];tag.visible=left>0;if(top)tag.position.set(top.position.x,top.position.y+.009,top.position.z)}
+paintTag();
+
+const hint=document.getElementById('hint'),count=document.getElementById('count');
+function say(){const h={idle:hung?'tap the paper for the next one':'tap the paper to start',in:'',dev:'wait for it',ready:'now the tongs',grab:'',lift:'',fly:'',done:'tap a print to read the back'}[phase];
+  hint.textContent=TOTAL?h:'nothing developed yet';hint.classList.toggle('gone',(!h&&TOTAL>0)||!ltDone);count.textContent=`${hung} of ${TOTAL} dry`}
+window.__ltSay=say;
+say();
+
+function takeSheet(){if(phase!=='idle'||taken>=TOTAL)return;
+  const top=layers[TOTAL-taken-1];top.visible=false;top.getWorldPosition(_a);
+  active=makePrint(QUEUE[taken++]);active.from=_a.clone().setY(_a.y+.02);active.g.position.copy(active.from);active.g.quaternion.copy(FLAT);prints.push(active);
+  paintTag();phase='in';active.t=0;say()}
+function grabIt(){if(phase!=='ready')return;phase='grab';active.t=0;say()}
+
+// 滴水：一小把水珠循环用
+const drops=Array.from({length:14},()=>{const d=new THREE.Mesh(new THREE.SphereGeometry(.018,8,6),new THREE.MeshPhysicalMaterial({color:'#5a2a14',transparent:true,opacity:.75,roughness:.05,clearcoat:1}));d.visible=false;d.userData.v=0;scene.add(d);return d});
+let dropT=0,boost=.4,leave=0;
+function spawnDrop(p){const d=drops.find(d=>!d.visible);if(!d)return;d.visible=true;d.userData.v=0;d.position.copy(p).add(_a.set((Math.random()-.5)*PW*.8,0,(Math.random()-.5)*.05))}
+const tips=[];tongs.traverse(c=>{if(c.material&&c.material.color&&c.material.color.getHexString()==='9e2a1e')tips.push(c)});
+
+// ---- 点 ----
+const ray=new THREE.Raycaster(),m=new THREE.Vector2(),fr=document.getElementById('frame');
+const local=e=>{const r=fr.getBoundingClientRect();return[(e.clientX-r.left)/k,(e.clientY-r.top)/k]};
+const aim=e=>{const [x,y]=local(e);m.set(x/1040*2-1,-(y/694)*2+1);ray.setFromCamera(m,cam)};
+const hits=(e,objs)=>{aim(e);return ray.intersectObjects(objs,true).length>0};
+const pickPrint=e=>{aim(e);const h=ray.intersectObjects(prints.flatMap(p=>[p.front,p.back]))[0];return h&&h.object.userData.pr};
+function what(e){
+  if(!ltDone)return null;
+  if(looking)return 'back';
+  if(phase==='idle'&&taken<TOTAL&&hits(e,[stack]))return 'stack';
+  if(phase==='ready'&&(hits(e,[tongs])||pickPrint(e)===active))return 'tongs';
+  const p=pickPrint(e);if(p&&p.stage==='hung')return p;return null}
+fr.addEventListener('pointermove',e=>{fr.style.cursor=what(e)?'pointer':''});
+fr.addEventListener('click',e=>{const w=what(e);
+  if(w==='back'){looking.stage='unlook';looking.t=0;looking.flipTo=0;looking=null;say()}
+  else if(w==='stack')takeSheet();
+  else if(w==='tongs')grabIt();
+  else if(w&&w.stage==='hung'){flipped=true;peekEl.classList.remove('on');hint.textContent='tap again to hang it back';hint.classList.remove('gone');looking=w;w.stage='look';w.t=0;w.from=w.g.position.clone();w.fromQ=w.g.quaternion.clone()}});
+// 全挂完：桌上红笔 all dry，点了顺着晾绳过去照片墙
+const dry=document.getElementById('dry');
+// 箭头跟着第一张晾着的照片走（照片会晃、镜头会动）：箭头尖对着它右上角
+const peekEl=document.getElementById('peek');let flipped=false;const _pk=new THREE.Vector3();
+function placePeek(){const p=prints.find(q=>q.stage==='hung');const want=!!p&&!flipped&&!looking&&!leave&&(phase==='idle'||phase==='done'||phase==='in'||phase==='dev');
+  peekEl.classList.toggle('on',want);if(!p)return;_pk.set(PW/2,PH/2,0);p.g.localToWorld(_pk);_pk.project(cam);
+  const x=(_pk.x+1)/2*1040,y=(1-_pk.y)/2*694;peekEl.style.left=(x-6)+'px';peekEl.style.top=(y-6)+'px'}
+// 照片墙提前在后面装好（透明），转场时淡上来，不黑场也不刷新页面
+const wallF=document.createElement('iframe');wallF.className='next';let wallGo=0,cut=0;
+// 换片时那一下黑：盖在暗房上面、照片墙下面
+const blk=document.createElement('div');blk.style.cssText='position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;will-change:opacity';document.body.appendChild(blk);
+// 绳子不吃灯光：最后的红和墙上那根线在暗底上看起来是同一个红
+const ROPE=new THREE.Color('#4a3a2c'),RED=new THREE.Color('#d03c2b');
+// 从镜头现在站的地方往右走（看片台那条路过来的镜头偏右一点，不能先拽回正中间）
+let X0=0;
+dry.addEventListener('click',()=>{if(leave)return;leave=.001;X0=cam.position.x;dry.classList.remove('on');hint.classList.add('gone')});
+
+const clock=new THREE.Clock();
+const loop=fd=>{const dt=fd||Math.min(clock.getDelta(),.1),t=clock.elapsedTime+=fd||0;
+  ripple(t);safe.intensity=150+Math.sin(t*.9)*4;
+  const A=active;
+  if(A&&phase!=='idle'&&phase!=='done'){A.t+=dt;const u=Math.min(1,A.t/(DUR[phase]||1)),e=ease(u);
+    if(phase==='in'){A.g.position.lerpVectors(A.from,IN_AT,e);// 先抬起来越过盘沿（盘沿高 .2，那摞最底下那张起飞最低），再落进药水
+      A.g.position.y+=Math.sqrt(Math.sin(u*Math.PI))*.42;A.g.updateMatrixWorld(true);
+      // 纸一碰到水面：沿着四条边按下去一圈；之后往前滑的那条边一路推着水
+      if(!A.splashed&&A.g.position.y<LIQ_Y){A.splashed=true;pokeOutline(A,-.02)}
+      else if(A.splashed&&u<1){_e[0].set(PW/2,0,0);A.g.localToWorld(_e[0]);poke(_e[0].x,_e[0].z,-.006*(1-u),.09)}
+      if(u>=1){phase='dev';A.t=0;A.agi=0;pokeOutline(A,-.01);say()}}
+    else if(phase==='dev'){const ud=Math.min(1,A.t/devDur());
+      // AGITATE GENTLY：隔一会儿在纸边上轻轻晃一下水
+      if((A.agi=(A.agi||0)+dt)>1.3){A.agi=0;_e[0].set((Math.random()-.5)*PW,(Math.random()<.5?-1:1)*PH/2,0);A.g.localToWorld(_e[0]);poke(_e[0].x,_e[0].z,-.008,.08)}develop(A,Math.pow(ud,1.3));A.g.position.y=IN_AT.y+Math.sin(t*1.3)*.004;if(ud>=1){phase='ready';say()}}
+    else if(phase==='ready'){A.g.position.y=IN_AT.y+Math.sin(t*1.3)*.004}
+    // 夹：先张开、转成竖的移到纸上边正上方 → 落下去 → 合拢
+    else if(phase==='grab'){if(!A.tFrom){A.tFrom=tongs.position.clone();A.qFrom=tongs.quaternion.clone()}
+      if(u<.55){const k=ease(u/.55);gripCenter(A,.35,_c);tongs.position.lerpVectors(A.tFrom,_c,k);tongs.quaternion.slerpQuaternions(A.qFrom,GRIP_Q,k);openTongs(k)}
+      else if(u<.8){const k=ease((u-.55)/.25);gripCenter(A,.35*(1-k),_c);tongs.position.copy(_c);tongs.quaternion.copy(GRIP_Q);openTongs(1);
+        // 夹头伸进水里那一下
+        if(k>.6&&!A.dipped){A.dipped=true;_e[0].set(0,PH/2-BITE,0);A.g.localToWorld(_e[0]);poke(_e[0].x-.03,_e[0].z,-.025,.06);poke(_e[0].x+.03,_e[0].z,-.025,.06)}}
+      else{gripCenter(A,0,_c);tongs.position.copy(_c);tongs.quaternion.copy(GRIP_Q);openTongs(1-ease((u-.8)/.2))}
+      if(u>=1){openTongs(0);phase='lift';A.t=0;A.from=A.g.position.clone();say()}}
+    else if(phase==='lift'){_a.set(A.from.x,1.35,A.from.z-.4);A.g.position.lerpVectors(A.from,_a,e);A.g.quaternion.slerpQuaternions(FLAT,UP,e);
+      A.g.updateMatrixWorld(true);gripCenter(A,0,tongs.position);tongs.quaternion.copy(GRIP_Q);
+      // 泡在药水里的时候纸自己不反光（反光是水面的事）；一出水，表面那层水膜就亮起来
+      A.front.material.clearcoat=A.back.material.clearcoat=Math.min(1,u*3);
+      // 纸被提出水面：四条边把水往上带一下，纸底下那块水被吸起来又落回去
+      if(!A.pulled&&u>.06){A.pulled=true;pokeOutline(A,.035);poke(A.from.x,A.from.z,.02,.4)}if(!A.lifted&&u>.15){A.lifted=true;develop(A,A.p,true)}
+      dropT+=dt;if(dropT>.12&&u>.3){dropT=0;spawnDrop(_b.set(A.g.position.x,A.g.position.y-PH/2,A.g.position.z))}
+      if(u>=1){phase='fly';A.t=0;A.from=A.g.position.clone();A.slot=hung}}
+    else if(phase==='fly'){_a.set(slotX(A.slot),HANG_Y,LINE_Z+(A.slot%2)*.03);A.g.position.lerpVectors(A.from,_a,e);A.g.scale.setScalar(1-(1-HS)*e);A.g.position.y+=Math.sin(u*Math.PI)*.3;
+      A.g.quaternion.slerpQuaternions(UP,HANG,e);A.home=_a.clone();
+      if(u>=1){A.stage='hung';addPin(A);hung++;active=null;phase=hung>=TOTAL?'done':'idle';say();if(phase==='done'){setTimeout(()=>dry.classList.add('on'),900);wallF.src='wall.html?v=tnrhqg&from=tray';document.body.appendChild(wallF)}}}}
+  // 竹夹子：没在用就回盘沿；该点它的时候红头一呼一吸地亮
+  // 松开以后自己张一下再合上、回到盘沿
+  if(phase!=='grab'&&phase!=='lift'){tongs.position.lerp(TONGS_REST.pos,Math.min(1,dt*4));tongs.quaternion.slerp(REST_Q,Math.min(1,dt*4))}
+  const glowOn=phase==='ready'?.5+.5*Math.sin(t*4):0;tips.forEach(m=>{m.material.emissive.set('#ff5a2a');m.material.emissiveIntensity=glowOn*.9});
+  // 那摞纸：轮到点它的时候最上面一张轻轻浮一下
+  if(tag.visible){const top=layers[TOTAL-taken-1];if(top)tag.position.y=top.position.y+.009+(phase==='idle'?Math.max(0,Math.sin(t*2.4))*.02:0)}
+  // 晾着的：轻轻晃；被点的那张凑到眼前、翻到背面；再点挂回去
+  prints.forEach(p=>{
+    if(p.stage==='hung'){p.g.rotation.set(Math.sin(t*.6+p.sway)*.03,0,Math.sin(t*.8+p.sway)*.025);
+      if((p.wet??1)>0){const w0=p.wet??1;p.wet=Math.max(0,w0-dt/9);if(Math.floor(w0*20)!==Math.floor(p.wet*20)){develop(p,p.p,true);p.front.material.clearcoat=p.wet}}}
+    else if(p.stage==='look'){p.t+=dt;const e=ease(Math.min(1,p.t/DUR.look));p.g.scale.setScalar(HS+(1-HS)*e);cam.getWorldDirection(_a);_b.copy(cam.position).addScaledVector(_a,2.9);
+      p.g.position.lerpVectors(p.from,_b,e);p.g.quaternion.slerpQuaternions(p.fromQ,cam.quaternion,e);if(e>=1)p.flipTo=1;p.lit=e}
+    else if(p.stage==='unlook'){p.t+=dt;const e=ease(Math.min(1,p.t/DUR.look));if(p.t<.35){p.lookPos=p.lookPos||p.g.position.clone();p.lookQ=p.lookQ||p.g.quaternion.clone()}
+      else{const e2=ease(Math.min(1,(p.t-.35)/DUR.look));p.g.scale.setScalar(1-(1-HS)*e2);p.g.position.lerpVectors(p.lookPos,p.home,e2);p.g.quaternion.slerpQuaternions(p.lookQ,HANG,e2);if(e2>=1){p.stage='hung';p.lookPos=p.lookQ=null}}}
+    if(p.stage==='unlook')p.lit=Math.max(0,(p.lit||0)-dt*1.5);p.front.material.emissiveIntensity=p.back.material.emissiveIntensity=(p.lit||0)*.28;
+    p.flip+=(p.flipTo-p.flip)*Math.min(1,dt*5);p.inner.rotation.y=ease(Math.min(1,Math.max(0,p.flip)))*Math.PI});
+  drops.forEach(d=>{if(!d.visible)return;d.userData.v+=dt*5;d.position.y-=d.userData.v*dt;if(d.position.y<LIQ_Y){d.visible=false;poke(d.position.x,d.position.z,-.02,.045)}});
+  // 点了 all dry：镜头抬起来顺着晾绳往右走，暗下去，进照片墙
+  if(leave){leave+=dt/3.6;const u=Math.min(1,leave),e=ease(u),run=X0+u*u*5+Math.max(0,leave-1)*10;
+    // 镜头降到晾绳的高度，正对着它往右走，越走越快；绳子慢慢染成红线
+    cam.position.set(run,CAM0[0]+(LINE_Y-CAM0[0])*e,CAM0[1]+(LINE_Z+5.6-CAM0[1])*e);_a.copy(LOOK).lerp(_b.set(run,LINE_Y,LINE_Z),e);_a.x=_a.x*(1-e)+run*e;cam.lookAt(_a);
+    const red=Math.min(1,Math.max(0,(u-.05)/.4));rope.material.color.lerpColors(ROPE,RED,red);
+    // 走到快头：灯暗下去一次，照片墙从暗里亮起来。暗和亮都交给浏览器合成层去过渡（主线程忙也不卡）；暗到底这边就停画，力气让给照片墙
+    if(u>=.88&&!cut){cut=1;blk.style.transition='opacity .8s ease-in';blk.style.opacity=1;
+      setTimeout(()=>{renderer.setAnimationLoop(null);_b.set(run,LINE_Y,LINE_Z).project(cam);
+        wallF.contentWindow.postMessage({go:1,x:-20,y:(1-_b.y)/2*694},'*');wallF.classList.add('on');
+        wallF.style.transition='opacity .9s ease-out';wallF.style.opacity=1},850)}}
+  else cam.lookAt(LOOK);
+  placePeek();
+  renderer.render(scene,cam)};
+// 晾绳上的木夹子
+function addPin(p){const pin=new THREE.Mesh(new THREE.BoxGeometry(.06,.2,.06),new THREE.MeshStandardMaterial({color:'#b48a5a',roughness:.7}));pin.position.set(0,PH/2+.02,.03);pin.castShadow=true;p.inner.add(pin)}
+// ?done：直接全挂好、all dry 已经写出来，只看转场用
+if(new URLSearchParams(location.search).has('done')){
+  QUEUE.forEach((q,j)=>{const p=makePrint(q);develop(p,1);p.slot=j;p.home=new THREE.Vector3(slotX(j),HANG_Y,LINE_Z+(j%2)*.03);p.g.position.copy(p.home);p.g.scale.setScalar(HS);p.wet=0;p.stage='hung';addPin(p);prints.push(p)});
+  layers.forEach(l=>l.visible=false);taken=hung=TOTAL;paintTag();phase='done';say();dry.classList.add('on');wallF.src='wall.html?v=tnrhqg&from=tray';document.body.appendChild(wallF)}
+renderer.setAnimationLoop(()=>loop());
+// 看片台的脚本都到了、第一帧画出来了才告诉壳子可以亮
+setTimeout(()=>ROLL.ready(),120);
+// 面板收起来时 rAF 会停，测试用：__tray.step(帧数)
+window.__tray={cam,LOOK,step:n=>{for(let i=0;i<n;i++)loop(1/30)},state:()=>({phase,taken,hung,TOTAL,looking:!!looking}),what:(x,y)=>{const w=what({clientX:x,clientY:y});return w&&(w.stage||w)},pp:()=>prints.map(p=>p.stage+':'+p.g.position.toArray().map(v=>v.toFixed(2)).join(','))};
+</script>
+</body></html>

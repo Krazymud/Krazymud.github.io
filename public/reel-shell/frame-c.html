@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A Roll For Two · 02</title>
+<style>
+@font-face{font-family:'JB Mono';src:url(font/jbmono.woff2) format('woff2')}
+@font-face{font-family:'Fraunces';src:url(font/Fraunces-normal.woff2) format('woff2');font-weight:100 900}
+@font-face{font-family:'Fraunces';src:url(font/Fraunces-italic.woff2) format('woff2');font-weight:100 900;font-style:italic}
+@font-face{font-family:'Reenie';src:url(font/ReenieBeanie-normal.woff2) format('woff2')}
+:root{--cream:#f3e6d2;--ink:#060403;--red:#ee5546}
+html,body{margin:0;height:100%;background:var(--ink);overflow:hidden}
+#stage{position:absolute;left:50%;top:50%;width:1600px;height:1000px;background:var(--ink)}
+.mono{font:400 11px/1.7 'JB Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--cream)}
+
+/* 和片头同一格放映光 */
+.proj{position:absolute;left:280px;top:130px;width:1040px;height:694px}
+.proj .spill{position:absolute;inset:-60px;border-radius:60px;background:radial-gradient(closest-side,rgba(255,150,60,.5),transparent);filter:blur(60px);opacity:0;transition:opacity 1.2s ease .15s}
+.frame{position:absolute;inset:0;overflow:hidden;background:#0d0705;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1040 694'%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='9'/%3E%3C/filter%3E%3Crect x='18' y='18' width='1004' height='658' rx='30' fill='white' filter='url(%23b)'/%3E%3C/svg%3E") center/100% 100%;
+          mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1040 694'%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='9'/%3E%3C/filter%3E%3Crect x='18' y='18' width='1004' height='658' rx='30' fill='white' filter='url(%23b)'/%3E%3C/svg%3E") center/100% 100%}
+
+/* 屋子：一面暖色的墙，灯亮了才看得见，光从灯泡那里往外化开 */
+.room{position:absolute;inset:0;opacity:.05;
+  background:
+    radial-gradient(520px 420px at 680px 280px,#c9763a,#6a3214 42%,#24100606 85%),
+    radial-gradient(900px 600px at 680px 300px,#3a1a0a,#160904 80%)}
+/* 墙：真的抹灰墙面，乘到暖光上，光强的地方纹理最清楚 */
+.room::after{content:"";position:absolute;inset:0;opacity:.85;mix-blend-mode:multiply;background:url(img/plaster.jpg) 0 0/700px;filter:contrast(1.6) brightness(1.05)}
+.shelf{position:absolute;left:0;right:0;top:604px;height:22px;background:linear-gradient(rgba(255,200,140,.25),transparent 30%,rgba(0,0,0,.55)),url(img/wood.jpg) 0 0/420px,#6b3a1c;background-blend-mode:normal,multiply;filter:brightness(.55) saturate(.9);
+  box-shadow:0 14px 30px rgba(0,0,0,.6);opacity:.06}
+/* 灯正下方落在架子上的一圈光 */
+.pool{position:absolute;left:420px;top:560px;width:520px;height:90px;border-radius:50%;opacity:0;mix-blend-mode:screen;
+  background:radial-gradient(closest-side,rgba(255,180,100,.45),transparent)}
+
+/* 旧收音机：关灯时只是一团化开的影子，开灯才清楚 */
+.radio{position:absolute;left:166px;top:309px;width:428px;height:296px;overflow:hidden;border-radius:6px;
+  filter:blur(10px) brightness(.08) saturate(.3);opacity:.9;transition:filter 1.3s ease .5s,opacity 1.3s ease .5s}
+.radio img{position:absolute;left:-27px;top:-11px;width:479px}
+.radio .dial{position:absolute;left:26px;top:193px;width:383px;height:81px;border-radius:4px;opacity:0;
+  background:radial-gradient(60% 80% at 50% 50%,rgba(255,190,90,.75),rgba(255,140,40,.15) 70%,transparent);mix-blend-mode:screen;transition:opacity .8s ease 1.6s}
+/* 光从右上来：右上亮一点，左下沉下去 */
+.radio .shade{position:absolute;inset:0;background:linear-gradient(225deg,rgba(255,190,120,.18),transparent 35%,transparent 55%,rgba(20,8,2,.6))}
+/* 投在墙上的影子，往左下歪 */
+.rshadow{position:absolute;left:150px;top:318px;width:428px;height:286px;border-radius:14px;background:#000;filter:blur(22px);opacity:0;transition:opacity 1.2s ease .5s}
+
+/* 挂着的灯泡，拉完会晃两下 */
+.bulb{position:absolute;left:640px;top:0;width:80px;height:330px;transform-origin:40px 0}
+.bulb svg{position:absolute;left:0;top:0;overflow:visible}
+.bulb .fil{stroke:#6a5040;transition:stroke .2s}
+.bulb .warmglass{opacity:0}
+.halo{position:absolute;left:-150px;top:102px;width:380px;height:380px;border-radius:50%;opacity:0;pointer-events:none;
+  background:radial-gradient(circle,rgba(255,236,190,1),rgba(255,180,90,.45) 22%,rgba(255,130,50,.12) 48%,rgba(255,120,40,0) 70%);mix-blend-mode:screen}
+.swing{animation:swing 2.6s cubic-bezier(.4,0,.4,1)}
+@keyframes swing{0%{transform:rotate(0)}12%{transform:rotate(3.2deg)}34%{transform:rotate(-2.2deg)}56%{transform:rotate(1.2deg)}78%{transform:rotate(-.5deg)}100%{transform:rotate(0)}}
+
+/* 拉绳 */
+.cord{position:absolute;left:800px;top:0;width:60px;height:440px;cursor:grab;transition:transform .25s cubic-bezier(.3,1.6,.5,1)}
+.cord .line{position:absolute;left:29px;top:0;width:1.5px;height:400px;background:linear-gradient(#3a2a1e,#c9b8a0)}
+.cord .bead{position:absolute;left:21px;top:396px;width:18px;height:30px;border-radius:9px 9px 7px 7px;
+  background:radial-gradient(circle at 35% 30%,#f0d6a8,#b88445 55%,#5a3a18);box-shadow:2px 6px 10px rgba(0,0,0,.6)}
+.cord:hover{transform:translateY(8px)}
+/* 箭头尖正好戳在珠子右边 (848,418) */
+.pull{position:absolute;left:878px;top:446px;transition:opacity .4s}
+.pull span{display:block;font:400 40px/1 'Reenie',cursive;color:var(--red);transform:rotate(-6deg)}
+.pull svg{position:absolute;left:-40px;top:-42px;overflow:visible}
+
+/* 晾着的胶卷，下一幕的伏笔 */
+.line2{position:absolute;left:840px;top:96px;width:240px;height:1px;background:rgba(220,200,170,.5);transform:rotate(-3deg);opacity:.05}
+/* 橙色片基的彩色负片：两边方孔，边上印着片号，灯亮了光从片子背后透过来 */
+.neg{position:absolute;width:36px;padding:12px 15px 16px;border-radius:2px;opacity:.05;
+  transform:perspective(700px) rotateY(var(--y,12deg)) rotate(var(--r,0deg));transform-origin:50% 0;
+  background:
+    linear-gradient(#140904 0 7px,transparent 7px) 3px 5px/5px 12px repeat-y,
+    linear-gradient(#140904 0 7px,transparent 7px) calc(100% - 3px) 5px/5px 12px repeat-y,
+    linear-gradient(90deg,rgba(60,20,0,.35),transparent 18%,rgba(255,220,160,.18) 46%,transparent 60%,rgba(60,20,0,.35)),
+    linear-gradient(#c8682a,#b45a20 40%,#c06428 70%,#a85018);
+  box-shadow:0 14px 26px rgba(0,0,0,.55),0 0 0 .5px rgba(255,200,140,.25)}
+.neg .fr{position:relative;width:36px;height:52px;margin-bottom:5px;overflow:hidden;border-radius:1px;background:#3a1606}
+.neg .fr img{width:100%;height:100%;object-fit:cover;display:block;
+  filter:invert(1) sepia(1) saturate(2.4) hue-rotate(-14deg) brightness(.72) contrast(.85)}
+.neg .fr::after{content:"";position:absolute;inset:0;background:#b85a1e;mix-blend-mode:multiply;opacity:.45}
+.neg .edge{position:absolute;left:8px;top:14px;writing-mode:vertical-rl;font:400 6px/1 'JB Mono',monospace;letter-spacing:.12em;color:#ffd79a;opacity:.6;white-space:nowrap}
+.neg .edge.r{left:auto;right:8px;top:30px}
+/* 木头夹子 */
+.neg .pin{position:absolute;left:50%;top:-24px;width:13px;height:34px;margin-left:-6.5px;border-radius:2px;
+  background:linear-gradient(90deg,#8a6438,#d8b98a 30%,#c9a472 50%,#8a6438 52%,#d2b080 70%,#9a7244);box-shadow:1px 3px 5px rgba(0,0,0,.5)}
+.neg .pin::after{content:"";position:absolute;left:-1px;right:-1px;top:13px;height:3px;border-radius:2px;background:linear-gradient(#ddd,#777)}
+/* 灯亮以后：片子发着一点橙光 */
+.on .neg{box-shadow:0 14px 26px rgba(0,0,0,.55),0 0 0 .5px rgba(255,200,140,.3),0 0 28px rgba(255,140,50,.28)}
+
+/* 灯亮之后：钨丝先闪两下才稳住，屋子跟着一跳一跳亮起来 */
+.on .room,.on .spill{animation:ignite 1.5s linear forwards}
+.on .shelf,.on .line2,.on .neg{animation:ignite 1.5s linear forwards}
+.on .pool{animation:ignite 1.5s linear forwards,breathe 4s ease-in-out 1.6s infinite}
+.on .halo,.on .bulb .warmglass{animation:ignite 1.5s linear forwards,breathe 4s ease-in-out 1.6s infinite}
+.on .bulb .fil{stroke:#fff3cf}
+.on .radio{filter:blur(0) brightness(.95) saturate(.95) sepia(.12);opacity:1}
+.on .radio .dial{opacity:1;animation:hum 3s ease-in-out 3s infinite}
+.on .rshadow{opacity:.75}
+.on .pull{opacity:0}
+.on .now{opacity:1;transform:none}
+@keyframes ignite{0%{opacity:0}6%{opacity:.75}11%{opacity:.08}19%{opacity:.9}25%{opacity:.25}40%,100%{opacity:1}}
+@keyframes breathe{50%{opacity:.88}}
+@keyframes hum{50%{opacity:.8}}
+
+/* 收音机响了：正在放的歌 */
+/* ?dj：收音机先像主持人点歌，字幕一行行出来，说完才放歌 */
+.dj{position:absolute;left:640px;top:440px;width:330px;color:var(--cream);opacity:0;transition:opacity .6s}
+.dj .who{margin-bottom:10px;opacity:.55}
+.dj p{margin:0;font:italic 300 21px/1.45 'Fraunces',serif;min-height:120px}
+.dj.show{opacity:1}
+.djmode .now{display:none}
+.djmode.played .now{display:flex}
+.now{position:absolute;left:166px;top:640px;display:flex;gap:28px;align-items:baseline;color:var(--cream);opacity:0;transform:translateY(6px);transition:.8s ease 1.6s}
+.now .song{font:italic 300 26px 'Fraunces',serif}
+.now .pick{cursor:pointer;opacity:.45;border-bottom:1px solid rgba(243,230,210,.35);padding-bottom:1px;transition:opacity .3s}
+.now .pick:hover,.now .pick.open{opacity:1}
+.plist{position:absolute;left:-16px;bottom:46px;min-width:360px;padding:10px 0;background:rgba(10,7,5,.9);border:1px solid rgba(243,230,210,.12);border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,.5);
+  opacity:0;visibility:hidden;transform:translateY(8px);transition:opacity .3s,transform .35s cubic-bezier(.3,.7,.3,1),visibility 0s .35s;z-index:9}
+.plist.open{opacity:1;visibility:visible;transform:none;transition:opacity .3s,transform .35s cubic-bezier(.3,.7,.3,1),visibility 0s}
+.plist div{display:flex;align-items:baseline;gap:12px;padding:8px 20px 8px 18px;cursor:pointer;color:var(--cream);opacity:.55;transition:opacity .2s,background .2s}
+.plist div:hover{opacity:1;background:rgba(243,230,210,.05)}
+.plist div.cur{opacity:1}
+.plist i{width:6px;height:6px;border-radius:50%;flex:none;align-self:center;background:transparent}.plist div.cur i{background:var(--red)}
+.plist b{font:italic 300 19px 'Fraunces',serif}.plist small{font:400 10px 'JB Mono',monospace;letter-spacing:.08em;text-transform:uppercase;opacity:.5}
+.now .eq{display:inline-flex;gap:3px;align-items:flex-end;height:12px;margin-right:10px}
+.now .eq i{width:2px;background:var(--cream);animation:eq 1s ease-in-out infinite}
+.now .eq i:nth-child(2){animation-delay:-.4s}.now .eq i:nth-child(3){animation-delay:-.7s}
+@keyframes eq{0%,100%{height:3px}50%{height:12px}}
+
+.grain{position:absolute;inset:0;opacity:.22;mix-blend-mode:overlay;pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E")}
+.vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 95% at 55% 40%,transparent 45%,rgba(10,4,1,.7) 100%)}
+.corner{position:absolute;opacity:.55}
+.mote{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(255,200,140,.5),rgba(255,170,90,0) 70%);filter:blur(2px)}
+</style></head>
+<body>
+<div id="stage">
+  <div class="proj">
+    <div class="spill"></div>
+    <div class="frame">
+      <div class="room"></div>
+      <div class="shelf"></div>
+
+      <div class="pool"></div>
+      <div class="line2"></div>
+      <div class="neg" style="left:872px;top:100px;--r:-2deg;--y:14deg">
+        <i class="pin"></i>
+        <div class="fr"><img data-pick="0" alt=""></div>
+        <div class="fr"><img data-pick="1" alt=""></div>
+        <div class="fr"><img data-pick="2" alt=""></div>
+        <div class="fr"><img data-pick="3" alt=""></div>
+        <span class="edge">KODAK GOLD 200 ▸ 9 ▸ 9A ▸ 10</span>
+        <span class="edge r">▸ 11 ▸ 11A ▸ 12 ▸ 12A</span>
+      </div>
+      <div class="neg" style="left:962px;top:94px;--r:1.5deg;--y:-10deg">
+        <i class="pin"></i>
+        <div class="fr"><img data-pick="4" alt=""></div>
+        <div class="fr"><img data-pick="5" alt=""></div>
+        <div class="fr"><img data-pick="6" alt=""></div>
+        <span class="edge">KODAK GOLD 200 ▸ 13 ▸ 13A</span>
+        <span class="edge r">▸ 14 ▸ 14A ▸ 15</span>
+      </div>
+
+      <div class="rshadow"></div>
+      <div class="radio"><img src="img/radio.jpg" alt=""><div class="dial"></div><div class="shade"></div></div>
+
+      <div class="bulb" id="bulb">
+        <div class="halo"></div>
+        <svg width="80" height="340" viewBox="0 0 80 340">
+          <defs>
+            <radialGradient id="lit" cx="50%" cy="62%" r="58%"><stop offset="0" stop-color="#fff6e0"/><stop offset=".45" stop-color="#ffd08a" stop-opacity=".95"/><stop offset="1" stop-color="#e2782a" stop-opacity=".85"/></radialGradient>
+            <linearGradient id="brass" x1="0" x2="1"><stop offset="0" stop-color="#5a3c1c"/><stop offset=".35" stop-color="#d9b072"/><stop offset=".55" stop-color="#a87c40"/><stop offset="1" stop-color="#4a2e14"/></linearGradient>
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <!-- 布包电线，拧着的 -->
+          <line x1="40" y1="0" x2="40" y2="196" stroke="#2a1a10" stroke-width="3.2"/>
+          <line x1="40" y1="0" x2="40" y2="196" stroke="#6a4a2e" stroke-width="3.2" stroke-dasharray="2 3" opacity=".6"/>
+          <!-- 铜灯头 -->
+          <path d="M31 196 h18 l3 22 h-24 z" fill="url(#brass)"/>
+          <rect x="28" y="216" width="24" height="5" rx="1.5" fill="url(#brass)"/>
+          <g fill="url(#brass)"><rect x="30" y="222" width="20" height="4" rx="1.5"/><rect x="30.5" y="227" width="19" height="4" rx="1.5"/><rect x="31" y="232" width="18" height="4" rx="1.5"/></g>
+          <!-- 爱迪生灯泡的玻璃 -->
+          <path id="g" d="M31 237 C 31 250, 9 262, 9 292 C 9 315, 23 330, 40 330 C 57 330, 71 315, 71 292 C 71 262, 49 250, 49 237 Z" fill="rgba(255,236,210,.05)" stroke="rgba(255,226,190,.32)" stroke-width="1"/>
+          <path class="warmglass" d="M31 237 C 31 250, 9 262, 9 292 C 9 315, 23 330, 40 330 C 57 330, 71 315, 71 292 C 71 262, 49 250, 49 237 Z" fill="url(#lit)"/>
+          <!-- 钨丝：两根支架 + 一圈一圈的笼子 -->
+          <path d="M37 238 L35 284 M43 238 L45 284 M40 238 L40 300" stroke="rgba(200,180,150,.45)" stroke-width=".8" fill="none"/>
+          <path class="fil" filter="url(#glow)" d="M24 284 L29 300 L34 284 L39 300 L44 284 L49 300 L54 284" stroke-width="1.3" fill="none" stroke-linejoin="round"/>
+          <!-- 玻璃上的高光 -->
+          <path d="M18 278 C 18 266, 24 258, 30 252" stroke="rgba(255,255,255,.35)" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <path d="M16 300 C 17 306, 19 310, 22 313" stroke="rgba(255,255,255,.18)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
+
+      <div class="cord" id="cord"><div class="line"></div><div class="bead"></div></div>
+      <div class="pull"><svg width="40" height="40" fill="none"><path d="M44 46 C 30 46, 16 36, 10 14 M10 14 L 6 24 M10 14 L 18 21" stroke="#ee5546" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>pull me</span></div>
+
+      <div class="dj" id="dj"><div class="mono who">On air · request line</div><p id="djt"></p></div>
+      <div class="now">
+        <span class="mono"><span class="eq"><i></i><i></i><i></i></span>Now playing · Side A · <span id="sideNo">01</span></span>
+        <span class="song" id="songT">the song we first danced to</span>
+        <span class="mono pick" id="pick" hidden>pick a song ▴</span><div class="plist" id="plist"></div>
+      </div>
+
+      <div class="mono corner" style="left:68px;top:58px">Scene 02 — The darkroom</div>
+      <div class="mono corner" style="right:68px;top:58px;text-align:right">02 / 24</div>
+      <div class="grain"></div><div class="vig"></div>
+    </div>
+  </div>
+  <div class="mote" style="left:180px;top:220px;width:26px;height:26px"></div>
+  <div class="mote" style="left:1390px;top:160px;width:18px;height:18px;opacity:.7"></div>
+  <div class="mote" style="left:1260px;top:800px;width:34px;height:34px;opacity:.5"></div>
+  <div class="mote" style="left:120px;top:690px;width:14px;height:14px;opacity:.6"></div>
+</div>
+
+<script src="zh.js?v=tnqgtm"></script>
+<script src="content.js?v=29994fe04a"></script>
+<script src="roll-link.js?v=to1cu6"></script>
+<script>
+const s=document.getElementById('stage');
+const fit=()=>{const k=Math.min(innerWidth/1600,innerHeight/1000);s.style.transform=`translate(-50%,-50%) scale(${k})`};
+fit();addEventListener('resize',fit);
+const q=new URLSearchParams(location.search);
+if(q.has('on'))s.classList.add('on');
+// 点歌：字幕和 dj.mp3 念的是同一句（不念名字，念 for you）。默认开，?nodj 关掉
+// 专属设置（服务器 custom.json）可以换主持人的声音和台词：radio.src 在客人的 x/，radio.text 字幕
+const DJ=window.CUSTOM?.radio?.text||CONTENT.radio.dj,DJSRC=window.CUSTOM?.radio?.src||'dj2.mp3';
+// 墙上的底片是竖的瘦格子：客人调过竖的裁切就先裁好再放
+document.querySelectorAll('img[data-pick]').forEach(im=>{const p=CONTENT.picks.radio[+im.dataset.pick];if(!p)return;im.src=CONTENT.small(p);
+  if(p.crop){const o=new Image();o.onload=()=>{im.src=CONTENT.cropCanvas(o,p,36/52,600).toDataURL('image/jpeg',.9)};o.src=CONTENT.small(p)}});
+document.getElementById('songT').textContent=CONTENT.radio.song;
+const useDJ=!q.has('nodj');
+const RATE=.96;   // 放慢一点点，声音也跟着沉一点
+let djTimer,ac,djBuf,stBuf,playing=[],sent=false;
+// 收音机的声音：开头一阵调台的雪花（static.wav，Commons CC0），底下一直垫着沙沙和噼啪，人声过窄带滤波像老喇叭
+// 两段声音一进这一幕就一起拿（11.02：以前拉了绳才一段一段去拿，跨境要干等三五秒才出声）；拉绳的时候只剩解码
+const RAW={dj:fetch(DJSRC).then(r=>r.arrayBuffer()).catch(()=>null),st:fetch('static.wav').then(r=>r.arrayBuffer()).catch(()=>null)};
+let radioN=0;
+const radio=async()=>{const n=++radioN;
+  ac=ac||new AudioContext();if(ac.state==='suspended')await ac.resume();
+  const load=async(k,u)=>{let b=await RAW[k];if(!b)b=await (await fetch(u)).arrayBuffer();return ac.decodeAudioData(b.slice(0))};
+  [djBuf,stBuf]=await Promise.all([djBuf||load('dj',DJSRC),stBuf||load('st','static.wav')]);
+  // 等声音的时候又拉了一下：这一趟作废，不然两遍人声叠在一起
+  if(n!==radioN)throw new Error('stale');
+  const t0=ac.currentTime,lead=1.4,dur=djBuf.duration/RATE,len=lead+dur+1;
+  // 调台：雪花声一下大一下小，像旋钮在拧
+  const st=ac.createBufferSource();st.buffer=stBuf;st.loop=true;
+  const sg=ac.createGain();sg.gain.setValueAtTime(0,t0);
+  [[.05,.55],[.3,.15],[.45,.6],[.75,.2],[.95,.45],[lead,.0]].forEach(([t,g])=>sg.gain.linearRampToValueAtTime(g,t0+t));
+  const sbp=ac.createBiquadFilter();sbp.type='bandpass';sbp.frequency.value=1800;sbp.Q.value=.5;
+  st.connect(sbp).connect(sg).connect(ac.destination);
+  // 底噪：一直有的沙沙 + 随机的噼啪
+  const nb=ac.createBuffer(1,Math.ceil(ac.sampleRate*len),ac.sampleRate),d=nb.getChannelData(0);
+  for(let i=0;i<d.length;i++){d[i]=(Math.random()*2-1)*.16;if(Math.random()<.0004)d[i]+=(Math.random()<.5?-1:1)*(.6+Math.random()*.4)}
+  const bed=ac.createBufferSource();bed.buffer=nb;
+  const blp=ac.createBiquadFilter();blp.type='lowpass';blp.frequency.value=5000;
+  const bg=ac.createGain();bg.gain.setValueAtTime(0,t0);bg.gain.linearRampToValueAtTime(.32,t0+lead*.8);bg.gain.linearRampToValueAtTime(.24,t0+len-.4);bg.gain.linearRampToValueAtTime(0,t0+len);
+  bed.connect(blp).connect(bg).connect(ac.destination);
+  // 人声
+  const v=ac.createBufferSource();v.buffer=djBuf;v.playbackRate.value=RATE;
+  const hp=ac.createBiquadFilter();hp.type='highpass';hp.frequency.value=260;
+  const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=3400;
+  const sh=ac.createWaveShaper();const cv=new Float32Array(256);for(let i=0;i<256;i++){const x=i/128-1;cv[i]=Math.tanh(1.8*x)}sh.curve=cv;
+  const vg=ac.createGain();vg.gain.value=.95;v.connect(hp).connect(lp).connect(sh).connect(vg).connect(ac.destination);
+  st.start(t0);st.stop(t0+lead+.1);bed.start(t0);v.start(t0+lead);playing=[st,bed,v];
+  return {lead,dur};
+};
+const stopRadio=()=>{playing.forEach(n=>{try{n.stop()}catch(e){}});playing=[]};
+// 字幕一框最多四行：长台词分成几页，这一页念完换下一页（11.05 专属设置的长台词）；能在标点后面断就在标点后面断
+const pages=t=>{const H=parseFloat(getComputedStyle(t).lineHeight)*4+2,mh=t.style.minHeight;t.style.minHeight='0';const out=[];let a=0;
+  const fits=(x,y)=>{t.textContent=DJ.slice(x,y);return t.offsetHeight<=H};
+  while(a<DJ.length){if(fits(a,DJ.length)){out.push([a,DJ.length]);break}
+    let b=a,best=-1;for(let j=a+1;j<=DJ.length;j++){if(j===DJ.length||DJ[j]===' '){if(!fits(a,j))break;b=j;if(/[,.!?;…]/.test(DJ[j-1]))best=j}}
+    if(b===a){b=DJ.indexOf(' ',a+1);if(b<0)b=DJ.length}
+    if(best>a+(b-a)*.5)b=best;out.push([a,b]);a=b;while(DJ[a]===' ')a++}
+  t.style.minHeight=mh;t.textContent='';return out};
+const dj=async()=>{const box=document.getElementById('dj'),t=document.getElementById('djt');clearTimeout(djTimer);stopRadio();s.classList.remove('played');
+  if(!s.classList.contains('on')){radioN++;box.classList.remove('show');return}
+  t.textContent='';
+  let lead=2,dur=DJ.length*.06;
+  try{({lead,dur}=await radio());lead+=.0}catch(e){if(e.message==='stale')return}   // 没点过页面放不了声，就只走字幕
+  setTimeout(()=>box.classList.add('show'),lead*1000-300);
+  // 字幕跟着声音走：整句时长平均分给每个字
+  await document.fonts.ready;const PG=pages(t),per=dur*1000/DJ.length;let i=0,pg=0;
+  const tick=()=>{if(i>=DJ.length){djTimer=setTimeout(()=>{box.classList.remove('show');s.classList.add('played');
+      if(!sent){sent=true;ROLL.music('play');if(ROLL.in)setTimeout(showScroll,2500)}},1600);return}
+    // 整句先按最后的样子排好，没念到的字占着位置但看不见，单词就不会打到一半被挤到下一行
+    i++;if(i>PG[pg][1]&&pg<PG.length-1)pg++;const [a,b]=PG[pg],k=Math.max(a,i);shown.textContent=DJ.slice(a,k);rest.textContent=DJ.slice(k,b);djTimer=setTimeout(tick,per)};
+  const shown=document.createElement('span'),rest=document.createElement('span');rest.style.visibility='hidden';t.replaceChildren(shown,rest);rest.textContent=DJ.slice(0,PG[0][1]);
+  djTimer=setTimeout(tick,lead*1000)};
+if(useDJ){s.classList.add('djmode');dj()}
+// 串成一卷时：主持人说完、歌响起来，不自己走；客人往下滚（或按下键、点那行小字）镜头才往下摇到桌上
+// 提示很淡：框底下一行小字，慢慢呼吸
+function showScroll(){if(document.querySelector('.scrolly'))return;const st=document.createElement('style');
+  st.textContent='.scrolly{position:absolute;left:0;right:0;text-align:center;font:400 11px/1 "JB Mono",monospace;letter-spacing:.3em;text-transform:uppercase;color:#f3e6d2;opacity:0;pointer-events:auto!important;cursor:pointer;animation:scrolly 3.2s ease-in-out 1s infinite}.scrolly b{display:block;font-weight:400;margin-top:6px;letter-spacing:0}@keyframes scrolly{0%,100%{opacity:.12;transform:translateY(0)}50%{opacity:.38;transform:translateY(4px)}}';
+  document.head.appendChild(st);const h=document.createElement('div');h.className='hint scrolly';h.innerHTML='scroll down<b>⌄</b>';document.querySelector('.proj>.frame').appendChild(h);
+  let gone=false;const go=()=>{if(gone)return;gone=true;h.remove();ROLL.done('pan')};
+  addEventListener('wheel',e=>{if(e.deltaY>8)go()},{passive:true});
+  addEventListener('keydown',e=>{if(['ArrowDown','PageDown',' '].includes(e.key))go()});h.onclick=go}
+// 歌单：壳子那边有几首就列几首，点哪首放哪首（单独打开这一幕时没有歌，按钮不出来）
+{const pick=document.getElementById('pick'),plist=document.getElementById('plist');
+ const draw=d=>{pick.hidden=false;document.getElementById('sideNo').textContent=String(d.cur+1).padStart(2,'0');
+   plist.replaceChildren(...d.list.map((t,i)=>{const [a,b]=t.split(' · '),el=document.createElement('div');el.className=i===d.cur?'cur':'';
+     el.innerHTML='<i></i><b></b><small></small>';el.querySelector('b').textContent=a;el.querySelector('small').textContent=b||'';
+     el.onclick=e=>{e.stopPropagation();ROLL.music('track:'+i);plist.classList.remove('open');pick.classList.remove('open')};return el}))};
+ addEventListener('message',e=>{if(e.data&&e.data.roll==='tracks')draw(e.data)});ROLL.music('list');
+ pick.onclick=e=>{e.stopPropagation();pick.classList.toggle('open',plist.classList.toggle('open'))};
+ addEventListener('click',()=>{plist.classList.remove('open');pick.classList.remove('open')})}
+// 拉一下：绳子往下拽再弹回，灯亮；再拉一下关掉，方便反复看
+const cord=document.getElementById('cord'),bulb=document.getElementById('bulb');
+cord.onclick=()=>{cord.style.transform='translateY(46px)';setTimeout(()=>{cord.style.transform='';s.classList.toggle('on');if(useDJ)dj();bulb.classList.remove('swing');void bulb.offsetWidth;bulb.classList.add('swing')},220)};
+</script>
+</body></html>

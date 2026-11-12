@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A Roll For Two · Book cover</title>
+<style>
+@font-face{font-family:'JB Mono';src:url(font/jbmono.woff2) format('woff2')}
+@font-face{font-family:'Reenie';src:url(font/ReenieBeanie-normal.woff2) format('woff2')}
+@font-face{font-family:'Allura';src:url(font/Allura.woff2) format('woff2')}
+/* 中文：只覆盖中日韩字区，页面里没出现中文就不会下载 */
+@font-face{font-family:'Roll Serif SC';src:url(font/NotoSerifSC-Bold-3500.woff2) format('woff2');font-weight:100 900;unicode-range:U+2E80-9FFF,U+3000-303F,U+FF00-FFEF}
+@font-face{font-family:'Roll Kai';src:url(font/LXGWWenKai-3500.woff2) format('woff2');unicode-range:U+2E80-9FFF,U+3000-303F,U+FF00-FFEF}
+@font-face{font-family:'Instrument Serif';src:url(font/InstrumentSerif-italic.woff2) format('woff2');font-style:italic}
+@font-face{font-family:'Courier Prime';src:url(font/CourierPrime-normal.woff2) format('woff2')}
+@font-face{font-family:'Fraunces';src:url(font/Fraunces-normal.woff2) format('woff2');font-weight:100 900}
+@font-face{font-family:'Fraunces';src:url(font/Fraunces-italic.woff2) format('woff2');font-weight:100 900;font-style:italic}
+/* 放映机那段默片的字幕卡：IM Fell English（OFL），老铅字 */
+@font-face{font-family:'IM Fell';src:url(font/IMFell-normal.woff2) format('woff2')}
+:root{--cream:#f3e6d2;--ink:#040302;--red:#ee5546}
+html,body{margin:0;height:100%;background:var(--ink);overflow:hidden}
+#stage{position:absolute;left:50%;top:50%;width:1600px;height:1000px;background:var(--ink)}
+.mono{font:400 11px/1.7 'JB Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--cream)}
+.proj{position:absolute;left:280px;top:130px;width:1040px;height:694px}
+.proj .spill{position:absolute;inset:-50px;border-radius:80px;background:radial-gradient(closest-side,rgba(255,190,120,.14),transparent);filter:blur(60px)}
+.frame{position:absolute;inset:0;overflow:hidden;background:#0c0603;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1040 694'%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='9'/%3E%3C/filter%3E%3Crect x='18' y='18' width='1004' height='658' rx='30' fill='white' filter='url(%23b)'/%3E%3C/svg%3E") center/100% 100%;
+          mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1040 694'%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='9'/%3E%3C/filter%3E%3Crect x='18' y='18' width='1004' height='658' rx='30' fill='white' filter='url(%23b)'/%3E%3C/svg%3E") center/100% 100%}
+canvas#gl{position:absolute;inset:0;width:1040px;height:694px;display:block}
+.corner{position:absolute;opacity:.5}
+.grain{position:absolute;inset:0;opacity:.2;mix-blend-mode:overlay;pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");animation:grain .4s steps(3) infinite}
+@keyframes grain{33%{background-position:40px 70px}66%{background-position:-60px 20px}}
+/* 写书名的输入框是看不见的，字画在信纸上；红笔提示在下面 */
+#ttl{position:absolute;left:0;bottom:0;width:1px;height:1px;opacity:0;border:0;padding:0;font-size:16px;caret-color:transparent;pointer-events:none}
+.hint{position:absolute;left:0;right:0;bottom:38px;text-align:center;font:400 34px/1 'Reenie',cursive;color:var(--red);z-index:3;cursor:pointer;transition:opacity .8s}
+.hint.gone{opacity:0;pointer-events:none}
+.vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 95% at 50% 50%,transparent 50%,rgba(2,1,0,.45) 100%)}
+</style></head>
+<body>
+<div id="stage">
+  <div class="proj">
+    <div class="spill"></div>
+    <div class="frame" id="frame">
+      <canvas id="gl"></canvas>
+      <div class="mono corner" style="left:68px;top:58px">Scene 08 — The book</div>
+      <input id="ttl" autocomplete="off" spellcheck="false" aria-label="Film title">
+      <div class="hint" id="hint"></div>
+      <div class="grain"></div><div class="vig"></div>
+    </div>
+  </div>
+</div>
+<script src="zh.js?v=tnqgtm"></script>
+<script src="content.js?v=29994fe04a"></script>
+<script src="roll-link.js?v=to1cu6"></script>
+<script type="module">
+import * as THREE from './lib/three.module.js?v=tn9zuj';
+import {CW,CH,coverTextures,titleStitches,hasCJK,TITLE_Y0,TITLE_H} from './bc-tex.js?v=tnboar';
+import {makeCard,SW,SH} from './bc-card.js?v=to1erh';
+import {makeBook,BW,BD,FUR} from './bc-book.js?v=tnbnsy';
+import {makeLetter,makeQuill,makeNotes,makeTicket,makeCamera} from './bc-desk.js?v=tnpyds';
+import {setupReading} from './bc-read.js?v=to11bs';
+import {collageBase,makeCutout,makeSticker,stickyNote,newsStill,seaChart,compassDeco,petalsDeco} from './bc-pages.js?v=to1gte';
+import {makeTheater} from './bc-popup.js?v=tncq0l';
+import {makeMap} from './bc-map.js?v=tnrhq4';
+import {makeCompass} from './bc-compass.js?v=to17lf';
+import {makePetals} from './bc-petals.js?v=to18vn';
+import {makeCard as makeLibCard} from './bc-libcard.js?v=to1gte';
+import {makeReel} from './bc-reel.js?v=to11bs';
+import {GLTFLoader} from './lib/GLTFLoader.js?v=tnd0f8';
+import {liveCollage} from './bc-collage.js?v=tnco07';
+import {buildLetters} from './bc-letters.js?v=tnbplo';
+const s=document.getElementById('stage');
+const fit=()=>{const k=Math.min(innerWidth/1600,innerHeight/1000);s.style.transform=`translate(-50%,-50%) scale(${k})`};fit();addEventListener('resize',fit);
+
+// 书名是客人在入场那一幕用羽毛笔写的；这里先放占位
+const Q=new URLSearchParams(location.search);
+const TITLE='',BYLINE=CONTENT.book.byline;
+// 书的颜色：?c=8a1d1a 这样换（不带 #）
+const COLOR='#'+(Q.get('c')||'7a2420');
+const MOBILE=matchMedia('(pointer:coarse)').matches;
+
+// 一进来就把这一幕要的图和模型同时拿起来（11.02：原来一个拿完才拿下一个，二十多样排着队，第一次打开的人要黑屏等几十秒）
+// img() 记住拿过的，后面照旧一句句 await，等的只是已经在路上的那一份
+const IMGS=new Map(),img=src=>{if(!IMGS.has(src))IMGS.set(src,ROLL.img(src));return IMGS.get(src)};
+const LEATHER=Promise.all(['nor_gl','rough'].map(k=>new THREE.TextureLoader().loadAsync(`img/leather_${k}.jpg`)));
+// 客人写的中文也等字体到了再画进贴图（11.03）
+await Promise.all([ROLL.zhReady(),document.fonts.load("italic 800 200px Fraunces"),document.fonts.load("italic 400 42px Fraunces"),document.fonts.load("20px 'JB Mono'"),document.fonts.load("46px 'Courier Prime'"),document.fonts.load("40px Reenie"),document.fonts.load("58px Allura"),document.fonts.load("italic 40px 'Instrument Serif'"),document.fonts.load("700 30px 'Courier Prime'"),document.fonts.load("italic 600 46px Fraunces"),document.fonts.load("34px 'IM Fell'")]);
+// 客人调过裁切的照片，先按它在书里那一格的形状裁好（封面卡 4:3、拼贴大 4:3、拼贴小 210:250、电影院银幕 900:560、地图和指南针的拍立得正方形）
+const cut=(im,f,a)=>f&&f.crop?CONTENT.cropCanvas(im,f,a,1800):im;
+const [photo,feather,ticketImg,cameraImg,envImg]=await Promise.all([img(CONTENT.book.cover.photo).then(im=>cut(im,CONTENT.book.cover,512/384)),img('img/feather.jpg'),img('img/ticket.webp'),img('img/camera.webp'),img('img/env_cafe.jpg')]);
+// 皮：Poly Haven leather_red_03（CC0）的皮纹法线和粗糙度，颜色自己染
+const tl=new THREE.TextureLoader(),[lNor,lRough]=await LEATHER;
+// 封面要的都到了，再一起拿后面几页的图和两个模型（11.03：以前一进来就全部一起拿，封面的几张被挤在一堆里）
+{const B=CONTENT.book;['img/feather.jpg','img/ticket.webp','img/camera.webp','img/env_cafe.jpg','img/wood.jpg',
+  ...'collage/bfly-brown.webp collage/bfly-orange.webp collage/bfly-yellow.webp collage/filmad.jpg collage/greyhound.webp collage/news.jpg collage/seventh-heaven.jpg collage/stamp-ca.jpg collage/stamp-ct.jpg collage/stamp-mi.jpg daisy/daisy-pressed.webp daisy/daisy-sprig.webp daisy/fmn-pressed.webp library/card-1916.jpg library/notice-paper.jpg library/notice-print.png library/pocket-1959.jpg library/stamper.webp map-china-1910.jpg'.split(' ').map(n=>'img/'+n),
+  B.cover?.photo,B.theater?.photo,B.compass?.photo,...(B.collage||[]).map(p=>p.photo),...(B.map||[]).map(p=>p.photo)].filter(Boolean).forEach(img)}
+const GLTF={compass:new GLTFLoader().loadAsync('models/compass/seadogs_compass_1k.gltf'),proj:new GLTFLoader().loadAsync('models/projector/filmstrip_projector_8mm_1k.gltf')};
+for(const t of [lNor,lRough]){t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(.6,.8)}
+
+// 卡片在封面上的位置（画布像素），绒毛遮罩要用
+const CARD_W=1.2,cardPx={w:CARD_W/BW*CW,h:CARD_W*SH/SW/BD*CH,y:540};cardPx.x=(CW-cardPx.w)/2;
+const tex=coverTextures({title:TITLE,byline:BYLINE,color:COLOR,card:cardPx});
+
+const cv=document.getElementById('gl');
+const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true,preserveDrawingBuffer:true});
+renderer.setPixelRatio(ROLL.pr());renderer.setSize(1040,694,false);ROLL.onQuality(()=>{renderer.setPixelRatio(ROLL.pr());renderer.setSize(1040,694,false)});
+renderer.shadowMap.enabled=true;
+// 影子不每帧重画：只在灯、纸、羽毛笔、桌上东西在动的时候才画（镜头动不用重画影子）
+renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;
+const scene=new THREE.Scene();scene.background=new THREE.Color('#1a110a');
+const cam=new THREE.PerspectiveCamera(30,1040/694,.1,100);cam.position.set(.4,7.2,5.4);cam.lookAt(.4,0,-.15);
+// 桌子照冲印袋那一幕的调法：压暗、做旧、偏巧克力棕，灯只负责亮度
+const wimg=await img('img/wood.jpg'),wc=document.createElement('canvas');wc.width=wimg.width;wc.height=wimg.height;
+{const x=wc.getContext('2d');x.filter='brightness(.66) sepia(.55) saturate(.95) hue-rotate(8deg) contrast(1.1)';x.drawImage(wimg,0,0);x.filter='none';x.globalCompositeOperation='multiply';x.globalAlpha=.4;x.fillStyle='#6e5028';x.fillRect(0,0,wc.width,wc.height)}
+const wood=new THREE.CanvasTexture(wc);wood.colorSpace=THREE.SRGBColorSpace;wood.wrapS=wood.wrapT=THREE.RepeatWrapping;wood.repeat.set(3,2);
+const table=new THREE.Mesh(new THREE.PlaneGeometry(22,15),new THREE.MeshStandardMaterial({map:wood,color:'#ffffff',roughness:.85}));
+table.rotation.x=-Math.PI/2;table.receiveShadow=true;scene.add(table);
+// 整个房间的光：一张暖色咖啡馆全景（Poly Haven comfy_cafe，CC0，缩成 1024 宽），再往暖里压一层；
+// 皮面、纸、桌子都会带上很淡的房间反光，这是不像 CG 最要紧的一步
+{const ec=document.createElement('canvas');ec.width=envImg.width;ec.height=envImg.height;const x=ec.getContext('2d');x.drawImage(envImg,0,0);x.globalCompositeOperation='multiply';x.fillStyle='#ffc890';x.fillRect(0,0,ec.width,ec.height);
+ const et=new THREE.CanvasTexture(ec);et.colorSpace=THREE.SRGBColorSpace;et.mapping=THREE.EquirectangularReflectionMapping;
+ const pm=new THREE.PMREMGenerator(renderer);scene.environment=pm.fromEquirectangular(et).texture;pm.dispose()}
+scene.add(new THREE.AmbientLight('#ffd6a8',.03));
+// 两盏光：入场时亮在信纸上，书在旁边暗着但看得见；?light=book 看灯转到书上之后
+const LIGHT=Q.get('light')||'paper',PAPER=new THREE.Vector3(-1.3,0,.2),BOOK=new THREE.Vector3(1.15,0,-.1);
+const spot=(target,on)=>{const l=new THREE.SpotLight('#ffd29c',on?105:9,30,.5,1,2);l.position.set(target.x-1.6,6.5,target.z+1.3);l.target.position.copy(target);
+  l.castShadow=true;l.shadow.mapSize.set(1024,1024);l.shadow.radius=6;l.shadow.bias=-.0003;scene.add(l,l.target);return l};
+const lampPaper=spot(PAPER,LIGHT==='paper'),lampBook=spot(BOOK,LIGHT==='book');
+
+const fill=new THREE.PointLight('#ffc890',1.1,10,2);fill.position.set(2.6,1.8,2.4);scene.add(fill);
+
+const threads=makeBook(tex,0,{nor:lNor,rough:lRough},COLOR),{book,TOP}=threads;book.rotation.y=-.08;book.position.copy(BOOK);scene.add(book);
+const L=makeLetter(1.7);L.mesh.position.set(PAPER.x,.004,PAPER.z);L.mesh.rotation.z=.08;scene.add(L.mesh);
+const qq=makeQuill(2.0,feather);qq.position.set(PAPER.x+.25,.04,PAPER.z+.15);qq.rotation.y=-.9;scene.add(qq);
+{const n=makeNotes();n.position.set(2.75,0,-1.95);n.rotation.y=-.1;scene.add(n);
+ const tk=makeTicket(ticketImg,1.4);tk.position.set(2.3,.026,-1.2);tk.rotation.z=.3;scene.add(tk)}
+{const cm=makeCamera(cameraImg,.8);cm.position.set(-2.3,0,1.55);cm.rotation.y=.4;scene.add(cm)}
+const card=makeCard(photo,CARD_W);card.group.position.set(0,TOP,-BD/2+(cardPx.y+cardPx.h/2)/CH*BD);book.add(card.group);
+
+// ---- 白耳机：卷成松松的一小团放在桌子左上角，两只耳机从团里伸出来 ----
+const white=new THREE.MeshPhysicalMaterial({color:'#f4f1ec',roughness:.32,clearcoat:.7,clearcoatRoughness:.2});
+const cw=.016,V=(x,y,z)=>new THREE.Vector3(x,y,z),EC=V(-2.1,0,-1.55);
+const tube=(pts,n)=>{const c=new THREE.CatmullRomCurve3(pts,false,'catmullrom',.4);const m=new THREE.Mesh(new THREE.TubeGeometry(c,n,cw,8,false),white);m.castShadow=m.receiveShadow=true;scene.add(m);return c};
+// 一圈压一圈：每一圈稍微小一点、高一点点，叠着不穿模
+const coil=[];for(let i=0;i<=40;i++){const a=i/40*Math.PI*2*2.1+.4,r=.3-i*.0028;coil.push(V(EC.x+Math.cos(a)*r*1.15,cw+i*.0009,EC.z+Math.sin(a)*r*.85))}
+const last=coil[coil.length-1];
+const main=tube([...coil,V(last.x+.25,cw,last.z+.3),V(last.x+.65,cw,last.z+.62),V(last.x+.95,cw,last.z+.7)],380);
+const side=tube([coil[30],V(coil[30].x-.08,cw+.025,coil[30].z-.08),V(coil[30].x-.2,cw,coil[30].z-.22),V(coil[30].x-.26,cw,coil[30].z-.38)],120);
+{const r=new THREE.Mesh(new THREE.CapsuleGeometry(.03,.14,6,12),white);const u=.6;r.position.copy(main.getPointAt(u));r.position.y=cw+.02;r.quaternion.setFromUnitVectors(V(0,1,0),main.getTangentAt(u));r.castShadow=true;scene.add(r)}
+// 耳机：柄的尾巴就是线头，柄往前长出去，头微微翘起来
+const bud=curve=>{
+  const p=curve.getPointAt(1),t=curve.getTangentAt(1).setY(0).normalize();
+  const outer=new THREE.Group(),inner=new THREE.Group();
+  const stem=new THREE.Mesh(new THREE.CapsuleGeometry(.03,.2,6,12),white);stem.rotation.z=-Math.PI/2;stem.position.x=.13;
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.1,32,20),white);head.scale.set(1,.75,1.05);head.position.x=.33;
+  const grill=new THREE.Mesh(new THREE.CircleGeometry(.045,24),new THREE.MeshStandardMaterial({color:'#6f6862',roughness:.6}));grill.rotation.x=-Math.PI/2;grill.position.set(.35,.076,0);
+  stem.castShadow=head.castShadow=true;inner.add(stem,head,grill);inner.rotation.z=.15;inner.position.y=.012;
+  outer.add(inner);outer.position.copy(p);outer.rotation.y=Math.atan2(-t.z,t.x);scene.add(outer)};
+bud(main);bud(side);
+
+// 平平的纸片、细细的耳机线不投影：影子几乎看不出来，却让每次画影子都慢一截
+scene.traverse(o=>{if(o.isMesh&&(o.geometry.type==='TubeGeometry'||(o.geometry.type==='PlaneGeometry'&&o.parent!==qq.children[0])))o.castShadow=false});
+// 房间反光只要淡淡一层
+scene.traverse(o=>{if(o.material)[].concat(o.material).forEach(m=>{if("envMapIntensity" in m)m.envMapIntensity=.2})});
+// ---- 写书名 ----
+// 1 进来：全景，灯照着信纸，红字提示点信纸
+// 2 点了：镜头推过去，信纸在画面正中；纸上自己写着怎么做，客人打字，羽毛笔跟着字尾走
+// 3 回车：镜头转到书上，灯跟过去，路上书名一针一针绣好
+const inp=document.getElementById('ttl'),hint=document.getElementById('hint');
+qq.updateMatrixWorld(true);
+// 羽毛笔按笔尖来摆：写字的时候像被手拿着，笔尖贴纸、羽毛往上翘，不会钻到书底下
+const nibW=new THREE.Vector3();qq.traverse(o=>{if(o.geometry?.type==='ConeGeometry')o.getWorldPosition(nibW)});
+const nibLocal=qq.worldToLocal(nibW.clone()),curNib=nibW.clone();let nibGoal=null,tilt=0,tiltGoal=0;qq.rotation.order='YXZ';
+const qHome=qq.position.clone(),nibHome=nibW.clone();
+const onPaper=(u,v)=>L.mesh.localToWorld(new THREE.Vector3((u-.5)*L.w,(.5-v)*L.h,0));
+// 三个机位：全景 / 信纸居中 / 书居中（推近一点就好，不用贴脸）
+const SHOT={wide:{p:cam.position.clone(),l:new THREE.Vector3(.4,0,-.15)},
+  letter:{p:new THREE.Vector3(PAPER.x+.15,4.6,PAPER.z+3.0),l:new THREE.Vector3(PAPER.x+.1,0,PAPER.z-.05)},
+  book:{p:new THREE.Vector3(BOOK.x+.05,5.0,BOOK.z+3.3),l:new THREE.Vector3(BOOK.x,.25,BOOK.z-.05)}};
+let move=null;const look=SHOT.wide.l.clone();
+const goShot=(name,ms)=>{move={from:{p:cam.position.clone(),l:look.clone()},to:SHOT[name],t0:performance.now(),ms}};
+let stage='wide',writing=false,sealedAt=0,stitches=null,si=0,plan=null,prep=0,bumpDone=false,blinkAt=0,caret=false;
+hint.textContent='tap the letter';
+// 书名那一条小平面开场就放好（空的透明图），着色器和贴图先编译上传，回车时只换图，不会半路卡一下
+const blankCol=mk2(CW/2,TITLE_H/2),blankBump=mk2(CW/2,TITLE_H/2);
+const titleTex=new THREE.CanvasTexture(blankCol);titleTex.colorSpace=THREE.SRGBColorSpace;titleTex.anisotropy=8;const titleBump=new THREE.CanvasTexture(blankBump);
+const titlePlane=(()=>{const tp=new THREE.Mesh(new THREE.PlaneGeometry(BW,BD*TITLE_H/CH),new THREE.MeshStandardMaterial({map:titleTex,bumpMap:titleBump,bumpScale:3,roughness:.45,transparent:true,depthWrite:false}));
+ tp.rotation.x=-Math.PI/2;tp.position.set(0,TOP+.005,-BD/2+(TITLE_Y0+TITLE_H/2)/CH*BD);book.add(tp);return tp})();
+function mk2(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c}
+const draw=()=>{const e=L.write(inp.value,writing&&caret);return e};
+// 书名按占地方算长短：中日韩字一个算两格，其它一个算一格，最多 24 格（大约英文 24 个字母、中文 12 个字）
+const MAXU=24,units=s=>[...s].reduce((n,ch)=>n+(/[⺀-鿿가-힯＀-￯]/.test(ch)?2:1),0);
+const clip=s=>{let out='',n=0;for(const ch of s){const u=units(ch);if(n+u>MAXU)break;out+=ch;n+=u}return out};
+let tooLongAt=0,composing=false;
+// 有中文先把两套中文字体拿到（字体到了再画，不然第一下会是电脑自带的字）
+const ensureCJK=s=>hasCJK(s)?Promise.all([document.fonts.load("800 100px 'Roll Serif SC'",s),document.fonts.load("40px 'Roll Kai'",s)]):Promise.resolve();
+// 中文输入法还在拼的时候先不剪，等字选好了再算
+const typed=()=>{if(!writing)return;const s=composing?inp.value:clip(inp.value);if(s!==inp.value){inp.value=s;
+    // 写满了：红铅笔在下面轻轻提醒一句
+    hint.textContent='short and sweet is better';hint.classList.remove('gone');clearTimeout(tooLongAt);tooLongAt=setTimeout(()=>hint.classList.add('gone'),1800)}
+  if(hasCJK(s))ensureCJK(s).then(()=>{if(writing)draw()});
+  caret=true;blinkAt=performance.now();const e=draw();if(!s){nibGoal=null;tiltGoal=0;return}
+  nibGoal=onPaper(e.u,e.v);nibGoal.y+=.012;tiltGoal=.5;
+  // 客人停手 0.35 秒就先把这一版的针算好，回车时多半已经现成
+  clearTimeout(prep);prep=setTimeout(()=>{const t=inp.value.trim();if(t&&plan?.title!==t&&stage==='letter')ensureCJK(t).then(()=>{if(stage==='letter'&&inp.value.trim()===t)plan=titleStitches(t)})},350)};
+const open=()=>{if(stage!=='wide')return;stage='letter';hint.classList.add('gone');goShot('letter',1500);
+  setTimeout(()=>{if(!writing&&stage==='letter'){hint.textContent='tap the line to write';hint.classList.remove('gone')}},1600)};
+// 点到横线才开始写：横线上出现一根会闪的光标
+const startWriting=()=>{if(stage!=='letter')return;writing=true;hint.classList.add('gone');inp.focus();caret=true;blinkAt=performance.now();draw()};
+const seal=()=>{const s=inp.value.trim();if(!s||stage!=='letter')return;stage='book';writing=false;
+  // 信纸上的光标等镜头离开以后再擦，转镜头的时候不去碰那张大图
+  setTimeout(draw,2800);
+  inp.blur();inp.disabled=true;clearTimeout(prep);ensureCJK(s).then(()=>sealGo(s))};
+const sealGo=s=>{sealedTitle=s;theater?.setTitle(s);if(plan?.title!==s)plan=titleStitches(s);stitches=plan.stitches;
+  titleTex.image=plan.col;titleTex.needsUpdate=true;
+  sealedAt=performance.now();goShot('book',2600);
+  // 羽毛笔等镜头离开信纸以后再放回桌上，转镜头的时候不用重画影子
+  setTimeout(()=>{nibGoal=null;tiltGoal=0},2700)};
+inp.addEventListener('input',typed);
+inp.addEventListener('compositionstart',()=>composing=true);inp.addEventListener('compositionend',()=>{composing=false;typed()});
+inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing&&!composing){e.preventDefault();seal()}});
+// 点哪里：全景时点信纸，推近后点横线；鼠标只在能点的地方变成小手
+const ray=new THREE.Raycaster(),ndc=new THREE.Vector2(),frameEl=document.getElementById('frame');
+const hitLetter=ev=>{const r=cv.getBoundingClientRect();ndc.set((ev.clientX-r.left)/r.width*2-1,-(ev.clientY-r.top)/r.height*2+1);ray.setFromCamera(ndc,cam);
+  const h=ray.intersectObject(L.mesh)[0];return h?{v:1-h.uv.y}:null};
+const onLine=h=>h&&h.v>.47&&h.v<.72;
+frameEl.addEventListener('click',ev=>{if(move)return;const h=hitLetter(ev);
+  if(stage==='wide'&&h)open();else if(stage==='letter'&&(onLine(h)||writing))startWriting()});
+frameEl.addEventListener('pointermove',ev=>{const h=hitLetter(ev);
+  frameEl.style.cursor=(stage==='wide'&&h)||(stage==='letter'&&!writing&&onLine(h))?'pointer':'default'});
+// ?t=名字：自动点信纸、点横线、一个字一个字写、再封好，方便演示
+if(Q.get('t')){const s=Q.get('t');let i=0;setTimeout(()=>{open();setTimeout(()=>{startWriting();(function tick(){inp.value=s.slice(0,++i);typed();if(i<s.length)setTimeout(tick,140);else setTimeout(seal,900)})()},1700)},900)}
+
+// ---- 绣好以后：开书、翻页、合书（bc-read.js）----
+// 书一翻开，封面要落到左边：左边桌上的信纸、羽毛笔、耳机、相机先一起往外滑，给它让地方
+const leftSide=new THREE.Group();scene.add(leftSide);
+{const box=new THREE.Box3(),ctr=new THREE.Vector3();scene.children.slice().forEach(o=>{if(o===leftSide||o===book||o===table||o.isLight||o.isCamera)return;box.setFromObject(o);if(box.isEmpty())return;box.getCenter(ctr);if(ctr.x<-.3)leftSide.attach(o)})}
+let slideAt=0;
+// 11.03：后面几页（拼贴、立体电影院、地图、指南针、花瓣、借书卡）要的图和模型不挡封面：封面先亮、先绣名字，这些在后台装；
+// 绣完要翻开的时候还没装好，就停在封面上等一下
+let theater=null,mapObj=null,reading=null,sealedTitle='';
+const pagesReady=(async()=>{
+const collagePics=await Promise.all(CONTENT.book.collage.map((p,i)=>img(p.photo).then(im=>cut(im,p,i?210/250:360/270)))),theaterPic=cut(await img(CONTENT.book.theater.photo),CONTENT.book.theater,900/560);
+// 拼贴页的实拍东西（Commons 公有领域）：蝴蝶标本照片本来就是透明底；1935 年美国邮票扫描是黑底，抠掉
+const collageReal={bflyOrange:await img('img/collage/bfly-orange.webp'),bflyYellow:await img('img/collage/bfly-yellow.webp'),bflyBrown:await img('img/collage/bfly-brown.webp'),
+  stampCT:makeCutout(await img('img/collage/stamp-ct.jpg')),stampMI:makeCutout(await img('img/collage/stamp-mi.jpg')),greyhound:makeSticker(await img('img/collage/greyhound.webp'),{tint:'#d1ad74'})};
+// 名字用的实拍字母：从老报纸和老电影广告的标题里切下来
+// 拼贴页和指南针上跟着客人走的字：名字、在一起那天（邮戳 10 MAY、票根 Nº 0510）
+const [,SM,SD]=CONTENT.since.split('-'),SINCE=+SD+' '+['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][SM-1];
+const COLLAGE={names:CONTENT.book.collageTitle||CONTENT.names.both,notes:CONTENT.book.collageNotes,date:SINCE,no:SM+SD,card:{front:'pull me',back:CONTENT.book.cardBack}};
+const collageLetters=buildLetters({filmad:await img('img/collage/filmad.jpg'),news:await img('img/collage/news.jpg')});
+
+// 立体书左页固定的一格旧报纸剧照：7th Heaven（1927），国会图书馆 SAYRE 14357，Commons 公有领域
+const stillImg=await img('img/collage/seventh-heaven.jpg');
+// 地图底图：1910 Chinese Empire and Japan（George Philip & Son，Commons 公有领域），裁到去过的那一片
+const mapImg=await img('img/map-china-1910.jpg');
+// 每处一张拍立得（现在是占位照片）
+// 她去过的八个地方（测试八处、近距离：大理丽江）
+// 地图上永远写英文地名（她 10.31 定的）：换片页「找」的时候存了英文名 en，没有就用客人填的
+const MAP_PLACES=CONTENT.book.map.map(p=>({...p,name:p.en||p.name}));
+// 指南针模型：Poly Haven seadogs_compass（CC0），盖子和指针是单独的零件
+const compassModel=await GLTF.compass;
+// 借书卡那页桌上的 8mm 放映机：Poly Haven filmstrip_projector_8mm（CC0），机身牌子擦掉了
+const projModel=await GLTF.proj;
+// 指南针那页右上角那枚旧邮票（Commons 1935 美国邮票扫描，公有领域，黑底抠掉）
+const compassStamp=makeCutout(await img('img/collage/stamp-ca.jpg'));
+// 数花瓣那朵压干的雏菊：Commons「20160116Bellis perennis1.jpg」（CC0），抠好存成 webp
+const daisyImg=await img('img/daisy/daisy-pressed.webp');
+// 左页角上压的勿忘我：Commons「20190422Myosotis sylvatica3.jpg」（CC0），抠好存成 webp
+const fmnImg=await img('img/daisy/fmn-pressed.webp');
+// 左页左边那一整株压干的雏菊：Commons「Bellis perennis - Museo Tazzetti Herbarium 96-2024」（Epgrande，CC BY 4.0，页面底下署名）
+const sprigImg=await img('img/daisy/daisy-sprig.webp');
+// 借书卡页：真的旧借阅卡（1916 多伦多，公有领域）、旧口袋（1959，Calsidyrose CC BY 2.0）、日期章（CC0），原来的字已擦掉
+const [libCardImg,libPocketImg,stamperImg]=await Promise.all(['img/library/card-1916.jpg','img/library/pocket-1959.jpg','img/library/stamper.webp'].map(img));
+// 催还单：1898 斯普林菲尔德图书馆的印刷单（公有领域，馆名和手写擦掉了）+ 1884 那张旧催还单的纸色
+const [noticePrint,noticePaper]=await Promise.all(['img/library/notice-print.png','img/library/notice-paper.jpg'].map(img));
+const mapPics=await Promise.all(CONTENT.book.map.map(p=>img(p.photo).then(im=>cut(im,p,1))));
+const compassPic=CONTENT.book.compass?.photo?cut(await img(CONTENT.book.compass.photo),CONTENT.book.compass,1):mapPics[Math.min(2,mapPics.length-1)];
+// 合上书飘出来那句：跟火把那张字条走（字条选 days 用 days 这句，选 birthday 用 birthday 这句），两句都能改
+const END_WORDS=CONTENT.book.endWords;
+const noteMode=CONTENT.note.mode;
+reading=setupReading({renderer,endWords:END_WORDS[noteMode]||END_WORDS.days,book,pageArt:[(x,W,H)=>collageBase(x,W,H,{letters:collageLetters,...COLLAGE}),()=>{},()=>{},
+    // 指南针那页右边：指南针下面红笔一句
+    // 指南针那页右边：指南针底下垫一张旧航海图（风玫瑰中心对准指南针），上面红笔一句
+    (x,W,H)=>{seaChart(x,416,786,760,700);compassDeco(x,W,H,{stamp:compassStamp})},
+    // 数花瓣右页：上面一句红铅笔
+    (x,W,H)=>{x.save();x.translate(W*.5,H*.1);x.rotate(-.03);x.fillStyle=x.strokeStyle='#a8231a';x.lineWidth=1.6;x.font="400 66px 'Reenie'";x.textAlign='center';x.strokeText('pull a petal.',0,0);x.fillText('pull a petal.',0,0);x.restore()},
+    // 借书卡右页：底下一行署名（CC BY 要写）
+    (x,W,H)=>{x.save();x.fillStyle='rgba(70,58,48,.55)';x.font="400 12px 'JB Mono'";x.textAlign='center';x.fillText('card pocket: Calsidyrose, CC BY 2.0 · library card, Toronto 1916 · film: Portrait of a Library, 1940: public domain · date stamp, projector: CC0',W*.5,H*.985);x.restore()}],
+  // 拼贴页上的碎片单独浮着，能晃、能捏、能挪（bc-collage.js）
+  pageLive:[o=>liveCollage({...o,opts:{photos:collagePics,real:collageReal,...COLLAGE}})],
+  // 左页的便签：这一页怎么玩（0 是封面内页，对着拼贴页；1 对着立体书）
+  leftArt:[(x,W,H)=>stickyNote(x,W*.3,H*.74,'everything here peels off. try the pocket.',{rot:-.06}),
+    // 立体书左页（固定不给客人改）：报纸剧照 + 我写的一句 + 怎么玩的黄便签
+    (x,W,H)=>{newsStill(x,stillImg,W*.47,H*.29,500,-.045,{head:'THE PICTURE PAGE',title:'7th Heaven',credit:'Janet Gaynor and Charles Farrell, 1927.'});
+      stickyNote(x,W*.7,H*.66,"whatever's playing, I'm only here for the girl in F18.",{rot:.06,S:360,size:46,color:'#f2c6c0',fold:'#f8dcd6',ink:'#7e1c16'});
+      stickyNote(x,W*.29,H*.8,'find your seat. F17.',{rot:-.05,S:330,size:56})},
+    (x,W,H)=>stickyNote(x,W*.3,H*.2,'unfold me.',{rot:-.07,S:300,size:60}),
+    // 指南针那页左边：那个人的照片（指针最后指着它）+ 便签
+    (x,W,H)=>{stickyNote(x,W*.27,H*.82,'open it. move the photo. flick the needle.',{rot:.06,S:340,size:50});
+      x.save();x.translate(W*.68,H*.9);x.rotate(-.05);x.fillStyle=x.strokeStyle='#a8231a';x.lineWidth=1.6;x.font="400 62px 'Reenie'";x.textAlign='center';x.strokeText('no matter where we go',0,0);x.fillText('no matter where we go',0,0);x.restore()},
+    // 数花瓣左页：上面一行印的标题，底下留给红笔记和落下来的花瓣
+    (x,W,H)=>{petalsDeco(x,W,H,{fmn:fmnImg,sprig:sprigImg});x.save();x.fillStyle='#3a2414';x.textAlign='center';x.font="italic 400 50px Fraunces";x.fillText('loves me, loves me not.',W*.5,H*.95);x.restore()},
+    // 借书卡左页：上半截空着当放映机的银幕；下半截是一张还书日期小条盖着 RENEWED、最后一页的话、every day.（日期章是 3D 的，躺在这页上）
+    (x,W,H)=>{x.save();x.fillStyle='#3a2414';x.textAlign='center';x.font="italic 400 50px Fraunces";x.fillText('the last page,',W*.5,H*.82);x.fillText('but not the last day.',W*.5,H*.82+60);
+      x.translate(W*.38,H*.64);x.rotate(.06);x.shadowColor='rgba(40,25,10,.3)';x.shadowBlur=10;x.shadowOffsetY=4;x.fillStyle='#f4ecd8';x.fillRect(-170,-100,340,200);x.shadowColor='transparent';
+      x.strokeStyle='rgba(58,36,20,.5)';x.lineWidth=1;x.strokeRect(-160,-90,320,180);x.fillStyle='#3a2414';x.font="700 18px 'JB Mono'";x.fillText('DATE DUE',0,-58);
+      x.strokeStyle='rgba(58,36,20,.3)';for(let i=0;i<3;i++){x.beginPath();x.moveTo(-140,-30+i*40);x.lineTo(140,-30+i*40);x.stroke()}
+      x.translate(0,20);x.rotate(-.18);x.strokeStyle='rgba(168,35,26,.8)';x.lineWidth=4;x.strokeRect(-120,-32,240,64);x.fillStyle='rgba(168,35,26,.85)';x.font="700 40px 'Courier Prime'";x.textBaseline='middle';x.fillText('RENEWED',0,2);x.restore();
+      x.save();x.translate(W*.66,H*.955);x.rotate(-.03);x.fillStyle='#a8231a';x.font="400 60px 'Reenie'";x.textAlign='center';x.fillText('every day.',0,0);x.restore()}],
+  compass:o=>makeCompass(compassModel,{...o,engrave:'',photo:compassPic,mapImg}),
+  petals:o=>makePetals(daisyImg,o),
+  // 认识那天（卡上第几天从这天算）；以后从客人填的内容里读
+  // 放映机放的片子：1940《Portrait of a Library》（蒙特克莱尔公共图书馆，公有领域）剪的一分钟
+  reel:o=>makeReel(projModel,{...o,src:window.CUSTOM?.reel?.src||'img/reel/libreel.mp4'}),
+  card:o=>makeLibCard({...o,card:libCardImg,pocket:libPocketImg,stamper:stamperImg,notice:{print:noticePrint,paper:noticePaper},met:CONTENT.since,title:Q.get('t')||CONTENT.book.title}),
+  // 地图上去过的地方（u,v 是在裁好的地图上的位置，按去的顺序连线）；以后从客人填的内容里读
+  // 地图上去过的地方：按去的顺序连线，给经纬度就自己落到图上（最多 8 处）；以后从客人填的内容里读
+  map:o=>mapObj=makeMap(mapImg,{...o,places:MAP_PLACES,next:{u:.91,v:.6},photos:mapPics}),
+  // 放映的时候整间屋子暗下去：曝光压低、补光关小（银幕和光柱不吃曝光）
+  dim:k=>{renderer.toneMappingExposure=.95*(1-.95*k);fill.intensity=1.1*(1-k)},
+  popup:o=>(theater=makeTheater(theaterPic,{...o,title:Q.get('t')||sealedTitle||''})),onOpen:()=>{slideAt=performance.now()},parts:threads,extras:[card.group,titlePlane],BW,BD,cam,frameEl,cv,hint,lamp:lampBook,lampOn:105,bookShot:SHOT.book,
+  go:(p,l,ms)=>{move={from:{p:cam.position.clone(),l:look.clone()},to:{p,l},t0:performance.now(),ms}}});
+// ?map=open：地图直接全摊开（看摊平以后的样子）
+if(Q.get('map')==='open')mapObj?.open();
+if(sealedTitle)theater?.setTitle(sealedTitle)})();
+
+let lampSettled=false,frameN=0;
+
+const ease=k=>k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2,T0=new THREE.Vector3();
+const frame=now=>{
+  tilt+=(tiltGoal-tilt)*.12;qq.rotation.x=tilt;curNib.lerp(nibGoal||nibHome,.16);
+  qq.position.copy(curNib).sub(nibLocal.clone().applyEuler(qq.rotation));
+  if(move){const k=Math.min(1,(now-move.t0)/move.ms),e=ease(k);
+    cam.position.lerpVectors(move.from.p,move.to.p,e);look.lerpVectors(move.from.l,move.to.l,e);cam.lookAt(look);if(k>=1)move=null}
+  if(writing&&now-blinkAt>530){blinkAt=now;caret=!caret;draw()}
+  if(sealedAt){
+    const k=Math.min(1,(now-sealedAt)/2600),e=ease(k);
+    // 灯跟着镜头从信纸转到书上；照书的那盏暗灯同时退下去
+    // 灯不动（动了就得每帧重画影子，会卡）：信纸那盏慢慢暗下去，书上那盏慢慢亮起来
+    if(!lampSettled){lampPaper.intensity=105*(1-e);lampBook.intensity=9+96*e;if(k>=1)lampSettled=true}
+    // 镜头转到一小半就开始绣，转完差不多绣完；按时间算，掉帧也不会绣得慢
+    const want=Math.min(stitches.length,Math.floor(stitches.length*Math.max(0,(now-sealedAt-300)/2000)));
+    // 书名小图也隔一帧传一次
+    if(si<want){while(si<want)stitches[si++].draw();
+      titleTex.needsUpdate=true}
+    // 凹凸图等镜头停稳、针都绣完再一次性换上
+    if(k>=1&&si>=stitches.length&&!bumpDone){bumpDone=true;titleBump.image=plan.bump;titleBump.needsUpdate=true;setTimeout(()=>{const go=()=>{reading.ready();if(Q.get('page'))setTimeout(()=>reading.jump(+Q.get('page')),300);if(Q.get('pull')==='all')setTimeout(()=>reading.petals?._pullAll(),1500)};
+      if(reading)go();else{hint.textContent='one moment, the pages are still drying';hint.classList.remove('gone');pagesReady.then(()=>{hint.classList.add('gone');go()})}},500)}
+  }
+  let moving=false;
+  if(slideAt){const k=Math.min(1,(now-slideAt)/1300);leftSide.position.x=-2.6*(1-Math.pow(1-k,3));if(k<1)moving=true}
+  reading?.update(now);
+  // 东西在动的时候影子隔一帧画一次就够了，眼睛看不出来
+  if((moving||reading?.busy||Math.abs(tiltGoal-tilt)>.002||curNib.distanceTo(nibGoal||nibHome)>.002)){++frameN;renderer.shadowMap.needsUpdate=true}
+  renderer.render(scene,cam);
+};
+renderer.setAnimationLoop(frame);
+setTimeout(()=>ROLL.ready(),120);
+// 串成一卷时：书合上、台灯灭了以后，底下并排两句：read it again 再读一遍 / roll the credits → 去片尾。每次合上都有这两个选择，点别处不算
+if(ROLL.in){const st=document.createElement('style');st.textContent=".tocred{position:absolute;left:50%;margin-left:28px;bottom:38px;font:400 34px/1 'Reenie',cursive;color:#ee5546;opacity:0;pointer-events:none;transition:opacity .8s;cursor:pointer;z-index:30;white-space:nowrap}.tocred.on{opacity:1;pointer-events:auto}.hint.pair{left:50%;right:auto;transform:translateX(calc(-100% - 28px))}";document.head.appendChild(st);
+  pagesReady.then(()=>reading.endChoice=true);const hintEl=document.getElementById('hint');
+  const ce=document.createElement('div');ce.className='tocred';ce.textContent='roll the credits →';frameEl.appendChild(ce);
+  setInterval(()=>{const both=reading?.state==='end'&&!hintEl.classList.contains('gone');ce.classList.toggle('on',both);hintEl.classList.toggle('pair',reading?.state==='end')},200);
+  hintEl.addEventListener('pointerdown',e=>{if(reading?.state==='end'){e.stopPropagation();ce.classList.remove('on');reading.replay()}});
+  ce.addEventListener('pointerdown',e=>e.stopPropagation());ce.onclick=e=>{e.stopPropagation();ce.classList.remove('on');ROLL.done('black')}}
+window.__book={render:()=>renderer.render(scene,cam),frame,cam,scene,get reading(){return reading},
+  // 调试：按给定时间推一帧（后台标签页 rAF 太慢时用）
+  step:n=>{reading?.update(n);renderer.shadowMap.needsUpdate=true;renderer.render(scene,cam)}};
+</script>
+</body></html>
