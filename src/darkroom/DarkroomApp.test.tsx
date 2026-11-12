@@ -44,7 +44,7 @@ describe('DarkroomApp', () => {
     expect(screen.queryByTestId('darkroom-ready')).toBeNull()
     await enter(TEST_PASSPHRASE)
     expect(await screen.findByTestId('darkroom-ready')).toBeInTheDocument()
-    expect(screen.getByTestId('note-count').textContent).toBe('1')
+    expect(await screen.findByTestId('reel-shell')).toBeInTheDocument()
   })
 
   it('stays locked on a wrong passphrase', async () => {
@@ -67,10 +67,8 @@ describe('DarkroomApp lock', () => {
     const keyStore = { load: vi.fn(async () => null), save: vi.fn(async () => undefined), clear: vi.fn(async () => undefined) }
     render(<DarkroomApp fetchBytes={vault.fetchBytes} keyStore={keyStore as never} webStore={null} />)
     await enter(TEST_PASSPHRASE)
-    await screen.findByTestId('darkroom-ready')
-    fireEvent.click(screen.getByRole('button', { name: /roll it, darling/i }))
-    fireEvent.click(screen.getByRole('button', { name: /继续/i }))
-    fireEvent.click(await screen.findByText('上锁'))
+    await screen.findByTestId('reel-shell')
+    fireEvent.click(await screen.findByRole('button', { name: '锁上' }))
     expect(await screen.findByLabelText('口令')).toBeTruthy()
     expect(keyStore.clear).toHaveBeenCalled()
     expect(screen.queryByTestId('darkroom-ready')).toBeNull()
