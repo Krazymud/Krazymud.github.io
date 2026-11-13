@@ -25,7 +25,13 @@ describe('roll-link shell targeting', () => {
     expect(html).toContain('playbackRate = 0.96')
     expect(html).not.toMatch(/DJSRC|dj2\.mp3/)
     expect(html).toContain('static.wav')
+    expect(html).toContain('img/radio.svg')
+    expect(html).not.toContain('img/radio.jpg')
+    expect(html).toContain('《吉诺佩蒂》第一首 · 萨蒂')
+    expect(html).not.toContain('.djmode .now{display:none}')
+    expect(html).toContain('pointerdown')
     expect(existsSync(join(process.cwd(), 'public/reel-shell/static.wav'))).toBe(true)
+    expect(existsSync(join(process.cwd(), 'public/reel-shell/img/radio.svg'))).toBe(true)
   })
 
   it('keeps the sample film radio greeting in content.js', () => {

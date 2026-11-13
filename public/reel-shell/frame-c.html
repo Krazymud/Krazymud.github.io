@@ -35,7 +35,7 @@ html,body{margin:0;height:100%;background:var(--ink);overflow:hidden}
 /* 旧收音机：关灯时只是一团化开的影子，开灯才清楚 */
 .radio{position:absolute;left:166px;top:309px;width:428px;height:296px;overflow:hidden;border-radius:6px;
   filter:blur(10px) brightness(.08) saturate(.3);opacity:.9;transition:filter 1.3s ease .5s,opacity 1.3s ease .5s}
-.radio img{position:absolute;left:-27px;top:-11px;width:479px}
+.radio img{position:absolute;left:0;top:0;width:100%;height:100%}
 .radio .dial{position:absolute;left:26px;top:193px;width:383px;height:81px;border-radius:4px;opacity:0;
   background:radial-gradient(60% 80% at 50% 50%,rgba(255,190,90,.75),rgba(255,140,40,.15) 70%,transparent);mix-blend-mode:screen;transition:opacity .8s ease 1.6s}
 /* 光从右上来：右上亮一点，左下沉下去 */
@@ -109,9 +109,7 @@ html,body{margin:0;height:100%;background:var(--ink);overflow:hidden}
 .dj .who{margin-bottom:10px;opacity:.55}
 .dj p{margin:0;font:italic 300 21px/1.45 'Fraunces',serif;min-height:120px}
 .dj.show{opacity:1}
-.djmode .now{display:none}
-.djmode.played .now{display:flex}
-.now{position:absolute;left:166px;top:640px;display:flex;gap:28px;align-items:baseline;color:var(--cream);opacity:0;transform:translateY(6px);transition:.8s ease 1.6s}
+.now{position:absolute;left:166px;top:640px;display:flex;gap:28px;align-items:baseline;color:var(--cream);opacity:.9;transform:none;transition:.8s ease}
 .now .song{font:italic 300 26px 'Fraunces',serif}
 .now .pick{cursor:pointer;opacity:.45;border-bottom:1px solid rgba(243,230,210,.35);padding-bottom:1px;transition:opacity .3s}
 .now .pick:hover,.now .pick.open{opacity:1}
@@ -163,7 +161,7 @@ html,body{margin:0;height:100%;background:var(--ink);overflow:hidden}
       </div>
 
       <div class="rshadow"></div>
-      <div class="radio"><img src="img/radio.jpg" alt=""><div class="dial"></div><div class="shade"></div></div>
+      <div class="radio"><img src="img/radio.svg" alt=""><div class="dial"></div><div class="shade"></div></div>
 
       <div class="bulb" id="bulb">
         <div class="halo"></div>
@@ -198,7 +196,7 @@ html,body{margin:0;height:100%;background:var(--ink);overflow:hidden}
       <div class="dj" id="dj"><div class="mono who">On air · request line</div><p id="djt"></p></div>
       <div class="now">
         <span class="mono"><span class="eq"><i></i><i></i><i></i></span>Now playing · Side A · <span id="sideNo">01</span></span>
-        <span class="song" id="songT">the song we first danced to</span>
+        <span class="song" id="songT">《吉诺佩蒂》第一首 · 萨蒂</span>
         <span class="mono pick" id="pick" hidden>pick a song ▴</span><div class="plist" id="plist"></div>
       </div>
 
@@ -213,9 +211,9 @@ html,body{margin:0;height:100%;background:var(--ink);overflow:hidden}
   <div class="mote" style="left:120px;top:690px;width:14px;height:14px;opacity:.6"></div>
 </div>
 
-<script src="zh.js?v=tnqgtm"></script>
+<script src="zh.js?v=radio2"></script>
 <script src="vault-bridge.js"></script>
-<script src="content.js?v=29994fe04a"></script>
+<script src="content.js?v=radio2"></script>
 <script src="roll-link.js?v=vaultcta2"></script>
 <script>
 const s=document.getElementById('stage');
@@ -244,30 +242,34 @@ function speak(text){return new Promise(resolve=>{
   u.onend=resolve;u.onerror=resolve;
   speechSynthesis.cancel();speechSynthesis.speak(u)})}
 // 收音机的声音：开头一阵调台的雪花（static.wav，Commons CC0），底下一直垫着沙沙和噼啪；人声走 TTS
+// 手机只在手指按下的那一拍肯开口，所以粗指针设备在拉绳的 pointerdown 里就朗读；桌面仍等 1.4 秒调台过去再念
 const RAW={st:fetch('static.wav').then(r=>r.arrayBuffer()).catch(()=>null)};
-let radioN=0;
+let radioN=0,spoke=false;
+const speakNow=()=>matchMedia('(pointer:coarse)').matches||/Mobile|Android|iPhone|iPad|MicroMessenger/i.test(navigator.userAgent);
+function unlockRadio(){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;ac=ac||new AC();if(ac.state==='suspended'){const r=ac.resume();if(r&&r.catch)r.catch(()=>{})}return ac}
 const radio=async()=>{const n=++radioN;
-  ac=ac||new AudioContext();if(ac.state==='suspended')await ac.resume();
+  if(!unlockRadio())return {lead:1.4,dur:DJ.length*.06/playbackRate};
   const load=async(k,u)=>{let b=await RAW[k];if(!b)try{b=await (await fetch(u)).arrayBuffer()}catch(e){return null}
     try{return await ac.decodeAudioData(b.slice(0))}catch(e){return null}};
   if(!stBuf)stBuf=await load('st','static.wav');
   if(n!==radioN)throw new Error('stale');
-  const t0=ac.currentTime,lead=1.4,dur=DJ.length*.06/playbackRate,len=lead+dur+1;
+  const t0=ac.currentTime,lead=spoke?.25:1.4,dur=DJ.length*.06/playbackRate,len=Math.max(lead,1.4)+dur+1;
   playing=[];
   if(stBuf){const st=ac.createBufferSource();st.buffer=stBuf;st.loop=true;
     const sg=ac.createGain();sg.gain.setValueAtTime(0,t0);
-    [[.05,.55],[.3,.15],[.45,.6],[.75,.2],[.95,.45],[lead,.0]].forEach(([t,g])=>sg.gain.linearRampToValueAtTime(g,t0+t));
+    const sweep=spoke?[[.02,.4],[.12,.15],[.35,0]]:[[.05,.55],[.3,.15],[.45,.6],[.75,.2],[.95,.45],[lead,0]];
+    sweep.forEach(([t,g])=>sg.gain.linearRampToValueAtTime(g,t0+t));
     const sbp=ac.createBiquadFilter();sbp.type='bandpass';sbp.frequency.value=1800;sbp.Q.value=.5;
     st.connect(sbp).connect(sg).connect(ac.destination);
-    st.start(t0);st.stop(t0+lead+.1);playing.push(st)}
+    st.start(t0);st.stop(t0+Math.min(lead,1.4)+.1);playing.push(st)}
   const nb=ac.createBuffer(1,Math.ceil(ac.sampleRate*len),ac.sampleRate),d=nb.getChannelData(0);
   for(let i=0;i<d.length;i++){d[i]=(Math.random()*2-1)*.16;if(Math.random()<.0004)d[i]+=(Math.random()<.5?-1:1)*(.6+Math.random()*.4)}
   const bed=ac.createBufferSource();bed.buffer=nb;
   const blp=ac.createBiquadFilter();blp.type='lowpass';blp.frequency.value=5000;
-  const bg=ac.createGain();bg.gain.setValueAtTime(0,t0);bg.gain.linearRampToValueAtTime(.32,t0+lead*.8);bg.gain.linearRampToValueAtTime(.24,t0+len-.4);bg.gain.linearRampToValueAtTime(0,t0+len);
+  const bg=ac.createGain();bg.gain.setValueAtTime(0,t0);bg.gain.linearRampToValueAtTime(.32,t0+Math.min(lead,.8));bg.gain.linearRampToValueAtTime(.24,t0+len-.4);bg.gain.linearRampToValueAtTime(0,t0+len);
   bed.connect(blp).connect(bg).connect(ac.destination);
   bed.start(t0);playing.push(bed);
-  setTimeout(()=>{if(n===radioN)speak(DJ)},lead*1000);
+  if(!spoke)setTimeout(()=>{if(n===radioN)speak(DJ)},lead*1000);
   return {lead,dur};
 };
 const stopRadio=()=>{playing.forEach(n=>{try{n.stop()}catch(e){}});playing=[]};
@@ -280,7 +282,7 @@ const pages=t=>{const H=parseFloat(getComputedStyle(t).lineHeight)*4+2,mh=t.styl
     if(best>a+(b-a)*.5)b=best;out.push([a,b]);a=b;while(DJ[a]===' ')a++}
   t.style.minHeight=mh;t.textContent='';return out};
 const dj=async()=>{const box=document.getElementById('dj'),t=document.getElementById('djt');clearTimeout(djTimer);stopRadio();s.classList.remove('played');
-  if(!s.classList.contains('on')){radioN++;box.classList.remove('show');return}
+  if(!s.classList.contains('on')){radioN++;spoke=false;box.classList.remove('show');try{speechSynthesis.cancel()}catch(e){}return}
   t.textContent='';
   let lead=2,dur=DJ.length*.06;
   try{({lead,dur}=await radio());lead+=.0}catch(e){if(e.message==='stale')return}   // 没点过页面放不了声，就只走字幕
@@ -314,6 +316,7 @@ function showScroll(){if(document.querySelector('.scrolly'))return;const st=docu
  addEventListener('click',()=>{plist.classList.remove('open');pick.classList.remove('open')})}
 // 拉一下：绳子往下拽再弹回，灯亮；再拉一下关掉，方便反复看
 const cord=document.getElementById('cord'),bulb=document.getElementById('bulb');
+cord.addEventListener('pointerdown',()=>{unlockRadio();if(speakNow()&&!s.classList.contains('on')){spoke=true;speak(DJ)}},{passive:true});
 cord.onclick=()=>{cord.style.transform='translateY(46px)';setTimeout(()=>{cord.style.transform='';s.classList.toggle('on');if(useDJ)dj();bulb.classList.remove('swing');void bulb.offsetWidth;bulb.classList.add('swing')},220)};
 </script>
 </body></html>
