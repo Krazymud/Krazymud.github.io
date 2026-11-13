@@ -15,7 +15,6 @@ const PLACEHOLDER_TONES = ['#2a2420', '#1c1a18', '#32302c', '#242220']
 export function UnlockPanel({ canRemember, onUnlock }: UnlockPanelProps) {
   const reduced = useReducedMotion() ?? false
   const [passphrase, setPassphrase] = useState('')
-  const [remember, setRemember] = useState(true)
   const [busy, setBusy] = useState(false)
   const [holding, setHolding] = useState(false)
   const [shaking, setShaking] = useState(false)
@@ -39,7 +38,7 @@ export function UnlockPanel({ canRemember, onUnlock }: UnlockPanelProps) {
     setMessage(null)
     let ok: boolean
     try {
-      ok = await onUnlock(passphrase, remember && canRemember)
+      ok = await onUnlock(passphrase, canRemember)
     } catch {
       setBusy(false)
       setMessage('出了点问题，请再试一次')
