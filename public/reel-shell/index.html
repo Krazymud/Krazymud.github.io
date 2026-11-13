@@ -107,9 +107,9 @@ const SAYS_READY=new Set([3,4,6]);
 // 都是过了版权期的老录音（music/LICENSE.txt）；客人可以换、删、排顺序，也可以放自己的歌。列表循环，只留一首就是单曲循环
 // 专属设置（服务器 custom.json）里有自己的歌单就用它（文件在客人的 x/）
 const MUSIC=window.CUSTOM?.music||[
-  {src:'/darkroom/music/satie-gymnopedie-1.mp3',title:'Gymnopédie No.1 · Erik Satie'},
-  {src:'/darkroom/music/debussy-clair-de-lune.mp3',title:'Clair de Lune · Claude Debussy'},
-  {src:'/darkroom/music/chopin-nocturne-op37-1.mp3',title:'Nocturne Op.37 No.1 · Frédéric Chopin'},
+  {src:'/darkroom/music/satie-gymnopedie-1.mp3',title:'《吉诺佩蒂》第一首 · 萨蒂'},
+  {src:'/darkroom/music/debussy-clair-de-lune.mp3',title:'《月光》· 德彪西'},
+  {src:'/darkroom/music/chopin-nocturne-op37-1.mp3',title:'《夜曲》作品 37 之 1 · 肖邦'},
 ];
 const q=new URLSearchParams(location.search),BOOT=window.FILM_V||Date.now().toString(36);   // 服务器给了版本号就用它（同一版每次地址一样，浏览器能用存着的）
 let cur=+q.get('s')||0,now=null,next=null,busy=false;

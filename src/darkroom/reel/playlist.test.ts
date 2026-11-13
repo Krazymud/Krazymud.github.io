@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_PLAYLIST, type PlaylistTrack } from './playlist'
+import { readFile } from 'node:fs/promises'
+import path from 'node:path'
+import { DEFAULT_PLAYLIST, SHELL_SONG_TITLES, type PlaylistTrack } from './playlist'
 
 function assertTrack(t: PlaylistTrack) {
   expect(t.src).toMatch(/^\/darkroom\/music\/[\w-]+\.mp3$/)
@@ -28,5 +30,27 @@ describe('DEFAULT_PLAYLIST', () => {
       const file = path.join(process.cwd(), 'public', t.src.replace(/^\//, ''))
       await expect(access(file)).resolves.toBeUndefined()
     }
+  })
+
+  it('pairs each src with the shell Chinese titles', () => {
+    expect(DEFAULT_PLAYLIST[0]).toMatchObject({
+      src: '/darkroom/music/satie-gymnopedie-1.mp3',
+      title: SHELL_SONG_TITLES.satie,
+    })
+    expect(DEFAULT_PLAYLIST[1]).toMatchObject({
+      src: '/darkroom/music/chopin-nocturne-op37-1.mp3',
+      title: SHELL_SONG_TITLES.chopin,
+    })
+    expect(DEFAULT_PLAYLIST[2]).toMatchObject({
+      src: '/darkroom/music/debussy-clair-de-lune.mp3',
+      title: SHELL_SONG_TITLES.debussy,
+    })
+  })
+
+  it('matches reel-shell MUSIC titles in index.html', async () => {
+    const html = await readFile(path.join(process.cwd(), 'public/reel-shell/index.html'), 'utf8')
+    expect(html).toContain(SHELL_SONG_TITLES.satie)
+    expect(html).toContain(SHELL_SONG_TITLES.debussy)
+    expect(html).toContain(SHELL_SONG_TITLES.chopin)
   })
 })

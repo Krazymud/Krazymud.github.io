@@ -1,5 +1,6 @@
 import type { ListContent, ListEntry, NoteEntry, PhotoEntry } from '../../vault/types'
 import { copy } from '../../config/copy'
+import { SHELL_SONG_TITLES } from './playlist'
 
 export type ReelPhotoUrls = Record<string, { photo: string; thumb: string; full: string }>
 
@@ -13,7 +14,14 @@ export type ReelContentInput = {
 }
 
 const FALLBACKS = ['img/p129.jpg', 'img/p1005.jpg', 'img/p1027.jpg', 'img/p1011.jpg', 'img/p1062.jpg'] as const
-const ROLL_NAMES = ['for Two', 'slow days', 'far away', 'still us'] as const
+const ROLL_NAMES = ['初显', '曝光', '聚焦', '冲洗'] as const
+
+const framesFor = (photos: PhotoEntry[], urls: ReelPhotoUrls) => {
+  if (!photos.length) {
+    return [{ photo: 'img/blank-frame.svg', thumb: 'img/blank-frame.svg', full: 'img/blank-frame.svg', date: '', line: '' }]
+  }
+  return photos.map((photo, i) => frameFromPhoto(photo, urls, i, photo.caption || ''))
+}
 
 function fmtShort(date: string): string {
   const ms = Date.parse(date)
@@ -104,22 +112,12 @@ export function vaultToReelContent(input: ReelContentInput) {
   })
   const listTitles = input.lists.map((l) => l.entry.title.trim()).filter(Boolean)
 
-  const rolls = ROLL_NAMES.map((fallbackName, ri) => {
-    const slice = photos.slice(ri * 8, ri * 8 + 8)
-    const name = listTitles[ri] || noteTitles[ri] || fallbackName
-    const frames = Array.from({ length: 8 }, (_, j) => {
-      const photo = slice[j] ?? (photos.length ? photos[j % photos.length] : undefined)
-      const line =
-        ri === 2
-          ? noteBodies[j % Math.max(1, noteBodies.length)] || photo?.caption || ''
-          : ri === 3
-            ? listLines[j] || noteBodies[j % Math.max(1, noteBodies.length)] || photo?.caption || ''
-            : photo?.caption || listLines[j] || ''
-      return frameFromPhoto(photo, input.urls, ri * 8 + j, line)
-    })
-    const place = slice[0]?.caption?.slice(0, 24) || noteTitles[0] || copy.siteName
-    return { name, dates: `Vol ${ri + 1}`, place, frames }
-  })
+  const rolls = ROLL_NAMES.map((name) => ({
+    name,
+    dates: '',
+    place: '',
+    frames: framesFor(photos, input.urls),
+  }))
 
   const pick = (n: number, offset = 0) =>
     Array.from({ length: n }, (_, i) =>
@@ -141,8 +139,25 @@ export function vaultToReelContent(input: ReelContentInput) {
       creditsStills: pick(4, 3),
     },
     radio: {
-      dj: `Good evening. Brought to you by ${copy.siteName}.`,
-      song: listTitles[0] || noteTitles[0] || '匣中回忆',
+      dj: 'Good evening. Brought to you by your love.',
+      song: SHELL_SONG_TITLES.satie,
+    },
+    papers: {
+      notes: input.notes.length
+        ? input.notes.map(({ entry, text }) => ({
+            source: entry.source,
+            title: entry.title,
+            date: entry.date,
+            body: text,
+          }))
+        : [{ source: '', title: '', date: since, body: '' }],
+      lists: input.lists.length
+        ? input.lists.map(({ entry, content }) => ({
+            source: entry.source,
+            title: entry.title,
+            items: content.items ?? [],
+          }))
+        : [{ source: '', title: '', items: [] }],
     },
     letter,
     note: {
@@ -153,12 +168,12 @@ export function vaultToReelContent(input: ReelContentInput) {
     torch: {
       photo: torchPhoto.photo,
       thumb: torchPhoto.thumb,
-      caption: photos[photos.length - 1]?.caption || noteTitles[0] || 'last frame on the roll',
+      caption: photos[photos.length - 1]?.caption || noteTitles[0] || '最后一张',
       date: fmtLong(photos[photos.length - 1]?.date || since),
     },
     ticket: {
-      place: `${copy.siteName} Cinema`,
-      admit: 'Admit two',
+      place: '暗房',
+      admit: '两位',
       seat: 'Row G · 7 & 8',
       date: fmtShort(since),
       back: listLines.slice(0, 4).length
@@ -169,7 +184,7 @@ export function vaultToReelContent(input: ReelContentInput) {
     },
     book: {
       cover,
-      byline: `a film by ${copy.siteName}`,
+      byline: '暗房的一卷',
       title: noteTitles[0] || copy.siteName,
       collage: pick(2, 0),
       theater: cover,
@@ -208,26 +223,26 @@ export function vaultToReelContent(input: ReelContentInput) {
       last: listTitles[0] || 'see you on the next roll',
     },
     credits: [
-      ['big', 'A Roll <em>for Two</em>'],
-      ['role', 'Directed by'],
-      ['name', copy.siteName],
-      ['role', 'Starring'],
-      ['name', 'you <em>and</em> me'],
+      ['big', '一卷<em>两个人</em>'],
+      ['role', '导演'],
+      ['name', '暗房'],
+      ['role', '主演'],
+      ['name', '你<em>和</em>我'],
       ['ph', -3],
       ['ph', 4],
-      ['role', 'Shot on'],
-      ['name', 'a film camera'],
-      ['role', 'Developed at'],
-      ['name', copy.siteName],
-      ['role', 'Music'],
+      ['role', '拍摄器材'],
+      ['name', '一台胶片机'],
+      ['role', '冲洗于'],
+      ['name', '暗房'],
+      ['role', '音乐'],
       ['name', '<em>{song}</em>'],
       ['ph', 2],
       ['ph', -4],
-      ['role', 'Brought to you by'],
-      ['name', copy.siteName],
-      ['role', 'Special thanks to'],
-      ['name', 'every blurry frame'],
-      ['red', 'see you on the next roll'],
+      ['role', '出品'],
+      ['name', '暗房'],
+      ['role', '特别感谢'],
+      ['name', '每一张拍糊了的'],
+      ['red', '下一卷见'],
     ],
     __lang: 'zh',
   }
