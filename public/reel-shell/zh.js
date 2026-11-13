@@ -3,15 +3,13 @@
 // 第 4 幕页面那两行标题不改；照片墙的小纸牌和贴纸不改；书旁边那一堆、借书卡、读书卡不改。
 // 换字是整句对整句（roll-link.js 在网页文字、画布 fillText 上换），所以这里只放「要换」的句子，没列出来的就保持英文。
 (()=>{
-let lang='en';try{lang=localStorage.getItem('aroll.lang')||'en'}catch(e){}
+let lang='zh';try{lang = localStorage.getItem('aroll.lang') || 'zh'}catch(e){}
 window.ROLL_LANG=lang;
 // 中文字体：英文版也要有——客人在换片页写的中文（照片背面、信……）不跟语言变，可也得用手写中文字体写出来（11.01）
 window.ZH_FONT={
   // 英文字体缺中文字的时候用哪个中文字体顶上：好玩的手写 → 沐瑶软笔；花体签名 → 清松手写体 8；衬线、打字机 → 霞鹜文楷；小标签 → 写意体
   fonts:[
-    [/Reenie/i,'Muyao-Softbrush'],
-    [/Allura|Sacramento|Corinthia|Ephesis|Herr Von|HerrVon|Mrs Saint|MrsSaint/i,'JasonHandwriting8'],
-    [/JB Mono|Inter Tight|monospace|sans-serif/i,'YShi-Written'],
+    [/Reenie|Allura|Sacramento|Corinthia|Ephesis|Herr Von|Mrs Saint/i,'ZH Brush'],
     [/./,'ZH Kai']],
   // 某一幕想换别的中文字体就写在这里，比如 'tray.html':[[/Reenie/i,'JasonHandwriting8']]（10.31 试过清松，她说还是原来的好）
   fontsFor:{},
@@ -32,6 +30,17 @@ window.ZH={
       'cut along the dashed line · fold on the dotted line · glue the backs together · print at 100% (actual size)':'沿虚线剪下 · 在点线处对折 · 背面粘起来 · 打印时选「实际大小」',
       'Gymnopédie No.1 · Erik Satie':'《吉诺佩蒂》第一号 · 萨蒂','Liebestraum No.3 · Franz Liszt':'《爱之梦》第三号 · 李斯特',
       'Let Me Call You Sweetheart · Lewis James, 1924':'《让我叫你甜心》· 刘易斯·詹姆斯，1924','Comfort · imaboo':'《Comfort》· imaboo'},
+    'index.html':{
+      'settings':'设置','music':'音乐','on':'开','off':'关','volume':'音乐音量','sound':'音效音量','clarity':'清晰度',
+      'smooth':'流畅','standard':'标准','sharp':'清晰','polaroids':'拍立得','take them home':'带它们回家','language':'语言',
+      'loading the next reel':'下一卷正在装片',
+      'the eight from the wall · front and back':'照片墙上那八张 · 正面和背面','download photos':'下载照片','print & cut':'打印下来剪',
+      'just a moment…':'稍等一下…','getting the prints ready…':'正在冲印…',
+      'cut along the dashed line · fold on the dotted line · glue the backs together · print at 100% (actual size)':'沿虚线剪下 · 在点线处对折 · 背面粘起来 · 打印时选「实际大小」',
+      'Gymnopédie No.1 · Erik Satie':'《吉诺佩蒂》第一号 · 萨蒂','Liebestraum No.3 · Franz Liszt':'《爱之梦》第三号 · 李斯特',
+      'Let Me Call You Sweetheart · Lewis James, 1924':'《让我叫你甜心》· 刘易斯·詹姆斯，1924','Comfort · imaboo':'《Comfort》· imaboo'},
+    'opening.html':{'roll it, darling':'宝宝，往下看'},
+    'frame-lists.html':{'Some things':'有些东西','take time':'要慢慢','to develop':'才显影','tear here':'从这里撕开'},
     'frame-c.html':{
       'pull me':'拉我','On air · request line':'正在直播 · 点歌热线','Now playing · Side A ·':'正在播放 · A 面 ·','pick a song ▴':'换一首 ▴',
       'Gymnopédie No.1':'《吉诺佩蒂》第一号','Erik Satie':'萨蒂','Liebestraum No.3':'《爱之梦》第三号','Franz Liszt':'李斯特',

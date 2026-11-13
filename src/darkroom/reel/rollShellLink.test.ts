@@ -59,6 +59,20 @@ describe('roll-link shell targeting', () => {
     expect(lists).not.toContain('TT &amp; Claude')
   })
 
+  it('defaults to Chinese and uses the two local faces', () => {
+    const zh = readFileSync(join(process.cwd(), 'public/reel-shell/zh.js'), 'utf8')
+    expect(zh).toContain("lang = localStorage.getItem('aroll.lang') || 'zh'")
+    expect(zh).toContain("'index.html'")
+    expect(zh).toContain('宝宝，往下看')
+    const link = readFileSync(join(process.cwd(), 'public/reel-shell/roll-link.js'), 'utf8')
+    expect(link).toContain('font/LXGWWenKai-Regular.woff2')
+    expect(link).toContain('font/MaShanZheng-Regular.ttf')
+    expect(link).toContain('ZH Brush')
+    const opening = readFileSync(join(process.cwd(), 'public/reel-shell/opening.html'), 'utf8')
+    expect(opening).toContain('宝宝，往下看')
+    expect(opening).not.toContain('roll it, darling')
+  })
+
   it('sizes the rolls to the vault and captions the viewer from the frame line', () => {
     const html = readFileSync(join(process.cwd(), 'public/reel-shell/rolls.html'), 'utf8')
     expect(html).toContain('CONTENT.rolls[0].frames.length')
