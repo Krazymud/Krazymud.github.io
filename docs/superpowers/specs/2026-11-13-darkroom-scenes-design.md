@@ -1,7 +1,7 @@
 # 暗房：口令、收音机、信纸与中文
 
 **Date:** 2026-11-13 (Asia/Shanghai)  
-**Status:** awaiting user review of this spec
+**Status:** approved (user confirmed 2026-11-13, Asia/Shanghai)
 
 ## 目标
 
