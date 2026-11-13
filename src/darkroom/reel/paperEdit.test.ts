@@ -142,6 +142,22 @@ describe('paper-edit saves', () => {
     await settle()
   })
 
+  it('keeps line breaks when the note body has br elements', async () => {
+    const ctx = boot([{ source: '', title: '', date: '2026-01-01', body: '' }])
+    open.push(ctx.dom)
+    const titleEl = ctx.win.document.querySelector('.pe-title')
+    const dateEl = ctx.win.document.querySelector('.pe-date')
+    const bodyEl = ctx.win.document.querySelector('.pe-text')
+    if (!titleEl || !dateEl || !bodyEl) throw new Error('paper fields missing')
+    titleEl.textContent = '段'
+    dateEl.textContent = '2026-03-01'
+    bodyEl.innerHTML = '第一句。<br>第二句。'
+    click(ctx.win, '下一幕')
+    await settle()
+    expect(ctx.saves).toHaveLength(1)
+    expect(ctx.saves[0]?.page?.body).toBe('第一句。\n第二句。')
+  })
+
   it('deletes a saved note after vault-content supplies the source', async () => {
     const ctx = boot([{ source: '', title: '', date: '2026-01-01', body: '' }])
     open.push(ctx.dom)

@@ -36,6 +36,30 @@
   function text(el) {
     return (el && el.textContent ? el.textContent : '').trim()
   }
+  function noteBody(el) {
+    if (!el) return ''
+    if (typeof el.innerText === 'string') return el.innerText.trim()
+    let out = ''
+    const blockRe = /^(DIV|P|LI|UL|OL|H[1-6]|BLOCKQUOTE|PRE|SECTION|ARTICLE)$/i
+    const visit = (node) => {
+      if (node.nodeType === 3) {
+        out += node.textContent || ''
+        return
+      }
+      if (node.nodeType !== 1) return
+      const name = node.tagName
+      if (name === 'BR') {
+        out += '\n'
+        return
+      }
+      const block = blockRe.test(name)
+      if (block && out && out.slice(-1) !== '\n') out += '\n'
+      for (let i = 0; i < node.childNodes.length; i++) visit(node.childNodes[i])
+      if (block && out && out.slice(-1) !== '\n') out += '\n'
+    }
+    visit(el)
+    return out.trim()
+  }
 
   window.PAPER = {
     mount({ kind, root }) {
@@ -269,7 +293,7 @@
           source: page.source || '',
           title: text(titleEl),
           date: text(dateEl),
-          body: text(bodyEl),
+          body: noteBody(bodyEl),
         }
       }
 
