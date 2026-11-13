@@ -68,6 +68,7 @@ describe('DarkroomApp', () => {
       clear: vi.fn(async () => undefined),
     }
     render(<DarkroomApp fetchBytes={vault.fetchBytes} keyStore={keyStore} webStore={null} />)
+    await screen.findByLabelText('口令')
     expect(screen.queryByText('在这台设备上记住')).toBeNull()
     await enter(TEST_PASSPHRASE)
     expect(await screen.findByTestId('darkroom-ready')).toBeInTheDocument()
