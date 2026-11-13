@@ -29,6 +29,11 @@ describe('roll-link shell targeting', () => {
     expect(existsSync(join(process.cwd(), 'public/reel-shell/static.wav'))).toBe(true)
   })
 
+  it('keeps the sample film radio greeting in content.js', () => {
+    const js = readFileSync(join(process.cwd(), 'public/reel-shell/content.js'), 'utf8')
+    expect(js).toContain('Good evening. Brought to you by your love.')
+  })
+
   it('sets the song line from the track list', () => {
     const html = readFileSync(join(process.cwd(), 'public/reel-shell/frame-c.html'), 'utf8')
     expect(html).toContain('songT.textContent = d.list[d.cur]')
