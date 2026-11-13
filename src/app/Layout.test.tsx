@@ -3,7 +3,6 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { stopAll, unlockAudio } from '../audio/sound'
 import { copy } from '../config/copy'
-import { getPrefs } from '../prefs/prefs'
 import { routes } from './routes'
 
 vi.mock('../audio/sound', () => ({
@@ -45,22 +44,9 @@ describe('Layout', () => {
     expect(stopAll).toHaveBeenCalledTimes(1)
   })
 
-  it('stops every sound when muted and loads them again when unmuted', () => {
+  it('does not float a mute control on the darkroom home', () => {
     renderHome()
-    const mute = screen.getByRole('button', { name: '静音' })
-    fireEvent.click(mute)
-    expect(getPrefs().muted).toBe(true)
-    expect(stopAll).toHaveBeenCalledTimes(1)
-    vi.mocked(unlockAudio).mockClear()
-    const mutedAtUnlock: boolean[] = []
-    vi.mocked(unlockAudio).mockImplementation(() => {
-      mutedAtUnlock.push(getPrefs().muted)
-    })
-    fireEvent.click(mute)
-    expect(getPrefs().muted).toBe(false)
-    expect(stopAll).toHaveBeenCalledTimes(1)
-    expect(unlockAudio).toHaveBeenCalledTimes(2)
-    expect(mutedAtUnlock).toEqual([true, false])
+    expect(screen.queryByRole('button', { name: '静音' })).toBeNull()
   })
 
   it('uses immersive darkroom shell without light glass nav', async () => {
@@ -74,12 +60,12 @@ describe('Layout', () => {
 
   it('unlocks audio on any pointer, click or key press', () => {
     renderHome()
-    const mute = screen.getByRole('button', { name: '静音' })
-    fireEvent.pointerDown(mute)
+    const shell = document.querySelector('[data-shell="immersive"]')!
+    fireEvent.pointerDown(shell)
     expect(unlockAudio).toHaveBeenCalledTimes(1)
-    fireEvent.click(mute)
+    fireEvent.click(shell)
     expect(unlockAudio).toHaveBeenCalled()
-    fireEvent.keyDown(mute, { key: 'Enter' })
+    fireEvent.keyDown(shell, { key: 'Enter' })
     expect(unlockAudio).toHaveBeenCalled()
   })
 })

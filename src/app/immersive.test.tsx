@@ -33,7 +33,7 @@ describe('immersive layout', () => {
     // Home is always darkroom shell — no glass header.
     expect(document.querySelector('header')).toBeNull()
     expect(document.querySelector('[data-shell="immersive"]')).not.toBeNull()
-    expect(screen.getAllByRole('button', { name: '静音' })).toHaveLength(1)
+    expect(screen.queryByRole('button', { name: '静音' })).toBeNull()
     fireEvent.click(screen.getByText('toggle'))
     expect(document.querySelector('header')).toBeNull()
     expect(document.querySelector('[data-shell="immersive"]')).not.toBeNull()
