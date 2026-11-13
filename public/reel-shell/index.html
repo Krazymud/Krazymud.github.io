@@ -283,7 +283,7 @@ addEventListener('message',e=>{const d=e.data;if(!d||!d.roll)return;
     // 放映机放带声音的片子：歌先停，片子放完接着放（专属设置 reel.sound）
     else if(d.cmd==='hush'){if(started&&!music.paused){hushed=true;fade(0,800)}}else if(d.cmd==='unhush'){if(hushed){hushed=false;music.play().catch(()=>{});fade(ducked?VOL*.3:VOL,1500)}}}
   else if(d.roll==='paper-save'||d.roll==='paper-delete'){if(now&&e.source===now.contentWindow){try{window.parent.postMessage(d,'*')}catch(err){}}}
-  else if(d.roll==='paper-result'){if(now){try{now.contentWindow.postMessage(d,'*')}catch(err){}}}
+  else if(d.roll==='paper-result'){if(e.source===window.parent&&now){try{now.contentWindow.postMessage(d,'*')}catch(err){}}}
   else if(d.roll==='vault-content'&&d.content){window.CONTENT=d.content;if(d.content.__lang)window.ROLL_LANG=d.content.__lang;document.querySelectorAll('iframe').forEach(f=>{try{f.contentWindow.postMessage(d,'*')}catch(err){}})}
   else if(d.roll==='restart'){location.href=location.pathname}});
 function startReel(){if(window.__reelStarted)return;window.__reelStarted=1;boot()}

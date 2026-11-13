@@ -15,6 +15,7 @@
       title: p.title || '',
       date: p.date || '',
       body: p.body || '',
+      token: p.token || '',
     }
   }
   function cloneList(p) {
@@ -22,6 +23,7 @@
       source: p.source || '',
       title: p.title || '',
       items: (p.items || []).map((it) => ({ text: it.text || '', done: !!it.done })),
+      token: p.token || '',
     }
   }
   function blankNote() {
@@ -54,6 +56,59 @@
       })()
       let idx = 0
       const waits = new Map()
+      const held = new Map()
+      const heldWait = new Map()
+      let saving = 0
+      let queuedVault = null
+
+      function clonePage(p) {
+        return isList ? cloneList(p) : cloneNote(p)
+      }
+      function normItems(items) {
+        return (items || [])
+          .map((it) => ({ text: (it.text || '').trim(), done: !!it.done }))
+          .filter((it) => it.text !== '')
+      }
+      function samePaper(a, b) {
+        if (!a || !b) return false
+        if ((a.title || '').trim() !== (b.title || '').trim()) return false
+        if (String(a.date || '').trim() !== String(b.date || '').trim()) return false
+        if (isList) {
+          const ai = normItems(a.items)
+          const bi = normItems(b.items)
+          if (ai.length !== bi.length) return false
+          for (let i = 0; i < ai.length; i++) {
+            if (ai[i].text !== bi[i].text || ai[i].done !== bi[i].done) return false
+          }
+          return true
+        }
+        return (a.body || '').trim() === (b.body || '').trim()
+      }
+      function sourceFromResult(res) {
+        if (!res) return ''
+        if (typeof res.source === 'string' && res.source) return res.source
+        if (res.page && typeof res.page.source === 'string' && res.page.source) return res.page.source
+        if (typeof res.newId === 'string' && res.newId) return res.newId
+        return ''
+      }
+      function fulfillHeld(token, source) {
+        const waiters = heldWait.get(token) || []
+        heldWait.delete(token)
+        waiters.forEach((fn) => fn(source || ''))
+      }
+      function waitHeldSource(token) {
+        const existing = pages.find((p) => p.token === token && p.source)
+        if (existing) return Promise.resolve(existing.source)
+        return new Promise((resolve) => {
+          const timer = setTimeout(() => resolve(''), 30000)
+          const list = heldWait.get(token) || []
+          list.push((source) => {
+            clearTimeout(timer)
+            resolve(source || '')
+          })
+          heldWait.set(token, list)
+        })
+      }
 
       const pageHead = letter.querySelector('.head')
       if (pageHead) pageHead.style.display = 'none'
@@ -158,6 +213,7 @@
           }
           const txt = document.createElement('div')
           txt.contentEditable = 'true'
+          txt.setAttribute('contenteditable', 'true')
           txt.textContent = it.text
           txt.style.cssText =
             'flex:1;font:400 15px/1.5 "Courier Prime",monospace;color:#150e08;outline:none;border-bottom:1px dotted rgba(74,46,22,.25);min-height:1.4em'
@@ -219,8 +275,74 @@
       }
 
       function writeLocal(page) {
-        if (isList) pages[idx] = cloneList(page)
-        else pages[idx] = cloneNote(page)
+        const token = (pages[idx] && pages[idx].token) || page.token || ''
+        const next = clonePage(page)
+        next.token = token
+        if (!next.source && pages[idx] && pages[idx].source) next.source = pages[idx].source
+        pages[idx] = next
+      }
+
+      function applyVault(incomingRaw) {
+        if (pages[idx]) writeLocal(readPage())
+        const incoming = (incomingRaw || []).map(clonePage)
+        const current = pages[idx]
+        const claimed = new Set()
+        const keepLocal = new Set()
+        pages.forEach((lp) => {
+          if (lp.source) return
+          const probe = lp.token && held.has(lp.token) ? held.get(lp.token) : lp
+          const mi = incoming.findIndex((rp, i) => !claimed.has(i) && rp.source && samePaper(probe, rp))
+          if (mi < 0) return
+          lp.source = incoming[mi].source
+          claimed.add(mi)
+          if (!samePaper(lp, incoming[mi])) keepLocal.add(lp)
+          if (lp.token) {
+            const token = lp.token
+            held.delete(token)
+            fulfillHeld(token, lp.source)
+          }
+        })
+        const next = []
+        const placed = new Set()
+        incoming.forEach((rp) => {
+          if (!rp.source || next.some((p) => p.source === rp.source)) return
+          const li = pages.findIndex((lp, i) => !placed.has(i) && lp.source === rp.source)
+          if (li >= 0) {
+            placed.add(li)
+            const lp = pages[li]
+            lp.token = ''
+            if (keepLocal.has(lp)) next.push(lp)
+            else next.push(clonePage(rp))
+          } else next.push(clonePage(rp))
+        })
+        pages.forEach((lp, i) => {
+          if (placed.has(i)) return
+          if (lp.source && !lp.token) return
+          next.push(lp)
+        })
+        if (!next.length) next.push(isList ? blankList() : blankNote())
+        let nextIdx = 0
+        if (current) {
+          if (!current.source) {
+            const ni = next.indexOf(current)
+            if (ni >= 0) nextIdx = ni
+          } else {
+            const si = next.findIndex((p) => p === current || p.source === current.source)
+            if (si >= 0) nextIdx = si
+          }
+        }
+        if (nextIdx >= next.length) nextIdx = next.length - 1
+        pages.splice(0, pages.length, ...next)
+        idx = nextIdx
+        showPage()
+      }
+
+      function takeVault(incoming) {
+        if (saving) {
+          queuedVault = incoming
+          return
+        }
+        applyVault(incoming)
       }
 
       function waitResult(id) {
@@ -237,7 +359,10 @@
 
       function postSave(page) {
         const id = rid()
-        const payload = { roll: 'paper-save', kind, id, page }
+        const clean = isList
+          ? { source: page.source || '', title: page.title || '', items: page.items || [] }
+          : { source: page.source || '', title: page.title || '', date: page.date || '', body: page.body || '' }
+        const payload = { roll: 'paper-save', kind, id, page: clean }
         try {
           shell().postMessage(payload, '*')
         } catch (e) {}
@@ -263,31 +388,66 @@
           return
         }
         if (d.roll === 'vault-content' && d.content && d.content.papers) {
-          const incoming = d.content.papers[isList ? 'lists' : 'notes'] || []
-          const keep = pages[idx] && pages[idx].source ? pages[idx].source : ''
-          pages.splice(
-            0,
-            pages.length,
-            ...(incoming.length ? incoming.map(isList ? cloneList : cloneNote) : [isList ? blankList() : blankNote()]),
-          )
-          if (keep) {
-            const ni = pages.findIndex((p) => p.source === keep)
-            if (ni >= 0) idx = ni
-          } else if (idx >= pages.length) idx = pages.length - 1
-          showPage()
+          takeVault(d.content.papers[isList ? 'lists' : 'notes'] || [])
         }
       })
 
       async function saveCurrent() {
         const page = readPage()
-        const { res } = await postSave(page)
-        if (!res.ok) {
-          setErr(res.reason === 'title' ? '先写标题' : '没写上')
-          return false
+        let token = (pages[idx] && pages[idx].token) || ''
+        if (!page.source && token && held.has(token)) {
+          const snap = held.get(token)
+          const merged = clonePage(page)
+          merged.token = token
+          const slotAt = pages.findIndex((p) => p.token === token)
+          if (slotAt >= 0) pages[slotAt] = merged
+          if (samePaper(snap, merged)) {
+            setErr('')
+            return true
+          }
+          const source = await waitHeldSource(token)
+          if (!source) {
+            setErr('没写上')
+            return false
+          }
+          page.source = source
         }
-        writeLocal(page)
-        setErr('')
-        return true
+
+        const hadSource = !!page.source
+        saving++
+        try {
+          const { res } = await postSave(page)
+          if (!res.ok) {
+            setErr(res.reason === 'title' ? '先写标题' : '没写上')
+            return false
+          }
+          const hinted = sourceFromResult(res)
+          if (hinted) page.source = hinted
+          let at = token ? pages.findIndex((p) => p.token === token) : idx
+          if (at < 0) at = idx
+          if (!hadSource) {
+            if (!token) token = rid()
+            if (!page.source) held.set(token, clonePage(page))
+            else held.delete(token)
+          } else if (token) held.delete(token)
+          if (!page.source && pages[at] && pages[at].source && samePaper(pages[at], page)) {
+            page.source = pages[at].source
+            if (token) held.delete(token)
+          }
+          const slot = clonePage(page)
+          slot.token = hadSource ? (pages[at] && pages[at].token) || '' : token
+          if (pages[at]) pages[at] = slot
+          else pages[idx] = slot
+          setErr('')
+          return true
+        } finally {
+          saving--
+          if (saving === 0 && queuedVault) {
+            const incoming = queuedVault
+            queuedVault = null
+            applyVault(incoming)
+          }
+        }
       }
 
       bPrev.onclick = async () => {
@@ -311,6 +471,10 @@
       bRip.onclick = async () => {
         const page = pages[idx]
         if (!page.source) {
+          if (page.token) {
+            held.delete(page.token)
+            fulfillHeld(page.token, '')
+          }
           if (pages.length > 1) {
             pages.splice(idx, 1)
             if (idx >= pages.length) idx = pages.length - 1
@@ -339,7 +503,8 @@
 
       addRow.onclick = () => {
         const page = pages[idx]
-        if (!page.items) page.items = []
+        if (!page) return
+        page.items = collectListItems()
         page.items.push({ text: '', done: false })
         renderListItems(page.items.map((it) => ({ ...it })))
       }
