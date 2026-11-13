@@ -229,4 +229,25 @@ describe('ReelShellHost', () => {
       ),
     )
   })
+
+  it('paper-delete kind list with a source calls deleteList', async () => {
+    vault.deleteList.mockResolvedValue({ ok: true })
+    render(<ReelShellHost />)
+    await screen.findByTestId('reel-shell')
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { roll: 'paper-delete', kind: 'list', id: 'd3', source: 'lists/wish' },
+        source: mockContentWindow as unknown as Window,
+      }),
+    )
+
+    await waitFor(() => expect(vault.deleteList).toHaveBeenCalledWith('lists/wish'))
+    await waitFor(() =>
+      expect(mockContentWindow.postMessage).toHaveBeenCalledWith(
+        { roll: 'paper-result', id: 'd3', ok: true, reason: undefined },
+        '*',
+      ),
+    )
+    expect(vault.deleteNote).not.toHaveBeenCalled()
+  })
 })

@@ -465,13 +465,48 @@
         }
       })
 
+      function substance(page) {
+        if (isList) return normItems(page.items).length > 0
+        return (page.body || '').trim() !== ''
+      }
+      function isBlankDraft(page) {
+        return !page.source && !(page.title || '').trim() && !substance(page)
+      }
+      function needsTitle(page) {
+        return !page.source && !(page.title || '').trim() && substance(page)
+      }
+      function dirty() {
+        const cur = pages[idx]
+        if (!cur) return false
+        return !samePaper(readPage(), cur)
+      }
       function saveCurrent() {
         if (saveFlight) return saveFlight
+        const page = readPage()
+        if (isBlankDraft(page)) {
+          writeLocal(page)
+          setErr('')
+          return Promise.resolve(true)
+        }
+        if (needsTitle(page)) {
+          setErr('先写标题')
+          return Promise.resolve(false)
+        }
         saveFlight = performSave().finally(() => {
           saveFlight = null
         })
         return saveFlight
       }
+      function isPaperField(node) {
+        if (!node || node.nodeType !== 1) return false
+        if (node === titleEl || node === dateEl || node === bodyEl) return true
+        return !!(isList && listEl.contains(node) && node.getAttribute('contenteditable') === 'true')
+      }
+      letter.addEventListener('focusout', (e) => {
+        if (!isPaperField(e.target)) return
+        if (!dirty()) return
+        void saveCurrent()
+      })
 
       async function performSave() {
         const target = pages[idx]

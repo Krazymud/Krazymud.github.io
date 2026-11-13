@@ -82,7 +82,7 @@ canvas#gl{position:absolute;inset:0;width:1040px;height:694px;display:block}
     <div class="spill"></div>
     <div class="frame" id="frame">
       <canvas id="gl"></canvas>
-      <div class="title"><h2>Four rolls, <em>one us</em></h2><p>every season we kept, wound up and waiting</p></div>
+      <div class="title"><h2>四卷</h2><p>每一张都在</p></div>
       <div class="hint">pick one</div>
       <div class="mono tag" id="tag"><b id="tagName"></b><span id="tagSub"></span></div>
       <div class="mono back" id="back">← back to the table</div>
@@ -91,7 +91,7 @@ canvas#gl{position:absolute;inset:0;width:1040px;height:694px;display:block}
       <div class="vcap" id="vcap"></div>
       <div class="vtip gone" id="vtip"><svg width="120" height="90" viewBox="0 0 120 90"><path d="M8 10 C40 6 78 22 96 66" fill="none" stroke="#ee5546" stroke-width="2.4" stroke-linecap="round"/><path d="M84 58 L97 70 L101 52" fill="none" stroke="#ee5546" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><i>press me</i></div>
       <div class="mono corner" style="left:68px;top:58px">第 5 幕</div>
-      <div class="mono corner" style="right:68px;top:58px;text-align:right">4 rolls · 96 frames</div>
+      <div class="mono corner" style="right:68px;top:58px;text-align:right">5 / 9</div>
       <div class="grain"></div><div class="vig"></div>
     </div>
   </div>
@@ -584,7 +584,7 @@ const loop=fd=>{const dt=fd||Math.min(clock.getDelta(),.1),t=clock.elapsedTime;
    leverT=Math.min(1,leverT+dt*3.2);lever.rotation.x=Math.sin(leverT*Math.PI)*.75;
    if(on&&u.a>.9&&Math.abs(pull-pullT)<.004){const g=gateFrame();if(g!==gateShown){gateShown=g;
      if(g>=0&&g<N){slotCanvas(vx,g,1);const f=cur.frames[g];vcap.classList.remove('on');
-       setTimeout(()=>{vcap.innerHTML=`<span class="mono">${esc(f.date)} · frame ${String(g+1).padStart(2,'0')}</span><p>${esc(f.line)}</p>`;vcap.classList.add('on')},250);
+       setTimeout(()=>{const cap=String(f.line||'').trim();vcap.innerHTML=`<span class="mono">${esc(f.date)}</span>${cap?`<p>${esc(cap)}</p>`:''}`;vcap.classList.add('on')},250);
        if(dev[g]===0)dev[g]=.001}
      else{vx.fillStyle='#3a2414';vx.fillRect(0,0,FW,FH);vcap.classList.remove('on')}
      vTex.needsUpdate=true}}
