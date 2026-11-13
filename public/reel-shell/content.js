@@ -32,7 +32,7 @@ const C={
     creditsStills:['p129','p1027','p1011','p1005'].map(P),
   },
   // 收音机：主持人那句、Now playing 底下那行
-  radio:{dj:'Good evening. Brought to you by your love.',song:'the song we first danced to'},
+  radio:{dj:'Good evening. Brought to you by your love.',song:'《吉诺佩蒂》第一首 · 萨蒂'},
   // 冲印袋里的信（打字机一个字一个字打出来）
   letter:`Dear Giada,
 
