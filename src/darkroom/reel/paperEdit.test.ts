@@ -6,6 +6,15 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const script = readFileSync(join(process.cwd(), 'public/reel-shell/paper-edit.js'), 'utf8')
 
+type ShellWindow = Window & {
+  Event: typeof Event
+  FocusEvent: typeof FocusEvent
+  CONTENT: unknown
+  ROLL: { prep: () => void; done: (fx: string) => void }
+  PAPER: { mount: (opts: { kind: string; root: Element }) => void }
+  confirm: () => boolean
+}
+
 type PaperMsg = {
   roll?: string
   id?: string
@@ -23,12 +32,7 @@ function boot(records: Record<string, unknown>[], kind: 'note' | 'list' = 'note'
     </body>`,
     { url: 'http://localhost/', runScripts: 'dangerously' },
   )
-  const win = dom.window as unknown as Window & {
-    CONTENT: unknown
-    ROLL: { prep: () => void; done: (fx: string) => void }
-    PAPER: { mount: (opts: { kind: string; root: Element }) => void }
-    confirm: () => boolean
-  }
+  const win = dom.window as unknown as ShellWindow
   const saves: PaperMsg[] = []
   const deletes: PaperMsg[] = []
   const scene: string[] = []
@@ -82,7 +86,7 @@ function status(win: Window) {
   return win.document.querySelector('.pe-err')?.textContent ?? ''
 }
 
-function blur(win: Window, sel: string) {
+function blur(win: ShellWindow, sel: string) {
   const el = win.document.querySelector(sel)
   if (!el) throw new Error(`missing ${sel}`)
   el.dispatchEvent(new win.Event('focusout', { bubbles: true }))
@@ -100,13 +104,10 @@ function vault(win: Window, notes: Record<string, unknown>[]) {
   win.postMessage({ roll: 'vault-content', content: { since: '2026-01-01', papers: { notes, lists: [] } } }, '*')
 }
 
-const open: { close: () => void }[] = []
+const open: JSDOM[] = []
 
 afterEach(() => {
-  while (open.length) {
-    const dom = open.pop()
-    dom?.window.close()
-  }
+  while (open.length) open.pop()?.window.close()
 })
 
 describe('paper-edit saves', () => {

@@ -71,7 +71,7 @@ export function DarkroomApp({ fetchBytes = fetchVaultBytes, keyStore, webStore }
   }, [fetchBytes, store, attempt])
 
   const unlock = useCallback(
-    async (file: VaultFile, passphrase: string, remember: boolean) => {
+    async (file: VaultFile, passphrase: string, _remember: boolean) => {
       let session: VaultSession
       try {
         session = await unlockWithPassphrase(file, passphrase)

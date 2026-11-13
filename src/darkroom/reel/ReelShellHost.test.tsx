@@ -94,7 +94,7 @@ describe('ReelShellHost', () => {
   it('handles paper-save for notes and posts paper-result', async () => {
     vault.saveNote.mockResolvedValue({ ok: false, reason: 'title' })
     render(<ReelShellHost />)
-    const iframe = await screen.findByTestId('reel-shell')
+    await screen.findByTestId('reel-shell')
     window.dispatchEvent(
       new MessageEvent('message', {
         data: {
