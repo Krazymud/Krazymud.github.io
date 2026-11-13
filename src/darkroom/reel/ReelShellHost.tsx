@@ -180,7 +180,8 @@ export function ReelShellHost() {
   useEffect(() => {
     const onMessage = async (event: MessageEvent) => {
       const win = iframeRef.current?.contentWindow
-      if (win && event.source !== win) return
+      if (!win) return
+      if (event.source !== win) return
       const data = event.data as {
         roll?: string
         kind?: string
@@ -199,12 +200,12 @@ export function ReelShellHost() {
       if (data.roll === 'paper-save' && data.kind === 'note' && data.id && data.page) {
         const page = data.page
         const result = await saveNote({
-          source: page.source || undefined,
+          ...(page.source ? { source: page.source } : {}),
           title: page.title ?? '',
           date: page.date ?? '',
           body: page.body ?? '',
         })
-        win?.postMessage(
+        win.postMessage(
           {
             roll: 'paper-result',
             id: data.id,
@@ -219,11 +220,11 @@ export function ReelShellHost() {
       if (data.roll === 'paper-save' && data.kind === 'list' && data.id && data.page) {
         const page = data.page
         const result = await saveList({
-          source: page.source || undefined,
+          ...(page.source ? { source: page.source } : {}),
           title: page.title ?? '',
           items: page.items ?? [],
         })
-        win?.postMessage(
+        win.postMessage(
           {
             roll: 'paper-result',
             id: data.id,
@@ -237,12 +238,12 @@ export function ReelShellHost() {
 
       if (data.roll === 'paper-delete' && data.id && (data.kind === 'note' || data.kind === 'list')) {
         if (!data.source) {
-          win?.postMessage({ roll: 'paper-result', id: data.id, ok: true }, '*')
+          win.postMessage({ roll: 'paper-result', id: data.id, ok: true }, '*')
           return
         }
         const result =
           data.kind === 'note' ? await deleteNote(data.source) : await deleteList(data.source)
-        win?.postMessage(
+        win.postMessage(
           {
             roll: 'paper-result',
             id: data.id,

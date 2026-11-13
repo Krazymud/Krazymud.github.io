@@ -122,4 +122,111 @@ describe('ReelShellHost', () => {
       ),
     )
   })
+
+  it('paper-save kind list calls saveList with page items and posts paper-result', async () => {
+    vault.saveList.mockResolvedValue({ ok: true })
+    render(<ReelShellHost />)
+    await screen.findByTestId('reel-shell')
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: {
+          roll: 'paper-save',
+          kind: 'list',
+          id: 'l1',
+          page: {
+            source: 'lists/wish',
+            title: '清单',
+            items: [
+              { text: 'a', done: false },
+              { text: 'b', done: true },
+            ],
+          },
+        },
+        source: mockContentWindow as unknown as Window,
+      }),
+    )
+
+    await waitFor(() =>
+      expect(vault.saveList).toHaveBeenCalledWith({
+        source: 'lists/wish',
+        title: '清单',
+        items: [
+          { text: 'a', done: false },
+          { text: 'b', done: true },
+        ],
+      }),
+    )
+    await waitFor(() =>
+      expect(mockContentWindow.postMessage).toHaveBeenCalledWith(
+        { roll: 'paper-result', id: 'l1', ok: true, reason: undefined },
+        '*',
+      ),
+    )
+  })
+
+  it("paper-save note with source '' calls saveNote without a source property", async () => {
+    vault.saveNote.mockResolvedValue({ ok: true })
+    render(<ReelShellHost />)
+    await screen.findByTestId('reel-shell')
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: {
+          roll: 'paper-save',
+          kind: 'note',
+          id: 'n-new',
+          page: { source: '', title: '新', date: '2026-03-02', body: '字' },
+        },
+        source: mockContentWindow as unknown as Window,
+      }),
+    )
+
+    await waitFor(() =>
+      expect(vault.saveNote).toHaveBeenCalledWith({
+        title: '新',
+        date: '2026-03-02',
+        body: '字',
+      }),
+    )
+    expect(vault.saveNote.mock.calls[0][0]).not.toHaveProperty('source')
+  })
+
+  it("paper-delete with source '' posts paper-result ok and does not call delete helpers", async () => {
+    render(<ReelShellHost />)
+    await screen.findByTestId('reel-shell')
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { roll: 'paper-delete', kind: 'note', id: 'd1', source: '' },
+        source: mockContentWindow as unknown as Window,
+      }),
+    )
+
+    await waitFor(() =>
+      expect(mockContentWindow.postMessage).toHaveBeenCalledWith(
+        { roll: 'paper-result', id: 'd1', ok: true },
+        '*',
+      ),
+    )
+    expect(vault.deleteNote).not.toHaveBeenCalled()
+    expect(vault.deleteList).not.toHaveBeenCalled()
+  })
+
+  it('paper-delete note with a source calls deleteNote with that source', async () => {
+    vault.deleteNote.mockResolvedValue({ ok: true })
+    render(<ReelShellHost />)
+    await screen.findByTestId('reel-shell')
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { roll: 'paper-delete', kind: 'note', id: 'd2', source: 'notes/n1' },
+        source: mockContentWindow as unknown as Window,
+      }),
+    )
+
+    await waitFor(() => expect(vault.deleteNote).toHaveBeenCalledWith('notes/n1'))
+    await waitFor(() =>
+      expect(mockContentWindow.postMessage).toHaveBeenCalledWith(
+        { roll: 'paper-result', id: 'd2', ok: true, reason: undefined },
+        '*',
+      ),
+    )
+  })
 })
