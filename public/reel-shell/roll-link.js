@@ -39,7 +39,7 @@ window.ROLL={
 };
 // 这一幕出错卡住了（3D 起不来、脚本没拿到、抛错）：三秒后底下亮一行「跳到下一幕」，不让客人对着黑框干等（11.02）
 // 放不了声音这类没关系的错不算；图片没拿到由上面的 img() 管
-if(window.top!==window&&(location.pathname.split('/').pop()||'roll.html')!=='roll.html')(()=>{let shown=false;const QUIET=/NotAllowedError|AbortError|ResizeObserver/;
+if(window.top!==window&&(location.pathname.split('/').pop()||'roll.html')!=='roll.html')(()=>{let shown=false;const QUIET=/NotAllowedError|AbortError|ResizeObserver|EncodingError|decodeAudioData/;
   const bad=m=>{if(shown||QUIET.test(String(m)))return;shown=true;console.warn('[roll] scene error',m);setTimeout(()=>{
     // 两个选择：再试一次（这一幕重新装）/ 跳到下一幕
     const zh=window.ROLL_LANG==='zh',a=document.createElement('div');a.className='rollskip';

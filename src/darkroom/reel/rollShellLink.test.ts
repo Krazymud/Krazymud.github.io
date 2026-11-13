@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -18,5 +18,19 @@ describe('roll-link shell targeting', () => {
     expect(frameE).toContain('overflow:hidden')
     expect(frameE).toContain('hurry')
     expect(frameE).toContain('TEXT.length>24')
+  })
+
+  it('speaks the vault greeting and does not play dj2.mp3', () => {
+    const html = readFileSync(join(process.cwd(), 'public/reel-shell/frame-c.html'), 'utf8')
+    expect(html).toContain('speechSynthesis')
+    expect(html).toContain('playbackRate = 0.96')
+    expect(html).not.toMatch(/DJSRC|dj2\.mp3/)
+    expect(html).toContain('static.wav')
+    expect(existsSync(join(process.cwd(), 'public/reel-shell/static.wav'))).toBe(true)
+  })
+
+  it('sets the song line from the track list', () => {
+    const html = readFileSync(join(process.cwd(), 'public/reel-shell/frame-c.html'), 'utf8')
+    expect(html).toContain('songT.textContent = d.list[d.cur]')
   })
 })
