@@ -6,7 +6,12 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 const script = readFileSync(join(process.cwd(), 'public/reel-shell/paper-edit.js'), 'utf8')
 
-type PaperMsg = { roll?: string; id?: string; source?: string; page?: { source?: string; title?: string; body?: string } }
+type PaperMsg = {
+  roll?: string
+  id?: string
+  source?: string
+  page?: { source?: string; title?: string; body?: string; items?: { text?: string; done?: boolean }[] }
+}
 
 function boot(records: Record<string, unknown>[], kind: 'note' | 'list' = 'note') {
   const dom = new JSDOM(
@@ -319,4 +324,172 @@ describe('paper-edit saves', () => {
     await settle()
     expect(ctx.saves).toEqual([])
   })
+
+  it('does not append another blank when 新的一篇 is used on an unsaved blank sheet', async () => {
+    const note = boot([])
+    open.push(note.dom)
+    click(note.win, '新的一篇')
+    click(note.win, '新的一篇')
+    click(note.win, '下一幕')
+    await settle()
+    expect(note.saves).toEqual([])
+    expect(note.scene).toEqual(['cross'])
+    fill(note.win, '只此一篇', '2026-03-01', '正文')
+    click(note.win, '上一篇')
+    await flushSaves(note)
+    expect(field(note.win, '.pe-title')).toBe('只此一篇')
+    expect(field(note.win, '.pe-text')).toBe('正文')
+    click(note.win, '下一篇')
+    await flushSaves(note)
+    expect(field(note.win, '.pe-title')).toBe('只此一篇')
+    click(note.win, '新的一篇')
+    await flushSaves(note)
+    expect(note.saves.map((s) => s.page?.title)).toEqual(['只此一篇'])
+    expect(field(note.win, '.pe-title')).toBe('')
+    click(note.win, '上一篇')
+    await flushSaves(note)
+    expect(field(note.win, '.pe-title')).toBe('只此一篇')
+
+    const sourced = boot([{ source: 'notes/empty', title: '', date: '', body: '' }])
+    open.push(sourced.dom)
+    click(sourced.win, '新的一篇')
+    await flushSaves(sourced)
+    expect(sourced.saves.map((s) => s.page?.source)).toEqual(['notes/empty'])
+    expect(field(sourced.win, '.pe-title')).toBe('')
+    fill(sourced.win, '新页', '2026-04-01', '有了')
+    click(sourced.win, '上一篇')
+    await flushSaves(sourced)
+    expect(sourced.saves.map((s) => s.page?.title)).toEqual(['', '新页'])
+    expect(field(sourced.win, '.pe-title')).toBe('')
+
+    const list = boot([], 'list')
+    open.push(list.dom)
+    click(list.win, '新的一篇')
+    await settle()
+    expect(list.saves).toEqual([])
+    const titleEl = list.win.document.querySelector('.pe-title')
+    if (!titleEl) throw new Error('missing title')
+    titleEl.textContent = '买'
+    click(list.win, '+')
+    const item = list.win.document.querySelector('.pe-list [contenteditable]')
+    if (!item) throw new Error('missing item')
+    item.textContent = '牛奶'
+    click(list.win, '上一篇')
+    await flushSaves(list)
+    expect(field(list.win, '.pe-title')).toBe('买')
+    expect(list.win.document.querySelector('.pe-list [contenteditable]')?.textContent).toBe('牛奶')
+    click(list.win, '下一篇')
+    await flushSaves(list)
+    expect(field(list.win, '.pe-title')).toBe('买')
+  })
+
+  it('keeps a list row click when focus leaves the item onto that control', async () => {
+    const ctx = boot(
+      [
+        {
+          source: 'lists/l1',
+          title: '买',
+          items: [
+            { text: '牛奶', done: false },
+            { text: '面包', done: false },
+          ],
+        },
+        { source: 'lists/l2', title: '另一', items: [{ text: '盐', done: false }] },
+      ],
+      'list',
+    )
+    open.push(ctx.dom)
+
+    const row = ctx.win.document.querySelector('.pe-list > div')
+    const item = row?.querySelector('[contenteditable]')
+    const del = [...(row?.querySelectorAll('button') ?? [])].find((b) => b.textContent === '×')
+    if (!row || !item || !del) throw new Error('missing list row controls')
+    item.textContent = '酸奶'
+    item.dispatchEvent(new ctx.win.Event('input', { bubbles: true }))
+    item.dispatchEvent(new ctx.win.FocusEvent('focusout', { bubbles: true, relatedTarget: del }))
+    del.click()
+    expect([...ctx.win.document.querySelectorAll('.pe-list [contenteditable]')].map((el) => el.textContent)).toEqual(['面包'])
+    click(ctx.win, '下一篇')
+    await settle()
+    await flushSaves(ctx)
+    expect(field(ctx.win, '.pe-title')).toBe('另一')
+    click(ctx.win, '上一篇')
+    await flushSaves(ctx)
+    expect([...ctx.win.document.querySelectorAll('.pe-list [contenteditable]')].map((el) => el.textContent)).toEqual(['面包'])
+
+    const toggle = boot(
+      [
+        {
+          source: 'lists/l1',
+          title: '买',
+          items: [{ text: '牛奶', done: false }],
+        },
+        { source: 'lists/l2', title: '另一', items: [{ text: '盐', done: false }] },
+      ],
+      'list',
+    )
+    open.push(toggle.dom)
+    const toggleRow = toggle.win.document.querySelector('.pe-list > div')
+    const toggleItem = toggleRow?.querySelector('[contenteditable]')
+    const box = toggleRow?.querySelector('button')
+    if (!toggleRow || !toggleItem || !box) throw new Error('missing toggle')
+    toggleItem.textContent = '酸奶'
+    toggleItem.dispatchEvent(new toggle.win.Event('input', { bubbles: true }))
+    toggleItem.dispatchEvent(new toggle.win.FocusEvent('focusout', { bubbles: true, relatedTarget: box }))
+    box.click()
+    expect(toggle.win.document.querySelector('.pe-list button')?.innerHTML ?? '').toContain('✓')
+    click(toggle.win, '下一篇')
+    await settle()
+    await flushSaves(toggle)
+    click(toggle.win, '上一篇')
+    await flushSaves(toggle)
+    expect(toggle.win.document.querySelector('.pe-list [contenteditable]')?.textContent).toBe('酸奶')
+    expect(toggle.win.document.querySelector('.pe-list button')?.innerHTML ?? '').toContain('✓')
+
+    const added = boot(
+      [
+        {
+          source: 'lists/l1',
+          title: '买',
+          items: [{ text: '牛奶', done: false }],
+        },
+        { source: 'lists/l2', title: '另一', items: [{ text: '盐', done: false }] },
+      ],
+      'list',
+    )
+    open.push(added.dom)
+    const addItem = added.win.document.querySelector('.pe-list [contenteditable]')
+    const addBtn = [...added.win.document.querySelectorAll('button')].find((b) => b.textContent === '+')
+    if (!addItem || !addBtn) throw new Error('missing add row')
+    addItem.textContent = '酸奶'
+    addItem.dispatchEvent(new added.win.Event('input', { bubbles: true }))
+    addItem.dispatchEvent(new added.win.FocusEvent('focusout', { bubbles: true, relatedTarget: addBtn }))
+    addBtn.click()
+    expect([...added.win.document.querySelectorAll('.pe-list [contenteditable]')].map((el) => el.textContent)).toEqual([
+      '酸奶',
+      '',
+    ])
+    click(added.win, '下一篇')
+    await settle()
+    await flushSaves(added)
+    click(added.win, '上一篇')
+    await flushSaves(added)
+    expect([...added.win.document.querySelectorAll('.pe-list [contenteditable]')].map((el) => el.textContent)).toEqual([
+      '酸奶',
+      '',
+    ])
+  })
 })
+
+async function flushSaves(ctx: { win: Window; saves: PaperMsg[] }) {
+  const seen = new Set<string>()
+  for (let i = 0; i < 6; i++) {
+    await settle()
+    const pending = ctx.saves.filter((s) => s.id && !seen.has(s.id))
+    if (!pending.length) return
+    for (const save of pending) {
+      seen.add(save.id!)
+      reply(ctx.win, save.id!)
+    }
+  }
+}

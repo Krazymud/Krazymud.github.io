@@ -85,6 +85,7 @@
       let saving = 0
       let saveFlight = null
       let queuedVault = null
+      let listRev = 0
 
       function clonePage(p) {
         return isList ? cloneList(p) : cloneNote(p)
@@ -244,7 +245,9 @@
           }
           box.onclick = () => {
             it.done = !it.done
+            syncList(items)
             renderListItems(items)
+            noteListClick()
           }
           const txt = document.createElement('div')
           txt.contentEditable = 'true'
@@ -262,7 +265,9 @@
             'border:0;background:transparent;color:#d8432f;font:400 16px/1 sans-serif;cursor:pointer;opacity:.7;padding:0 4px'
           del.onclick = () => {
             items.splice(i, 1)
+            syncList(items)
             renderListItems(items)
+            noteListClick()
           }
           row.append(box, txt, del)
           listEl.appendChild(row)
@@ -497,13 +502,35 @@
         })
         return saveFlight
       }
+      function syncList(items) {
+        const page = pages[idx]
+        if (!page) return
+        page.items = items.map((it) => ({ text: it.text || '', done: !!it.done }))
+      }
+      function noteListClick() {
+        listRev++
+        const flight = saveFlight
+        const page = pages[idx]
+        if (!flight || !page || !page.source) return
+        void flight.then(() => {
+          if (saveFlight) return
+          void saveCurrent()
+        })
+      }
       function isPaperField(node) {
         if (!node || node.nodeType !== 1) return false
         if (node === titleEl || node === dateEl || node === bodyEl) return true
         return !!(isList && listEl.contains(node) && node.getAttribute('contenteditable') === 'true')
       }
+      function isListRowControl(node) {
+        if (!isList || !node || node.nodeType !== 1) return false
+        if (node === addRow) return true
+        const btn = node.closest && node.closest('button')
+        return !!(btn && (btn === addRow || listEl.contains(btn)))
+      }
       letter.addEventListener('focusout', (e) => {
         if (!isPaperField(e.target)) return
+        if (isListRowControl(e.relatedTarget)) return
         if (!dirty()) return
         void saveCurrent()
       })
@@ -511,6 +538,7 @@
       async function performSave() {
         const target = pages[idx]
         if (!target) return false
+        const listRevAtStart = listRev
         const page = readPage()
         let token = target.token || ''
         if (!page.source && token && held.has(token)) {
@@ -554,6 +582,9 @@
           }
           if (!pages.includes(target)) return false
           const slot = clonePage(page)
+          if (isList && listRev !== listRevAtStart) {
+            slot.items = readPage().items.map((it) => ({ text: it.text || '', done: !!it.done }))
+          }
           slot.token = hadSource ? target.token || '' : token
           assignPage(target, slot)
           setErr('')
@@ -589,7 +620,9 @@
       bNew.onclick = async () => {
         const page = pages[idx]
         if (!page) return
+        const adding = !isBlankDraft(readPage())
         if (!(await saveCurrent())) return
+        if (!adding) return
         const at = locate(page)
         if (at < 0) return
         idx = at
@@ -650,6 +683,7 @@
         page.items = collectListItems()
         page.items.push({ text: '', done: false })
         renderListItems(page.items.map((it) => ({ ...it })))
+        noteListClick()
       }
 
       showPage()
