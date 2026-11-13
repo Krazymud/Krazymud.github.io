@@ -79,7 +79,7 @@ export function DarkroomApp({ fetchBytes = fetchVaultBytes, keyStore, webStore }
         if (error instanceof DecryptError) return false
         throw error
       }
-      if (remember && store) await store.save(session.dek).catch(() => undefined)
+      if (store) await store.save(session.dek).catch(() => undefined)
       void play('unseal')
       setState({ status: 'ready', file, session })
       return true
