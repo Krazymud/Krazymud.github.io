@@ -180,7 +180,7 @@ export function vaultToReelContent(input: ReelContentInput) {
         ? listLines.slice(0, 4)
         : noteBodies.slice(0, 2).length
           ? noteBodies.slice(0, 2)
-          : ['keep every frame', 'see you on the next roll'],
+          : ['把每一格留住', '下一卷见'],
     },
     book: {
       cover,
@@ -217,10 +217,10 @@ export function vaultToReelContent(input: ReelContentInput) {
     },
     creditsBy: {
       director: copy.siteName,
-      starring: 'you and me',
-      camera: 'a film camera',
-      thanks: noteTitles[0] || 'every blurry frame',
-      last: listTitles[0] || 'see you on the next roll',
+      starring: '你和我',
+      camera: '一台胶片机',
+      thanks: noteTitles[0] || '每一张拍糊了的',
+      last: listTitles[0] || '下一卷见',
     },
     credits: [
       ['big', '一卷<em>两个人</em>'],
