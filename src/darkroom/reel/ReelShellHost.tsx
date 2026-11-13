@@ -196,14 +196,6 @@ export function ReelShellHost() {
 
   return (
     <div className="relative min-h-dvh" data-testid="reel-shell-host">
-      <button
-        type="button"
-        onClick={lock}
-        className="fixed left-4 top-4 z-30 text-xs tracking-[0.15em] text-[#f3e6d2]/55 hover:text-[#f3e6d2]"
-        style={{ fontFamily: 'JB Mono, monospace' }}
-      >
-        锁上
-      </button>
       <iframe
         key={payload.key}
         ref={iframeRef}

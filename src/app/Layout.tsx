@@ -109,8 +109,6 @@ export function Layout() {
             <Outlet />
           </motion.main>
         )}
-        {(immersive || isHome) &&
-          muteButton('dr-btn dr-panel fixed left-3 top-3 z-30 flex h-9 w-9 items-center justify-center')}
         {perfEnabled && <PerfOverlay />}
       </div>
     </ImmersiveContext.Provider>

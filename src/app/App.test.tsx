@@ -1,9 +1,9 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetSound, setAudioContextFactory } from '../audio/sound'
 import { copy } from '../config/copy'
-import { PREFS_KEY, resetPrefsCache } from '../prefs/prefs'
+import { resetPrefsCache } from '../prefs/prefs'
 import { routes } from './routes'
 
 function renderAt(path: string) {
@@ -63,19 +63,10 @@ describe('app shell', () => {
     expect(document.querySelector('main')?.className ?? '').not.toMatch(/glass-panel-solid/)
   })
 
-  it('mutes and unmutes from the immersive control', async () => {
+  it('does not float a mute control over the darkroom', async () => {
     stubEmptyVault()
-    setAudioContextFactory(() => ({ state: 'running', decodeAudioData: async () => ({}) }) as unknown as AudioContext)
     renderAt('/')
     await within(screen.getByRole('main')).findByText(copy.siteName)
-    const mute = screen.getByRole('button', { name: '静音' })
-    expect(mute).toHaveAttribute('aria-pressed', 'false')
-    fireEvent.click(mute)
-    expect(mute).toHaveAccessibleName('静音')
-    expect(mute).toHaveAttribute('aria-pressed', 'true')
-    expect(JSON.parse(localStorage.getItem(PREFS_KEY)!).muted).toBe(true)
-    fireEvent.click(mute)
-    expect(mute).toHaveAttribute('aria-pressed', 'false')
-    expect(JSON.parse(localStorage.getItem(PREFS_KEY)!).muted).toBe(false)
+    expect(screen.queryByRole('button', { name: '静音' })).toBeNull()
   })
 })

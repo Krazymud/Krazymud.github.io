@@ -61,16 +61,12 @@ describe('DarkroomApp', () => {
   })
 })
 
-describe('DarkroomApp lock', () => {
-  it('returns to unlock and clears the key store', async () => {
+describe('DarkroomApp chrome', () => {
+  it('does not float a lock button over the reel', async () => {
     const vault = await makeTestVault()
-    const keyStore = { load: vi.fn(async () => null), save: vi.fn(async () => undefined), clear: vi.fn(async () => undefined) }
-    render(<DarkroomApp fetchBytes={vault.fetchBytes} keyStore={keyStore as never} webStore={null} />)
+    render(<DarkroomApp fetchBytes={vault.fetchBytes} keyStore={null} webStore={null} />)
     await enter(TEST_PASSPHRASE)
     await screen.findByTestId('reel-shell')
-    fireEvent.click(await screen.findByRole('button', { name: '锁上' }))
-    expect(await screen.findByLabelText('口令')).toBeTruthy()
-    expect(keyStore.clear).toHaveBeenCalled()
-    expect(screen.queryByTestId('darkroom-ready')).toBeNull()
+    expect(screen.queryByRole('button', { name: '锁上' })).toBeNull()
   })
 })
