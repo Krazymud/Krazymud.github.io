@@ -6,13 +6,13 @@ describe('OpeningScene', () => {
   it('renders title and handwritten CTA', () => {
     render(<OpeningScene onContinue={() => {}} beltUrls={[]} />)
     expect(screen.getByRole('heading', { name: '暗房' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /roll it, darling/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '宝宝，往下看' })).toBeInTheDocument()
   })
 
   it('calls onContinue when CTA is clicked', () => {
     const onContinue = vi.fn()
     render(<OpeningScene onContinue={onContinue} beltUrls={[]} />)
-    fireEvent.click(screen.getByRole('button', { name: /roll it, darling/i }))
+    fireEvent.click(screen.getByRole('button', { name: '宝宝，往下看' }))
     expect(onContinue).toHaveBeenCalledOnce()
   })
 
