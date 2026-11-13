@@ -150,16 +150,16 @@ html,body{margin:0;height:100%;background:var(--ink);overflow:hidden}
         <div class="fr"><img data-pick="1" alt=""></div>
         <div class="fr"><img data-pick="2" alt=""></div>
         <div class="fr"><img data-pick="3" alt=""></div>
-        <span class="edge">KODAK GOLD 200 ▸ 9 ▸ 9A ▸ 10</span>
-        <span class="edge r">▸ 11 ▸ 11A ▸ 12 ▸ 12A</span>
+        <span class="edge">第9格 ▸ 第9A格 ▸ 第10格</span>
+        <span class="edge r">第11格 ▸ 第11A格 ▸ 第12格 ▸ 第12A格</span>
       </div>
       <div class="neg" style="left:962px;top:94px;--r:1.5deg;--y:-10deg">
         <i class="pin"></i>
         <div class="fr"><img data-pick="4" alt=""></div>
         <div class="fr"><img data-pick="5" alt=""></div>
         <div class="fr"><img data-pick="6" alt=""></div>
-        <span class="edge">KODAK GOLD 200 ▸ 13 ▸ 13A</span>
-        <span class="edge r">▸ 14 ▸ 14A ▸ 15</span>
+        <span class="edge">第13格 ▸ 第13A格</span>
+        <span class="edge r">第14格 ▸ 第14A格 ▸ 第15格</span>
       </div>
 
       <div class="rshadow"></div>
@@ -202,8 +202,8 @@ html,body{margin:0;height:100%;background:var(--ink);overflow:hidden}
         <span class="mono pick" id="pick" hidden>pick a song ▴</span><div class="plist" id="plist"></div>
       </div>
 
-      <div class="mono corner" style="left:68px;top:58px">Scene 02 — The darkroom</div>
-      <div class="mono corner" style="right:68px;top:58px;text-align:right">02 / 24</div>
+      <div class="mono corner" style="left:68px;top:58px">第 2 幕 · 暗房</div>
+      <div class="mono corner" style="right:68px;top:58px;text-align:right">2 / 9</div>
       <div class="grain"></div><div class="vig"></div>
     </div>
   </div>
@@ -223,47 +223,51 @@ const fit=()=>{const k=Math.min(innerWidth/1600,innerHeight/1000);s.style.transf
 fit();addEventListener('resize',fit);
 const q=new URLSearchParams(location.search);
 if(q.has('on'))s.classList.add('on');
-// 点歌：字幕和 dj.mp3 念的是同一句（不念名字，念 for you）。默认开，?nodj 关掉
-// 专属设置（服务器 custom.json）可以换主持人的声音和台词：radio.src 在客人的 x/，radio.text 字幕
-const DJ=window.CUSTOM?.radio?.text||CONTENT.radio.dj,DJSRC=window.CUSTOM?.radio?.src||'dj2.mp3';
+// 点歌：字幕和浏览器 TTS 念的是同一句。默认开，?nodj 关掉
+// 专属设置（服务器 custom.json）可以换台词：radio.text 字幕
+const DJ=window.CUSTOM?.radio?.text||CONTENT.radio.dj;
 // 墙上的底片是竖的瘦格子：客人调过竖的裁切就先裁好再放
 document.querySelectorAll('img[data-pick]').forEach(im=>{const p=CONTENT.picks.radio[+im.dataset.pick];if(!p)return;im.src=CONTENT.small(p);
   if(p.crop){const o=new Image();o.onload=()=>{im.src=CONTENT.cropCanvas(o,p,36/52,600).toDataURL('image/jpeg',.9)};o.src=CONTENT.small(p)}});
 document.getElementById('songT').textContent=CONTENT.radio.song;
 const useDJ=!q.has('nodj');
-const RATE=.96;   // 放慢一点点，声音也跟着沉一点
-let djTimer,ac,djBuf,stBuf,playing=[],sent=false;
-// 收音机的声音：开头一阵调台的雪花（static.wav，Commons CC0），底下一直垫着沙沙和噼啪，人声过窄带滤波像老喇叭
-// 两段声音一进这一幕就一起拿（11.02：以前拉了绳才一段一段去拿，跨境要干等三五秒才出声）；拉绳的时候只剩解码
-const RAW={dj:fetch(DJSRC).then(r=>r.arrayBuffer()).catch(()=>null),st:fetch('static.wav').then(r=>r.arrayBuffer()).catch(()=>null)};
+const playbackRate=0.96;
+let djTimer,ac,stBuf,playing=[],sent=false;
+function pickVoice(){const voices=speechSynthesis.getVoices().filter(v=>/^en(-|_)/i.test(v.lang));
+  return voices.find(v=>/male|david|daniel|alex/i.test(v.name))||voices[0]||null}
+function speak(text){return new Promise(resolve=>{
+  if(!window.speechSynthesis){resolve();return}
+  const u=new SpeechSynthesisUtterance(text);
+  const playbackRate = 0.96;
+  u.rate=playbackRate;u.pitch=0.85;
+  const voice=pickVoice();if(voice)u.voice=voice;
+  u.onend=resolve;u.onerror=resolve;
+  speechSynthesis.cancel();speechSynthesis.speak(u)})}
+// 收音机的声音：开头一阵调台的雪花（static.wav，Commons CC0），底下一直垫着沙沙和噼啪；人声走 TTS
+const RAW={st:fetch('static.wav').then(r=>r.arrayBuffer()).catch(()=>null)};
 let radioN=0;
 const radio=async()=>{const n=++radioN;
   ac=ac||new AudioContext();if(ac.state==='suspended')await ac.resume();
-  const load=async(k,u)=>{let b=await RAW[k];if(!b)b=await (await fetch(u)).arrayBuffer();return ac.decodeAudioData(b.slice(0))};
-  [djBuf,stBuf]=await Promise.all([djBuf||load('dj',DJSRC),stBuf||load('st','static.wav')]);
-  // 等声音的时候又拉了一下：这一趟作废，不然两遍人声叠在一起
+  const load=async(k,u)=>{let b=await RAW[k];if(!b)try{b=await (await fetch(u)).arrayBuffer()}catch(e){return null}
+    try{return await ac.decodeAudioData(b.slice(0))}catch(e){return null}};
+  if(!stBuf)stBuf=await load('st','static.wav');
   if(n!==radioN)throw new Error('stale');
-  const t0=ac.currentTime,lead=1.4,dur=djBuf.duration/RATE,len=lead+dur+1;
-  // 调台：雪花声一下大一下小，像旋钮在拧
-  const st=ac.createBufferSource();st.buffer=stBuf;st.loop=true;
-  const sg=ac.createGain();sg.gain.setValueAtTime(0,t0);
-  [[.05,.55],[.3,.15],[.45,.6],[.75,.2],[.95,.45],[lead,.0]].forEach(([t,g])=>sg.gain.linearRampToValueAtTime(g,t0+t));
-  const sbp=ac.createBiquadFilter();sbp.type='bandpass';sbp.frequency.value=1800;sbp.Q.value=.5;
-  st.connect(sbp).connect(sg).connect(ac.destination);
-  // 底噪：一直有的沙沙 + 随机的噼啪
+  const t0=ac.currentTime,lead=1.4,dur=DJ.length*.06/playbackRate,len=lead+dur+1;
+  playing=[];
+  if(stBuf){const st=ac.createBufferSource();st.buffer=stBuf;st.loop=true;
+    const sg=ac.createGain();sg.gain.setValueAtTime(0,t0);
+    [[.05,.55],[.3,.15],[.45,.6],[.75,.2],[.95,.45],[lead,.0]].forEach(([t,g])=>sg.gain.linearRampToValueAtTime(g,t0+t));
+    const sbp=ac.createBiquadFilter();sbp.type='bandpass';sbp.frequency.value=1800;sbp.Q.value=.5;
+    st.connect(sbp).connect(sg).connect(ac.destination);
+    st.start(t0);st.stop(t0+lead+.1);playing.push(st)}
   const nb=ac.createBuffer(1,Math.ceil(ac.sampleRate*len),ac.sampleRate),d=nb.getChannelData(0);
   for(let i=0;i<d.length;i++){d[i]=(Math.random()*2-1)*.16;if(Math.random()<.0004)d[i]+=(Math.random()<.5?-1:1)*(.6+Math.random()*.4)}
   const bed=ac.createBufferSource();bed.buffer=nb;
   const blp=ac.createBiquadFilter();blp.type='lowpass';blp.frequency.value=5000;
   const bg=ac.createGain();bg.gain.setValueAtTime(0,t0);bg.gain.linearRampToValueAtTime(.32,t0+lead*.8);bg.gain.linearRampToValueAtTime(.24,t0+len-.4);bg.gain.linearRampToValueAtTime(0,t0+len);
   bed.connect(blp).connect(bg).connect(ac.destination);
-  // 人声
-  const v=ac.createBufferSource();v.buffer=djBuf;v.playbackRate.value=RATE;
-  const hp=ac.createBiquadFilter();hp.type='highpass';hp.frequency.value=260;
-  const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=3400;
-  const sh=ac.createWaveShaper();const cv=new Float32Array(256);for(let i=0;i<256;i++){const x=i/128-1;cv[i]=Math.tanh(1.8*x)}sh.curve=cv;
-  const vg=ac.createGain();vg.gain.value=.95;v.connect(hp).connect(lp).connect(sh).connect(vg).connect(ac.destination);
-  st.start(t0);st.stop(t0+lead+.1);bed.start(t0);v.start(t0+lead);playing=[st,bed,v];
+  bed.start(t0);playing.push(bed);
+  setTimeout(()=>{if(n===radioN)speak(DJ)},lead*1000);
   return {lead,dur};
 };
 const stopRadio=()=>{playing.forEach(n=>{try{n.stop()}catch(e){}});playing=[]};
@@ -301,6 +305,7 @@ function showScroll(){if(document.querySelector('.scrolly'))return;const st=docu
 // 歌单：壳子那边有几首就列几首，点哪首放哪首（单独打开这一幕时没有歌，按钮不出来）
 {const pick=document.getElementById('pick'),plist=document.getElementById('plist');
  const draw=d=>{pick.hidden=false;document.getElementById('sideNo').textContent=String(d.cur+1).padStart(2,'0');
+   const songT=document.getElementById('songT');songT.textContent = d.list[d.cur] || '';
    plist.replaceChildren(...d.list.map((t,i)=>{const [a,b]=t.split(' · '),el=document.createElement('div');el.className=i===d.cur?'cur':'';
      el.innerHTML='<i></i><b></b><small></small>';el.querySelector('b').textContent=a;el.querySelector('small').textContent=b||'';
      el.onclick=e=>{e.stopPropagation();ROLL.music('track:'+i);plist.classList.remove('open');pick.classList.remove('open')};return el}))};

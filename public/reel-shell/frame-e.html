@@ -109,7 +109,7 @@ svg.fiber path{fill:none;stroke:rgba(246,226,190,.75);stroke-width:1.6;stroke-li
         <div class="perf"></div>
         <div class="form">
           <div class="lab"><b>Darkroom <em>No.7</em></b><span>Order 0517</span></div>
-          <div class="row"><span>Name</span><span class="hw" id="nameW">TT &amp; Claude</span></div>
+          <div class="row"><span>Name</span><span class="hw" id="nameW">留言</span></div>
           <div class="row"><span>Date in</span><span class="hw" id="dateW">10 May</span><span style="margin-left:auto">Ready</span><span class="hw">today</span></div>
           <div class="row"><span>Film</span><span>35mm · colour · 24 exp · 1 roll</span></div>
           <div class="boxes">
@@ -126,8 +126,8 @@ svg.fiber path{fill:none;stroke:rgba(246,226,190,.75);stroke-width:1.6;stroke-li
       </div>
       <div class="lamp"></div><div class="lamp2"></div>
 
-      <div class="mono corner" style="left:68px;top:58px">Scene 03 — The envelope</div>
-      <div class="mono corner" style="right:68px;top:58px;text-align:right">03 / 24</div>
+      <div class="mono corner" style="left:68px;top:58px">第 3 幕</div>
+      <div class="mono corner" style="right:68px;top:58px;text-align:right">3 / 9</div>
       <div class="grain"></div><div class="vig"></div>
     </div>
   </div>
@@ -136,6 +136,7 @@ svg.fiber path{fill:none;stroke:rgba(246,226,190,.75);stroke-width:1.6;stroke-li
 <script src="zh.js?v=tnqgtm"></script>
 <script src="vault-bridge.js"></script>
 <script src="content.js?v=29994fe04a"></script>
+<script src="paper-edit.js"></script>
 <script src="roll-link.js?v=vaultcta2"></script>
 <script>
 const s=document.getElementById('stage');
@@ -179,11 +180,10 @@ function curl(extra=0){const k=Math.min(p/W,1);let rx=p,ry=TY,j=0;
     rx-=w*Math.cos(r);ry-=w*Math.sin(r)}
   for(;j<sl.length;j++)sl[j].style.display='none'}
 render();
-let ac=null,rip=null,keys=null;
-// 撕纸、打字机的声音一进这一幕就一起拿（11.02：以前摸了才一个接一个拿，撕的头一下没声）；摸的时候只剩解码
-const SFX=['sfx/rip.mp3',...[1,2,3].map(n=>`sfx/typewriter${n}.mp3`)].map(u=>fetch(u).then(r=>r.arrayBuffer()).catch(()=>null));
+let ac=null,rip=null;
+const SFX=['sfx/rip.mp3'].map(u=>fetch(u).then(r=>r.arrayBuffer()).catch(()=>null));
 async function audio(){if(ac)return;ac=new AudioContext();const ld=async p=>{const b=await p;return b?ac.decodeAudioData(b.slice(0)):null};
-  try{[rip,...keys]=await Promise.all(SFX.map(ld))}catch(e){}}
+  try{[rip]=await Promise.all(SFX.map(ld))}catch(e){}}
 function play(buf,off,dur,g=1,rate=1){if(!ac||!buf)return;const src=ac.createBufferSource();src.buffer=buf;src.playbackRate.value=rate;const gn=ac.createGain();const t=ac.currentTime;
   gn.gain.setValueAtTime(0,t);gn.gain.linearRampToValueAtTime(g,t+.008);gn.gain.setValueAtTime(g,t+Math.max(.01,dur-.04));gn.gain.linearRampToValueAtTime(0,t+dur);
   src.connect(gn).connect(ac.destination);src.start(t,off,dur+.02)}
@@ -191,9 +191,6 @@ let ripAt=0,lastP=0,lastT=0;
 function ripBit(){const now=performance.now(),v=(p-lastP)/Math.max(16,now-lastT);lastP=p;lastT=now;if(p-ripAt<22)return;ripAt=p;
   play(rip,Math.random()*.3,.09+Math.random()*.08,Math.min(1,.35+v*1.2),.9+Math.random()*.2)}
 function ripAll(){play(rip,0,.5,.9)}
-// 打字机：三段录音里挑出来的单个键响（起点是用静音检测量的）
-const KEY=[[0,0],[0,.205],[0,.449],[1,.05],[2,.124]];
-function keyClick(c){if(!keys)return;if(c==='\n'){play(keys[1],.05,.3,.7,.85);return}if(c===' ')return;const [k,o]=KEY[Math.floor(Math.random()*KEY.length)];play(keys[k],o,.11,.55,.95+Math.random()*.1)}
 const local=e=>{const r=fr.getBoundingClientRect();return[(e.clientX-r.left)/k,(e.clientY-r.top)/k]};
 let dragging=false,startX=0;
 [strip,stripA].forEach(el=>el.addEventListener('pointerdown',e=>{audio();if(fr.classList.contains('opened'))return;dragging=true;startX=local(e)[0]-p;el.setPointerCapture(e.pointerId)}));
@@ -203,34 +200,10 @@ addEventListener('pointerup',()=>dragging=false);
 function open(){if(fr.classList.contains('opened'))return;dragging=false;p=W;render();
   // 撕完：再卷紧一点，整卷被甩出去
   curl(110);strip.classList.add('flying');strip.style.transformOrigin='100% 50%';strip.style.transform='translate(640px,560px) rotate(30deg) scale(.85)';ripAll();
-  fr.classList.add('opened');setTimeout(type,2300)}
-
-// 客人只换这一段字（中文的破折号两半中间夹一个不断行的字符，不会一半留在行尾一半掉到下一行开头）
-let TEXT=(CONTENT.letter||'').replace(/[—―]{2}/g,m=>m[0]+'⁠'+m[1]);
-// 中文一个字占得宽，写长了会掉出纸外：先缩小字号，还放不下就截到纸里，并允许点一下跳过打字
-const fitLetter=()=>{const out=document.getElementById('type'),sign=document.getElementById('signW'),ROOM=500-74-80;
- out.style.visibility='hidden';let fs=16;out.style.fontSize=fs+'px';out.textContent=TEXT;
- while(out.offsetHeight>ROOM&&fs>12){fs-=.5;out.style.fontSize=fs+'px'}
- while(out.offsetHeight>ROOM&&TEXT.length>24){
-   TEXT=TEXT.slice(0,Math.max(24,Math.floor(TEXT.length*0.82))).replace(/\s+\S*$/,'').replace(/[，。、；：!！?？,.\n…]+$/,'')+'…';
-   out.textContent=TEXT}
- sign.style.top=Math.min(430,Math.max(300,74+Math.min(out.offsetHeight,ROOM)+8))+'px';out.textContent='';out.style.visibility=''};fitLetter();
+  fr.classList.add('opened');setTimeout(()=>PAPER.mount({ kind: 'note', root: fr }),2300)}
 {const C=CONTENT,[y,m,d]=C.since.split('-').map(Number),MONL=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
- document.getElementById('forW').textContent='for '+C.names.to;document.getElementById('nameW').textContent=C.names.both;
- document.getElementById('dateW').textContent=d+' '+MONL[m-1];document.getElementById('signW').textContent=C.names.sign}
-// 打字机。光标用脚本闪，不用 CSS 动画，不然打字时整张纸被当成图层，字会糊
-function type(){fitLetter();const out=document.getElementById('type'),caret=document.createElement('span');caret.className='caret';
-  let i=0,hurry=false,finished=false;const blink=setInterval(()=>caret.style.visibility=caret.style.visibility==='hidden'?'':'hidden',500);
-  const finish=()=>{if(finished)return;finished=true;clearInterval(blink);caret.remove();out.textContent=TEXT;
-    document.getElementById('letter').classList.add('done');ROLL.prep();
-    setTimeout(()=>{fr.classList.add('tipping');setTimeout(()=>ROLL.done('cross'),hurry?700:1000)},hurry?700:2800)};
-  const skip=e=>{if(!fr.classList.contains('opened')||finished)return;if(e.target&&e.target.closest&&e.target.closest('input,textarea'))return;hurry=true};
-  fr.addEventListener('pointerdown',skip);
-  const tick=()=>{if(hurry||i>=TEXT.length){finish();return}
-    const c=TEXT[i++];out.textContent=TEXT.slice(0,i);out.appendChild(caret);keyClick(c);
-    const pace=TEXT.length>120?22:(c==='\n'?280:/[.,。，]/.test(c)?160:36+Math.random()*40);
-    setTimeout(tick,pace)};
-  out.appendChild(caret);tick()}
+ document.getElementById('forW').textContent='for '+C.names.to;
+ document.getElementById('dateW').textContent=d+' '+MONL[m-1]}
 if(new URLSearchParams(location.search).has('open'))open();
 </script>
 </body></html>

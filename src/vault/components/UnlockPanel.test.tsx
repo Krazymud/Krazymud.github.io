@@ -29,7 +29,7 @@ describe('UnlockPanel', () => {
     expect(screen.queryByText('PRIVATE VAULT')).not.toBeInTheDocument()
     expect(screen.getByTestId('unlock-panel').className).toMatch(/dr-stage/)
     expect(screen.getByRole('button', { name: copy.darkroom.unseal })).toBeInTheDocument()
-    expect(screen.getByText(/roll it, darling/i)).toBeInTheDocument()
+    expect(screen.getByText('宝宝，往下看')).toBeInTheDocument()
   })
 
   it('does not offer to save the passphrase', () => {

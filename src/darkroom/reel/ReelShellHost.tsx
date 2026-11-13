@@ -21,12 +21,8 @@ function parseList(bytes: Uint8Array): ListContent {
   }
 }
 
-function manifestKey(photos: { hash: string }[], notes: { hash: string }[], lists: { hash: string }[]) {
-  return [
-    photos.map((p) => p.hash).join(','),
-    notes.map((n) => n.hash).join(','),
-    lists.map((l) => l.hash).join(','),
-  ].join('|')
+function photoManifestKey(photos: { hash: string }[]) {
+  return photos.map((p) => p.hash).join(',') || 'empty'
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -46,12 +42,13 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 }
 
 export function ReelShellHost() {
-  const { photos, notes, lists, readBlob, loading, lock } = useDarkroomVault()
+  const { photos, notes, lists, readBlob, loading, lock, saveNote, saveList, deleteNote, deleteList } =
+    useDarkroomVault()
   const [payload, setPayload] = useState<{ json: string; key: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const blobUrls = useRef<string[]>([])
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const key = useMemo(() => manifestKey(photos, notes, lists), [photos, notes, lists])
+  const key = useMemo(() => photoManifestKey(photos), [photos])
 
   useEffect(() => {
     return () => {
@@ -138,7 +135,7 @@ export function ReelShellHost() {
           const json = JSON.stringify(content)
           sessionStorage.setItem(STORAGE_KEY, json)
           setError(null)
-          setPayload({ json, key: `${key}-empty` })
+          setPayload({ json, key: `${photoManifestKey(photos)}-empty` })
         } catch {
           setError(e instanceof Error ? e.message : 'reel failed')
         }
@@ -174,6 +171,92 @@ export function ReelShellHost() {
       /* ignore */
     }
   }
+
+  useEffect(() => {
+    if (!payload?.json) return
+    pushContent()
+  }, [payload?.json])
+
+  useEffect(() => {
+    const onMessage = async (event: MessageEvent) => {
+      const win = iframeRef.current?.contentWindow
+      if (!win) return
+      if (event.source !== win) return
+      const data = event.data as {
+        roll?: string
+        kind?: string
+        id?: string
+        source?: string
+        page?: {
+          source?: string
+          title?: string
+          date?: string
+          body?: string
+          items?: { text: string; done: boolean }[]
+        }
+      }
+      if (!data?.roll) return
+
+      if (data.roll === 'paper-save' && data.kind === 'note' && data.id && data.page) {
+        const page = data.page
+        const result = await saveNote({
+          ...(page.source ? { source: page.source } : {}),
+          title: page.title ?? '',
+          date: page.date ?? '',
+          body: page.body ?? '',
+        })
+        win.postMessage(
+          {
+            roll: 'paper-result',
+            id: data.id,
+            ok: result.ok,
+            reason: result.ok ? undefined : result.reason,
+          },
+          '*',
+        )
+        return
+      }
+
+      if (data.roll === 'paper-save' && data.kind === 'list' && data.id && data.page) {
+        const page = data.page
+        const result = await saveList({
+          ...(page.source ? { source: page.source } : {}),
+          title: page.title ?? '',
+          items: page.items ?? [],
+        })
+        win.postMessage(
+          {
+            roll: 'paper-result',
+            id: data.id,
+            ok: result.ok,
+            reason: result.ok ? undefined : result.reason,
+          },
+          '*',
+        )
+        return
+      }
+
+      if (data.roll === 'paper-delete' && data.id && (data.kind === 'note' || data.kind === 'list')) {
+        if (!data.source) {
+          win.postMessage({ roll: 'paper-result', id: data.id, ok: true }, '*')
+          return
+        }
+        const result =
+          data.kind === 'note' ? await deleteNote(data.source) : await deleteList(data.source)
+        win.postMessage(
+          {
+            roll: 'paper-result',
+            id: data.id,
+            ok: result.ok,
+            reason: result.ok ? undefined : result.reason,
+          },
+          '*',
+        )
+      }
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [saveNote, saveList, deleteNote, deleteList])
 
   if (error) {
     return (

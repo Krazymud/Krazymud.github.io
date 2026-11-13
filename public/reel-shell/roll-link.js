@@ -39,7 +39,7 @@ window.ROLL={
 };
 // 这一幕出错卡住了（3D 起不来、脚本没拿到、抛错）：三秒后底下亮一行「跳到下一幕」，不让客人对着黑框干等（11.02）
 // 放不了声音这类没关系的错不算；图片没拿到由上面的 img() 管
-if(window.top!==window&&(location.pathname.split('/').pop()||'roll.html')!=='roll.html')(()=>{let shown=false;const QUIET=/NotAllowedError|AbortError|ResizeObserver/;
+if(window.top!==window&&(location.pathname.split('/').pop()||'roll.html')!=='roll.html')(()=>{let shown=false;const QUIET=/NotAllowedError|AbortError|ResizeObserver|EncodingError|decodeAudioData/;
   const bad=m=>{if(shown||QUIET.test(String(m)))return;shown=true;console.warn('[roll] scene error',m);setTimeout(()=>{
     // 两个选择：再试一次（这一幕重新装）/ 跳到下一幕
     const zh=window.ROLL_LANG==='zh',a=document.createElement('div');a.className='rollskip';
@@ -117,7 +117,7 @@ if(window.top!==window&&window.parent===window.top){let live=window.ROLL.went;ad
     let z=Object.prototype.hasOwnProperty.call(D,k)?D[k]:null;if(z==null)for(const [re,f] of RX)if(re.test(k)){z=k.replace(re,f);break}
     return z==null?s:s.match(/^\s*/)[0]+z+s.match(/\s*$/)[0]};
   const zhFont=f=>{for(const [re,n] of [...((Z.fontsFor||{})[file]||[]),...Z.fonts])if(re.test(f))return n};
-  const addFam=v=>!v||/Muyao|JasonHandwriting|YShi|ZH Kai/.test(v)?v:v.replace(/(\s*,\s*(?:cursive|serif|sans-serif|monospace|system-ui|fantasy))?\s*$/,m=>`, "${zhFont(v)}"`+m);
+  const addFam=v=>!v||/Muyao|JasonHandwriting|YShi|ZH Kai|ZH Brush/.test(v)?v:v.replace(/(\s*,\s*(?:cursive|serif|sans-serif|monospace|system-ui|fantasy))?\s*$/,m=>`, "${zhFont(v)}"`+m);
   // 字体：四个都在自己服务器的 font/ 下（三个是 ZeoSeven 按字切好的，霞鹜文楷是 3500 常用字）。
   // 不用 <link>：那样每一幕都要等字体清单下完才算装好，转场会黑着等。改成自己去拿、拿到了塞成 <style>，不挡装载
   // 中文字体只管中文：英文字母、标点从它的字表里拿掉，不然英文字体还没装好时，英文会先用中文字体里的英文顶着，样子很怪
@@ -138,15 +138,15 @@ if(window.top!==window&&window.parent===window.top){let live=window.ROLL.went;ad
   const cssDone=Promise.all(Z.fontCSS.map(u=>Promise.all([G?'':txt(u),txt(u.replace('result.css','roll.css'))]).then(([a,b])=>G?b+'\n'+(G[gid(u)]||''):minus(a,b)+'\n'+b).then(css=>{const st=document.createElement('style');
     st.textContent=cjkOnly(css).replace(/url\("\.\//g,`url("${u.replace(/[^/]*$/,'')}`);document.head.appendChild(st);
     const fam=(css.match(/font-family:"([^"]+)"/)||[])[1];if(fam)document.fonts.load(`20px "${fam}"`,chars).catch(()=>{})}).catch(()=>{})));
-  {const st=document.createElement('style');st.textContent="@font-face{font-family:'ZH Kai';src:url(font/LXGWWenKai-3500.woff2) format('woff2');unicode-range:U+2E80-9FFF,U+3000-303F,U+FF00-FFEF}";document.head.appendChild(st)}
+  {const st=document.createElement('style');st.textContent="@font-face{font-family:'ZH Kai';src:url(font/LXGWWenKai-Regular.woff2) format('woff2');unicode-range:U+2E80-9FFF,U+3000-303F,U+FF00-FFEF}\n@font-face{font-family:'ZH Brush';src:url(font/MaShanZheng-Regular.ttf) format('truetype');unicode-range:U+2E80-9FFF,U+3000-303F,U+FF00-FFEF}";document.head.appendChild(st)}
   // 提前把要用到的字装好，画布上画字的时候字体已经在了
   const chars=[...new Set((ZHON?Object.values(D).join('')+'第天卷张晾干了你的从年月日开始':'')+(JSON.stringify(window.CONTENT||{}).match(/[\u2E80-\u9FFF\uFF00-\uFFEF]/g)||[]).join(''))].join('');
-  addEventListener('load',()=>['Muyao-Softbrush','JasonHandwriting8','YShi-Written','ZH Kai'].forEach(f=>document.fonts.load(`20px "${f}"`,chars).catch(()=>{})));
+  addEventListener('load',()=>['Muyao-Softbrush','JasonHandwriting8','YShi-Written','ZH Kai','ZH Brush'].forEach(f=>document.fonts.load(`20px "${f}"`,chars).catch(()=>{})));
   // 3D 场景把字画进贴图之前等一下中文字体（贴图只画一次，抢在字体前面画就永远是电脑自带的字）；最多等 3 秒（11.03）
-  if(chars)window.ROLL.zhReady=()=>Promise.race([cssDone.then(()=>Promise.all(['Muyao-Softbrush','JasonHandwriting8','YShi-Written','ZH Kai'].map(f=>document.fonts.load(`20px "${f}"`,chars).catch(()=>{})))),new Promise(r=>setTimeout(r,3000))]);
+  if(chars)window.ROLL.zhReady=()=>Promise.race([cssDone.then(()=>Promise.all(['Muyao-Softbrush','JasonHandwriting8','YShi-Written','ZH Kai','ZH Brush'].map(f=>document.fonts.load(`20px "${f}"`,chars).catch(()=>{})))),new Promise(r=>setTimeout(r,3000))]);
   // 壳子：片头放着的时候，把整卷字典里的中文字先下好放进缓存，后面每一幕装的时候就不用现等字体（转场黑屏）
   if(ZHON&&file==='roll.html')addEventListener('load',()=>setTimeout(()=>{const all=[...new Set(Object.values(Z.page).flatMap(p=>Object.values(p)).join('')+chars)].join('');
-    ['Muyao-Softbrush','JasonHandwriting8','YShi-Written','ZH Kai'].forEach(f=>document.fonts.load(`20px "${f}"`,all).catch(()=>{}))},2500));
+    ['Muyao-Softbrush','JasonHandwriting8','YShi-Written','ZH Kai','ZH Brush'].forEach(f=>document.fonts.load(`20px "${f}"`,all).catch(()=>{}))},2500));
   // CSS 规则里的 font-family 都接上中文字体（后来加进来的 <style> 也接）
   const seen=new WeakSet();
   const fixRules=rules=>{for(const r of rules){if(r.cssRules&&!(r instanceof CSSFontFaceRule))fixRules(r.cssRules);

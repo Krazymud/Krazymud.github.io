@@ -9,7 +9,7 @@ export const copy = {
     passphraseLabel: '口令',
     unseal: '启封',
     unsealing: '正在启封…',
-    openingCtaHand: 'roll it, darling',
+    openingCtaHand: '宝宝，往下看',
     holdHint: '按住启封',
     tapHint: '点一下启封',
     syncGate: '同步口令',

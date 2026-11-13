@@ -134,17 +134,6 @@ export function UnlockPanel({ canRemember, onUnlock }: UnlockPanelProps) {
                 }}
               />
             </label>
-            {canRemember && (
-              <label className="mt-3 flex items-center justify-center gap-2 text-xs opacity-70">
-                <input
-                  type="checkbox"
-                  checked={remember}
-                  onChange={(event) => setRemember(event.target.checked)}
-                  className="accent-[#ee5546]"
-                />
-                在这台设备上记住
-              </label>
-            )}
           </div>
 
           <button

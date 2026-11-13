@@ -59,6 +59,34 @@ describe('DarkroomApp', () => {
     render(<DarkroomApp fetchBytes={async () => null} keyStore={null} />)
     expect(await screen.findByText(copy.darkroom.empty)).toBeInTheDocument()
   })
+
+  it('saves the key after unlock and shows no remember checkbox', async () => {
+    const vault = await makeTestVault()
+    const keyStore = {
+      load: vi.fn(async () => null),
+      save: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined),
+    }
+    render(<DarkroomApp fetchBytes={vault.fetchBytes} keyStore={keyStore} webStore={null} />)
+    await screen.findByLabelText('口令')
+    expect(screen.queryByText('在这台设备上记住')).toBeNull()
+    await enter(TEST_PASSPHRASE)
+    expect(await screen.findByTestId('darkroom-ready')).toBeInTheDocument()
+    expect(keyStore.save).toHaveBeenCalledTimes(1)
+    expect(keyStore.save).toHaveBeenCalledWith(vault.dek)
+  })
+
+  it('opens the film when the saved key still unwraps the vault', async () => {
+    const vault = await makeTestVault()
+    const keyStore = {
+      load: vi.fn(async () => vault.dek),
+      save: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined),
+    }
+    render(<DarkroomApp fetchBytes={vault.fetchBytes} keyStore={keyStore} webStore={null} />)
+    expect(await screen.findByTestId('darkroom-ready')).toBeInTheDocument()
+    expect(screen.queryByLabelText('口令')).toBeNull()
+  })
 })
 
 describe('DarkroomApp chrome', () => {

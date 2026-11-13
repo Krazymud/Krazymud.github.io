@@ -20,7 +20,7 @@ vi.mock('../VaultBridge', () => ({
   }),
 }))
 
-const cta = /启封卷轴|启卷|继续|略过|roll/i
+const cta = /启封卷轴|启卷|继续|略过|roll|宝宝，往下看/i
 
 function stubReducedMotion(reduced: boolean) {
   const matchMedia = vi.fn().mockImplementation((query: string) => ({
@@ -69,13 +69,13 @@ describe('ReelStage', () => {
 
   it('renders LettersBeat after opening', () => {
     render(<ReelStage />)
-    fireEvent.click(screen.getByRole('button', { name: /启封卷轴|启卷|roll/i }))
+    fireEvent.click(screen.getByRole('button', { name: /启封卷轴|启卷|roll|宝宝，往下看/i }))
     expect(screen.getByTestId('letters-beat')).toBeInTheDocument()
   })
 
   it('shows 下一幕 on desk scene', () => {
     render(<ReelStage />)
-    fireEvent.click(screen.getByRole('button', { name: /启封卷轴|启卷|roll/i }))
+    fireEvent.click(screen.getByRole('button', { name: /启封卷轴|启卷|roll|宝宝，往下看/i }))
     fireEvent.click(screen.getByRole('button', { name: /略过/i }))
     expect(screen.getByRole('button', { name: '下一幕' })).toBeInTheDocument()
   })
