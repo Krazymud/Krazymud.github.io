@@ -59,10 +59,21 @@
       const held = new Map()
       const heldWait = new Map()
       let saving = 0
+      let saveFlight = null
       let queuedVault = null
 
       function clonePage(p) {
         return isList ? cloneList(p) : cloneNote(p)
+      }
+      function assignPage(target, slot) {
+        target.source = slot.source || ''
+        target.title = slot.title || ''
+        target.token = slot.token || ''
+        if (isList) target.items = (slot.items || []).map((it) => ({ text: it.text || '', done: !!it.done }))
+        else {
+          target.date = slot.date || ''
+          target.body = slot.body || ''
+        }
       }
       function normItems(items) {
         return (items || [])
@@ -275,11 +286,39 @@
       }
 
       function writeLocal(page) {
-        const token = (pages[idx] && pages[idx].token) || page.token || ''
+        const cur = pages[idx]
+        if (!cur) return
         const next = clonePage(page)
-        next.token = token
-        if (!next.source && pages[idx] && pages[idx].source) next.source = pages[idx].source
-        pages[idx] = next
+        next.token = cur.token || page.token || ''
+        if (!next.source && cur.source) next.source = cur.source
+        assignPage(cur, next)
+      }
+
+      function locate(page) {
+        if (!page) return -1
+        const at = pages.indexOf(page)
+        if (at >= 0) return at
+        if (page.token) {
+          const ti = pages.findIndex((p) => p.token === page.token)
+          if (ti >= 0) return ti
+        }
+        if (page.source) {
+          const si = pages.findIndex((p) => p.source === page.source)
+          if (si >= 0) return si
+        }
+        return -1
+      }
+
+      function removePage(page) {
+        const at = pages.indexOf(page)
+        if (at < 0) return
+        pages.splice(at, 1)
+        if (!pages.length) {
+          pages.push(isList ? blankList() : blankNote())
+          idx = 0
+        } else if (idx > at) idx--
+        else if (idx >= pages.length) idx = pages.length - 1
+        showPage()
       }
 
       function applyVault(incomingRaw) {
@@ -288,12 +327,19 @@
         const current = pages[idx]
         const claimed = new Set()
         const keepLocal = new Set()
+        const owned = new Set()
+        pages.forEach((p) => {
+          if (p.source) owned.add(p.source)
+        })
         pages.forEach((lp) => {
           if (lp.source) return
           const probe = lp.token && held.has(lp.token) ? held.get(lp.token) : lp
-          const mi = incoming.findIndex((rp, i) => !claimed.has(i) && rp.source && samePaper(probe, rp))
+          const mi = incoming.findIndex(
+            (rp, i) => !claimed.has(i) && rp.source && !owned.has(rp.source) && samePaper(probe, rp),
+          )
           if (mi < 0) return
           lp.source = incoming[mi].source
+          owned.add(lp.source)
           claimed.add(mi)
           if (!samePaper(lp, incoming[mi])) keepLocal.add(lp)
           if (lp.token) {
@@ -310,9 +356,13 @@
           if (li >= 0) {
             placed.add(li)
             const lp = pages[li]
+            if (!keepLocal.has(lp)) {
+              const fresh = clonePage(rp)
+              fresh.token = lp.token || ''
+              assignPage(lp, fresh)
+            }
             lp.token = ''
-            if (keepLocal.has(lp)) next.push(lp)
-            else next.push(clonePage(rp))
+            next.push(lp)
           } else next.push(clonePage(rp))
         })
         pages.forEach((lp, i) => {
@@ -323,11 +373,10 @@
         if (!next.length) next.push(isList ? blankList() : blankNote())
         let nextIdx = 0
         if (current) {
-          if (!current.source) {
-            const ni = next.indexOf(current)
-            if (ni >= 0) nextIdx = ni
-          } else {
-            const si = next.findIndex((p) => p === current || p.source === current.source)
+          const ni = next.indexOf(current)
+          if (ni >= 0) nextIdx = ni
+          else if (current.source) {
+            const si = next.findIndex((p) => p.source === current.source)
             if (si >= 0) nextIdx = si
           }
         }
@@ -347,13 +396,15 @@
 
       function waitResult(id) {
         return new Promise((resolve) => {
-          waits.set(id, resolve)
-          setTimeout(() => {
-            if (waits.has(id)) {
-              waits.delete(id)
-              resolve({ ok: false, reason: 'blob' })
-            }
-          }, 30000)
+          let timer
+          const finish = (res) => {
+            if (!waits.has(id)) return
+            waits.delete(id)
+            clearTimeout(timer)
+            resolve(res)
+          }
+          waits.set(id, finish)
+          timer = setTimeout(() => finish({ ok: false, reason: 'blob' }), 30000)
         })
       }
 
@@ -382,9 +433,7 @@
         const d = e.data
         if (!d) return
         if (d.roll === 'paper-result' && d.id && waits.has(d.id)) {
-          const fn = waits.get(d.id)
-          waits.delete(d.id)
-          fn(d)
+          waits.get(d.id)(d)
           return
         }
         if (d.roll === 'vault-content' && d.content && d.content.papers) {
@@ -392,52 +441,62 @@
         }
       })
 
-      async function saveCurrent() {
+      function saveCurrent() {
+        if (saveFlight) return saveFlight
+        saveFlight = performSave().finally(() => {
+          saveFlight = null
+        })
+        return saveFlight
+      }
+
+      async function performSave() {
+        const target = pages[idx]
+        if (!target) return false
         const page = readPage()
-        let token = (pages[idx] && pages[idx].token) || ''
+        let token = target.token || ''
         if (!page.source && token && held.has(token)) {
           const snap = held.get(token)
           const merged = clonePage(page)
           merged.token = token
-          const slotAt = pages.findIndex((p) => p.token === token)
-          if (slotAt >= 0) pages[slotAt] = merged
+          assignPage(target, merged)
           if (samePaper(snap, merged)) {
             setErr('')
             return true
           }
           const source = await waitHeldSource(token)
+          if (!pages.includes(target)) return false
           if (!source) {
             setErr('没写上')
             return false
           }
           page.source = source
+          target.source = source
         }
 
         const hadSource = !!page.source
         saving++
         try {
           const { res } = await postSave(page)
+          if (!pages.includes(target)) return false
           if (!res.ok) {
             setErr(res.reason === 'title' ? '先写标题' : '没写上')
             return false
           }
           const hinted = sourceFromResult(res)
           if (hinted) page.source = hinted
-          let at = token ? pages.findIndex((p) => p.token === token) : idx
-          if (at < 0) at = idx
           if (!hadSource) {
             if (!token) token = rid()
             if (!page.source) held.set(token, clonePage(page))
             else held.delete(token)
           } else if (token) held.delete(token)
-          if (!page.source && pages[at] && pages[at].source && samePaper(pages[at], page)) {
-            page.source = pages[at].source
+          if (!page.source && target.source && samePaper(target, page)) {
+            page.source = target.source
             if (token) held.delete(token)
           }
+          if (!pages.includes(target)) return false
           const slot = clonePage(page)
-          slot.token = hadSource ? (pages[at] && pages[at].token) || '' : token
-          if (pages[at]) pages[at] = slot
-          else pages[idx] = slot
+          slot.token = hadSource ? target.token || '' : token
+          assignPage(target, slot)
           setErr('')
           return true
         } finally {
@@ -451,53 +510,78 @@
       }
 
       bPrev.onclick = async () => {
-        if (idx <= 0) return
+        const page = pages[idx]
+        if (!page || pages.indexOf(page) <= 0) return
         if (!(await saveCurrent())) return
-        idx--
+        const at = locate(page)
+        if (at <= 0) return
+        idx = at - 1
         showPage()
       }
       bNext.onclick = async () => {
-        if (idx >= pages.length - 1) return
+        const page = pages[idx]
+        if (!page || pages.indexOf(page) >= pages.length - 1) return
         if (!(await saveCurrent())) return
-        idx++
+        const at = locate(page)
+        if (at < 0 || at >= pages.length - 1) return
+        idx = at + 1
         showPage()
       }
       bNew.onclick = async () => {
+        const page = pages[idx]
+        if (!page) return
         if (!(await saveCurrent())) return
+        const at = locate(page)
+        if (at < 0) return
+        idx = at
         pages.push(isList ? blankList() : blankNote())
         idx = pages.length - 1
         showPage()
       }
       bRip.onclick = async () => {
         const page = pages[idx]
+        if (!page) return
+        if (saveFlight) await saveFlight
+        if (!page.source && page.token && held.has(page.token)) {
+          if (!window.confirm('撕掉这一篇？')) return
+          const source = await waitHeldSource(page.token)
+          if (!source) {
+            setErr('没写上')
+            return
+          }
+          const res = await postDelete(source)
+          if (!res.ok) {
+            setErr('没写上')
+            return
+          }
+          held.delete(page.token)
+          const at = pages.includes(page) ? pages.indexOf(page) : pages.findIndex((p) => p.source === source)
+          if (at >= 0) removePage(pages[at])
+          return
+        }
         if (!page.source) {
           if (page.token) {
             held.delete(page.token)
             fulfillHeld(page.token, '')
           }
-          if (pages.length > 1) {
-            pages.splice(idx, 1)
-            if (idx >= pages.length) idx = pages.length - 1
-            showPage()
-          } else {
-            pages[0] = isList ? blankList() : blankNote()
-            showPage()
-          }
+          if (pages.includes(page)) removePage(page)
           return
         }
         if (!window.confirm('撕掉这一篇？')) return
-        const res = await postDelete(page.source)
+        const source = page.source
+        const res = await postDelete(source)
         if (!res.ok) {
           setErr('没写上')
           return
         }
-        pages.splice(idx, 1)
-        if (!pages.length) pages.push(isList ? blankList() : blankNote())
-        if (idx >= pages.length) idx = pages.length - 1
-        showPage()
+        const at = pages.includes(page) ? pages.indexOf(page) : pages.findIndex((p) => p.source === source)
+        if (at >= 0) removePage(pages[at])
       }
       bScene.onclick = async () => {
+        const page = pages[idx]
+        if (!page) return
         if (!(await saveCurrent())) return
+        if (locate(page) < 0) return
         window.ROLL.done('cross')
       }
 
