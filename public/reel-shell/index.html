@@ -97,12 +97,12 @@ iframe.on{opacity:1;pointer-events:auto}
 <script src="pola.js?v=tnrys8"></script>
 <script>
 // 整卷的顺序。显影盘里面自己装着照片墙（tray 暗一下进 wall），所以这里算一幕
-const SCENES=['opening.html','frame-c.html','frame-e.html','rolls.html?enter=bag','tray.html?lt','torch-comic.html','book-cover.html','credits.html'];
+const SCENES=['opening.html','frame-c.html','frame-e.html','frame-lists.html','rolls.html?enter=bag','tray.html?lt','torch-comic.html','book-cover.html','credits.html'];
 // 三个 3D 大场景不提前加载：提前加载会在后台抢资源（上一幕打字、翻信时卡），
 // 显影盘还会在客人圈照片之前就读走「要洗哪几张」。等上一幕喊 prep（快演完了）或者真要切过去时再加载
-const HEAVY=new Set([3,4,6]);
+const HEAVY=new Set([4,5,7]);
 // 这几幕 iframe 的 load 到了画面还是黑的（模型还在装），等它自己喊 ready 才算装好；喊不出来的话最多等 25 秒
-const SAYS_READY=new Set([3,4,6]);
+const SAYS_READY=new Set([4,5,7]);
 // 整卷的歌：从收音机主持人说完开始，一直放到片尾。客人挑一首或者排几首，按顺序接着放
 // 都是过了版权期的老录音（music/LICENSE.txt）；客人可以换、删、排顺序，也可以放自己的歌。列表循环，只留一首就是单曲循环
 // 专属设置（服务器 custom.json）里有自己的歌单就用它（文件在客人的 x/）
@@ -189,11 +189,11 @@ const FX={
 const WARM=(()=>{const C=window.CONTENT,JV=window.FILM_JS||{},js=f=>f+(JV[f]?'?v='+JV[f]:''),P=f=>f&&f.photo,S=f=>f&&(f.thumb||f.photo),B=C.book||{};
   return [
     // 片头起：胶卷那幕
-    {at:0,to:3,list:()=>[js('lib/three.module.js'),'img/wood.jpg',...C.rolls.flatMap(r=>r.frames.map(S)),...C.rolls[1].frames.map(P)]},
-    // 冲印袋起：暗房（第 4 卷都可能被圈，八张都下）
-    {at:2,to:4,list:()=>[...['tray-lt.js','tray-lt-dive.js','tray-lt-flow.js'].map(js),...['col','nor_gl','rough'].map(k=>`img/steel/steel_${k}.jpg`),...C.rolls[3].frames.map(P)]},
+    {at:0,to:4,list:()=>[js('lib/three.module.js'),'img/wood.jpg',...C.rolls.flatMap(r=>r.frames.map(S)),...C.rolls[1].frames.map(P)]},
+    // 清单起：暗房（第 4 卷都可能被圈，八张都下）
+    {at:3,to:5,list:()=>[...['tray-lt.js','tray-lt-dive.js','tray-lt-flow.js'].map(js),...['col','nor_gl','rough'].map(k=>`img/steel/steel_${k}.jpg`),...C.rolls[3].frames.map(P)]},
     // 暗房起：书
-    {at:4,to:6,list:()=>[
+    {at:5,to:7,list:()=>[
       ...'bc-tex bc-card bc-book bc-desk bc-read bc-turn bc-candle bc-pages bc-popup bc-map bc-compass bc-petals bc-libcard bc-reel bc-collage bc-letters lib/GLTFLoader lib/BufferGeometryUtils'.split(' ').map(f=>js(f+'.js')),
       ...['Allura','InstrumentSerif-italic','CourierPrime-normal','IMFell-normal'].map(f=>`font/${f}.woff2`),
       'models/compass/seadogs_compass_1k.gltf','models/compass/seadogs_compass.bin',...['nor_gl','diff','arm'].map(k=>`models/compass/textures/seadogs_compass_${k}_1k.jpg`),
@@ -282,6 +282,9 @@ addEventListener('message',e=>{const d=e.data;if(!d||!d.roll)return;
   else if(d.roll==='music'){if(d.cmd==='list')syncTracks();else if(String(d.cmd).startsWith('track:'))pickTrack(+d.cmd.slice(6));else if(d.cmd==='play')playMusic();else if(d.cmd==='kick'){if(cur>1&&cur<SCENES.length-1)playMusic()}else if(d.cmd==='duck'){ducked=true;fade(VOL*.3,800)}else if(d.cmd==='unduck'){ducked=false;fade(VOL,1200)}else if(d.cmd==='stop'){stopped=true;fade(0,2500);np.classList.remove('on')}
     // 放映机放带声音的片子：歌先停，片子放完接着放（专属设置 reel.sound）
     else if(d.cmd==='hush'){if(started&&!music.paused){hushed=true;fade(0,800)}}else if(d.cmd==='unhush'){if(hushed){hushed=false;music.play().catch(()=>{});fade(ducked?VOL*.3:VOL,1500)}}}
+  else if(d.roll==='paper-save'||d.roll==='paper-delete'){if(now&&e.source===now.contentWindow){try{window.parent.postMessage(d,'*')}catch(err){}}}
+  else if(d.roll==='paper-result'){if(now){try{now.contentWindow.postMessage(d,'*')}catch(err){}}}
+  else if(d.roll==='vault-content'&&d.content){window.CONTENT=d.content;if(d.content.__lang)window.ROLL_LANG=d.content.__lang;document.querySelectorAll('iframe').forEach(f=>{try{f.contentWindow.postMessage(d,'*')}catch(err){}})}
   else if(d.roll==='restart'){location.href=location.pathname}});
 function startReel(){if(window.__reelStarted)return;window.__reelStarted=1;boot()}
 (function(){

@@ -16,8 +16,7 @@ describe('roll-link shell targeting', () => {
     expect(opening).toMatch(/roll-link\.js\?v=/)
     const frameE = readFileSync(join(process.cwd(), 'public/reel-shell/frame-e.html'), 'utf8')
     expect(frameE).toContain('overflow:hidden')
-    expect(frameE).toContain('hurry')
-    expect(frameE).toContain('TEXT.length>24')
+    expect(frameE).toContain('paper-edit.js')
   })
 
   it('speaks the vault greeting and does not play dj2.mp3', () => {
@@ -37,5 +36,16 @@ describe('roll-link shell targeting', () => {
   it('sets the song line from the track list', () => {
     const html = readFileSync(join(process.cwd(), 'public/reel-shell/frame-c.html'), 'utf8')
     expect(html).toContain('songT.textContent = d.list[d.cur]')
+  })
+
+  it('inserts the lists scene and does not auto-advance the letter', () => {
+    const index = readFileSync(join(process.cwd(), 'public/reel-shell/index.html'), 'utf8')
+    expect(index).toContain("'frame-e.html','frame-lists.html','rolls.html?enter=bag'")
+    const letter = readFileSync(join(process.cwd(), 'public/reel-shell/frame-e.html'), 'utf8')
+    expect(letter).toContain('paper-edit.js')
+    expect(letter).not.toContain("ROLL.done('cross')")
+    const lists = readFileSync(join(process.cwd(), 'public/reel-shell/frame-lists.html'), 'utf8')
+    expect(lists).toContain("kind: 'list'")
+    expect(lists).toContain('paper-edit.js')
   })
 })
