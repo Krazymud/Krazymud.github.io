@@ -58,4 +58,12 @@ describe('roll-link shell targeting', () => {
     expect(lists).not.toContain('3 / 9')
     expect(lists).not.toContain('TT &amp; Claude')
   })
+
+  it('sizes the rolls to the vault and captions the viewer from the frame line', () => {
+    const html = readFileSync(join(process.cwd(), 'public/reel-shell/rolls.html'), 'utf8')
+    expect(html).toContain('CONTENT.rolls[0].frames.length')
+    expect(html).not.toContain("fillText('far away'")
+    expect(html).toContain("fillText('聚焦'")
+    expect(html).toContain('第 5 幕')
+  })
 })

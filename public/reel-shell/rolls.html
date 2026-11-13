@@ -90,7 +90,7 @@ canvas#gl{position:absolute;inset:0;width:1040px;height:694px;display:block}
       <div class="hint2" id="hint2">drag to pull it out, tap one to develop</div>
       <div class="vcap" id="vcap"></div>
       <div class="vtip gone" id="vtip"><svg width="120" height="90" viewBox="0 0 120 90"><path d="M8 10 C40 6 78 22 96 66" fill="none" stroke="#ee5546" stroke-width="2.4" stroke-linecap="round"/><path d="M84 58 L97 70 L101 52" fill="none" stroke="#ee5546" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><i>press me</i></div>
-      <div class="mono corner" style="left:68px;top:58px">Scene 04 — The rolls</div>
+      <div class="mono corner" style="left:68px;top:58px">第 5 幕</div>
       <div class="mono corner" style="right:68px;top:58px;text-align:right">4 rolls · 96 frames</div>
       <div class="grain"></div><div class="vig"></div>
     </div>
@@ -206,7 +206,7 @@ function canister(r){
 // ---- 拉出来的负片：橙色片基，齿孔镂空，影像反相 ----
 // 片子从罐口往外走，最先出来的是第 1 格，所以画布上把第 1 格放在最右边
 // 片子比八格多一截空白片尾，最后一格也能整个拉出罐口（看片器那卷要用）
-const N=8,S=N+1,FW=300,FH=440;   // 一格的画布尺寸，和片子在三维里的宽高比一致，不拉变形
+const N=Math.max(1, (CONTENT.rolls[0]&&CONTENT.rolls[0].frames.length)||1), S=N+1,FW=300,FH=440;   // 一格的画布尺寸，和片子在三维里的宽高比一致，不拉变形
 const fc=document.createElement('canvas');fc.width=FW*S;fc.height=FH;const fx=fc.getContext('2d');
 const slotX=i=>(S-1-i)*FW;   // 第 i 格在画布上的位置
 const IX=18,IY=62,IW=FW-36,IH=FH-124;
@@ -334,7 +334,7 @@ const brass=new THREE.MeshStandardMaterial({color:'#c9a45a',metalness:.85,roughn
  for(let i=0;i<6;i++){const v=new THREE.Mesh(new THREE.BoxGeometry(.5,.012,.03),new THREE.MeshStandardMaterial({color:'#050403'}));v.position.set(0,.565,-.15+i*.06);viewer.add(v)}
  // 片窗底下一块黄铜铭牌
  const pc=document.createElement('canvas');pc.width=512;pc.height=96;const p=pc.getContext('2d');p.fillStyle='#b8924b';p.fillRect(0,0,512,96);
- p.fillStyle='rgba(40,25,5,.85)';p.textAlign='center';p.font="italic 300 40px Fraunces";p.fillText('far away',256,46);p.font="400 18px 'JB Mono'";p.fillText('SLIDE VIEWER · No.3',256,78);
+ p.fillStyle='rgba(40,25,5,.85)';p.textAlign='center';p.font="italic 300 40px Fraunces";p.fillText('聚焦',256,46);p.font="400 18px 'JB Mono'";p.fillText('聚焦',256,78);
  const pt=new THREE.CanvasTexture(pc);pt.colorSpace=THREE.SRGBColorSpace;
  const plate=new THREE.Mesh(new THREE.PlaneGeometry(.5,.094),new THREE.MeshStandardMaterial({map:pt,metalness:.7,roughness:.35}));plate.position.set(0,-.46,.296);
  // 片子进出的两条缝
@@ -371,8 +371,8 @@ const sTex=new THREE.CanvasTexture(sc);sTex.colorSpace=SRGB;sTex.anisotropy=8;
 const sheet=new THREE.Mesh(new THREE.PlaneGeometry(2.3,2.3*SH/SW),new THREE.MeshStandardMaterial({map:sTex,roughness:.9,color:"#c9bca9"}));
 sheet.rotation.x=-Math.PI/2;sheet.rotation.z=.05;sheet.receiveShadow=true;sheet.visible=false;scene.add(sheet);
 const SHEET_AT=()=>new THREE.Vector3(STAGE.x+1.4,.004,STAGE.z+1.45);
-const CW=210,CH=250,CG=24,CX0=(SW-(4*CW+3*CG))/2,CYS=[150,500];
-const cell=i=>[CX0+(i%4)*(CW+CG),CYS[i>>2]];
+const CW=210,CH=250,CG=24,cols=Math.min(4,N),rows=Math.ceil(N/cols),sheetW=cols*CW+(cols-1)*CG,CX0=(SW-sheetW)/2,CYS=Array.from({length:rows},(_,r)=>150+r*(CH+100));
+const cell=i=>[CX0+(i%cols)*(CW+CG),CYS[Math.floor(i/cols)]];
 // want[i]：这一格做的记号（0 / 'circle' / 'heart'）；circ[i]：记号画到哪了
 const circ=new Array(N).fill(0),want=new Array(N).fill(0);
 const MARKS=ROLLS.map(()=>new Array(N).fill(0)),STROKES=ROLLS.map(()=>[]);
@@ -388,8 +388,8 @@ function buildSheet(){
   const x=sheetBase.getContext('2d');x.drawImage(paper,0,0);
   x.fillStyle='#2a211b';x.font="400 22px 'JB Mono'";x.fillText(`${cur.name.toUpperCase()} · ISO ${cur.iso} · CONTACT SHEET`,CX0,96);
   x.textAlign='right';x.fillText(`ROLL ${cur.no}`,SW-CX0,96);x.textAlign='left';
-  for(const y of CYS){x.fillStyle='#0d0907';x.fillRect(CX0-30,y-40,4*CW+3*CG+60,CH+80);
-    x.fillStyle='rgba(255,210,150,.35)';for(let px=CX0-24;px<CX0+4*CW+3*CG+24;px+=30){x.fillRect(px,y-30,14,18);x.fillRect(px,y+CH+14,14,18)}}
+  for(const y of CYS){x.fillStyle='#0d0907';x.fillRect(CX0-30,y-40,sheetW+60,CH+80);
+    x.fillStyle='rgba(255,210,150,.35)';for(let px=CX0-24;px<CX0+sheetW+24;px+=30){x.fillRect(px,y-30,14,18);x.fillRect(px,y+CH+14,14,18)}}
   cur.frames.forEach((f,i)=>{const [cx,cy]=cell(i);x.save();x.beginPath();x.rect(cx,cy,CW,CH);x.clip();x.filter=POS;CONTENT.drawCrop(x,pics[f.pic],f.src,cx,cy,CW,CH);x.restore();x.filter='none';
     x.fillStyle='rgba(255,215,160,.7)';x.font="400 14px 'JB Mono'";x.fillText(`▸ ${i+1}  ${f.date}`,cx+4,cy+CH+12)})}
 // 一笔一笔描出来：pts 是整笔的点，p 是画到哪（0..1），粗细跟着起笔收笔变
