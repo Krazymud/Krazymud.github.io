@@ -59,3 +59,11 @@ it('points every scene at fitStage and the portrait sheet', () => {
     expect(html, page).not.toContain('innerWidth/1600')
   }
 })
+
+it('stores both can rows and resizes the portrait canvas', () => {
+  const html = readFileSync(join(process.cwd(), 'public/reel-shell/rolls.html'), 'utf8')
+  expect(html).toContain('const POS_PORT=[[0.15,-1.6],[-0.2,-0.45],[0.2,0.7],[-0.1,1.85]]')
+  expect(html).toContain('const POS_DESK=[[-2.5,-.35],[-.75,.95],[1.05,-.75],[2.75,.7]]')
+  expect(html).toContain('renderer.setSize(r.width,r.height,false)')
+  expect(html).toContain('cam.aspect=r.width/Math.max(1,r.height)')
+})

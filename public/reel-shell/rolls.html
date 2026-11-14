@@ -108,7 +108,8 @@ canvas#gl{position:absolute;inset:0;width:1040px;height:694px;display:block}
 import * as THREE from './lib/three.module.js?v=tn9zuj';
 const s=document.getElementById('stage');
 let k=1;
-const fit=()=>{const box=ROLL.fitStage(s);k=box.pointer};
+let layout3d=null;
+const fit=()=>{const box=ROLL.fitStage(s);k=box.pointer;if(layout3d)layout3d(box)};
 fit();addEventListener('resize',fit);
 if(window.visualViewport){visualViewport.addEventListener('resize',fit);visualViewport.addEventListener('scroll',fit)}
 
@@ -271,6 +272,38 @@ let pull=0,pullT=0;
 const setPullView=()=>{const p=Math.max(.001,pull);film.scale.x=p;filmTex.repeat.x=p;filmTex.offset.x=1-p};
 
 const cans=ROLLS.map(r=>{const h=canister(r);h.userData.ft=0;scene.add(h);return h});
+const POS_DESK=[[-2.5,-.35],[-.75,.95],[1.05,-.75],[2.75,.7]];
+const POS_PORT=[[0.15,-1.6],[-0.2,-0.45],[0.2,0.7],[-0.1,1.85]];
+function placeCans(mode){
+  const pos=mode==='portrait'?POS_PORT:POS_DESK;
+  cans.forEach((h,i)=>{h.position.set(pos[i][0],h.userData.base.y,pos[i][1]);h.userData.base.copy(h.position)});
+}
+function dolly(look,points){
+  const dir=cam.position.clone().sub(look);let dist=dir.length();dir.normalize();
+  const fov=32*Math.PI/180,tanV=Math.tan(fov/2),tanH=tanV*cam.aspect;
+  for(let n=0;n<40;n++){
+    cam.position.copy(look).addScaledVector(dir,dist);
+    const forward=look.clone().sub(cam.position).normalize();
+    const right=new THREE.Vector3().crossVectors(forward,new THREE.Vector3(0,1,0)).normalize();
+    const up=new THREE.Vector3().crossVectors(right,forward).normalize();
+    const ok=points.every(p=>{const rel=p.clone().sub(cam.position),depth=rel.dot(forward);if(depth<=0.2)return false;
+      return Math.abs(rel.dot(right)/depth)<tanH*0.9&&Math.abs(rel.dot(up)/depth)<tanV*0.9});
+    if(ok)break;dist+=0.35}
+  cam.lookAt(look);
+}
+layout3d=(box)=>{
+  const proj=document.querySelector('.proj'),r=proj.getBoundingClientRect();
+  if(box.mode==='portrait'){
+    renderer.setSize(r.width,r.height,false);cam.aspect=r.width/Math.max(1,r.height);cam.updateProjectionMatrix();
+    placeCans('portrait');
+    cam.position.set(0,7,5.4);
+    dolly(new THREE.Vector3(0,0,.15),POS_PORT.map(([x,z])=>new THREE.Vector3(x,.2,z)).concat([new THREE.Vector3(0,.2,2.4)]));
+  }else{
+    renderer.setSize(1040,694,false);cam.aspect=1040/694;cam.updateProjectionMatrix();
+    placeCans('desk');cam.position.copy(HOME.pos);cam.lookAt(HOME.look);
+  }
+};
+layout3d(ROLL.fitStage(s));
 const STAND_Y=L/2+.09;
 // 点开的那卷挪到前面这个位置，其它的往后退
 const STAGE=new THREE.Vector3(-2.2,0,1.3);
