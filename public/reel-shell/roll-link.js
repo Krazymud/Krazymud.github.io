@@ -25,6 +25,25 @@ window.ROLL={
   // 壳子把这一幕亮出来的时候才开始（提前在后台加载好，但别提前演）
   // 清晰度：smooth 1 倍、standard 1.5 倍、sharp 2 倍（画布像素和屏幕像素的比）
   pr(){let q='standard';try{q=localStorage.getItem('aroll.q')||q}catch(e){}return {smooth:1,standard:1.5,sharp:2}[q]||1.5},
+  compact(w,h){return Math.min(w/1600,h/1000)<0.7},
+  view(){const vv=window.visualViewport;return {w:Math.min(innerWidth,vv?vv.width:innerWidth),h:Math.min(innerHeight,vv?vv.height:innerHeight)}},
+  fitStage(stage){
+    const {w,h}=this.view(),compact=this.compact(w,h),portrait=compact&&h>=w;
+    const k=Math.min(w/1600,h/1000),cover=Math.max(w/1040,h/694);
+    stage.classList.toggle('portrait',portrait);
+    stage.classList.toggle('phonewide',compact&&w>h);
+    if(!compact){
+      stage.style.left='50%';stage.style.top='50%';stage.style.width='1600px';stage.style.height='1000px';
+      stage.style.transform=`translate(-50%,-50%) scale(${k})`;
+    }else{
+      stage.style.left='0';stage.style.top='0';stage.style.width=w+'px';stage.style.height=h+'px';stage.style.transform='none';
+      stage.style.setProperty('--cover',String(cover));
+    }
+    const mode=portrait?'portrait':compact?'phonewide':'desk';
+    const box={mode,w,h,k,cover,pointer:mode==='desk'?k:mode==='phonewide'?cover:1};
+    window.dispatchEvent(new CustomEvent('reel-fit',{detail:box}));
+    return box;
+  },
   onQuality(fn){addEventListener('message',e=>{if(e.data&&e.data.roll==='quality')fn()})},
   // 「再试一次」重装的这一幕地址带 rgo：壳子的 go 只发一次，重装以后就当已经收到
   went:new URLSearchParams(location.search).has('rgo'),
