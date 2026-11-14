@@ -9,6 +9,7 @@ const script = readFileSync(join(process.cwd(), 'public/reel-shell/paper-edit.js
 type ShellWindow = Window & {
   Event: typeof Event
   FocusEvent: typeof FocusEvent
+  CustomEvent: typeof CustomEvent
   CONTENT: unknown
   ROLL: { prep: () => void; done: (fx: string) => void }
   PAPER: { mount: (opts: { kind: string; root: Element }) => void }
