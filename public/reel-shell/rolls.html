@@ -322,7 +322,8 @@ const tick=()=>{try{ac=ac||new AudioContext();const t=ac.currentTime,b=ac.create
 const ray=new THREE.Raycaster(),m=new THREE.Vector2();let hover=null,closing=false;
 const fr=document.getElementById('frame'),tag=document.getElementById('tag'),hint2=document.getElementById('hint2');
 const local=e=>{const r=fr.getBoundingClientRect();return[(e.clientX-r.left)/k,(e.clientY-r.top)/k]};
-const aim=e=>{const [x,y]=local(e);m.set(x/1040*2-1,-(y/694)*2+1);ray.setFromCamera(m,cam)};
+const framePx=()=>[fr.clientWidth,fr.clientHeight];
+const aim=e=>{const [x,y]=local(e);const [w,h]=framePx();m.set(x/w*2-1,-(y/h)*2+1);ray.setFromCamera(m,cam)};
 const pick=e=>{aim(e);const hit=ray.intersectObjects(cans,true)[0];if(!hit)return null;let o=hit.object;while(o&&!cans.includes(o))o=o.parent;return o};
 // 片子上点到的是第几格
 const frameAt=e=>{aim(e);const hit=ray.intersectObject(film)[0];if(!hit||!hit.uv)return -1;const u=filmTex.offset.x+hit.uv.x*filmTex.repeat.x,i=S-1-Math.floor(u*S);return i<N?i:-1};
@@ -626,8 +627,8 @@ const loop=fd=>{const dt=fd||Math.min(clock.getDelta(),.1),t=clock.elapsedTime;
        if(dev[g]===0)dev[g]=.001}
      else{vx.fillStyle='#3a2414';vx.fillRect(0,0,FW,FH);vcap.classList.remove('on')}
      vTex.needsUpdate=true}}
-   if(viewer.visible){_v.set(viewer.position.x,STAND_Y+.72,viewer.position.z).project(cam);vcap.style.left=((_v.x+1)/2*1040)+'px';vcap.style.top=((1-_v.y)/2*694)+'px';
-     lever.userData.knob.getWorldPosition(_v).project(cam);vtip.style.left=((_v.x+1)/2*1040)+'px';vtip.style.top=((1-_v.y)/2*694)+'px';
+   if(viewer.visible){const [fw,fh]=framePx();_v.set(viewer.position.x,STAND_Y+.72,viewer.position.z).project(cam);vcap.style.left=((_v.x+1)/2*fw)+'px';vcap.style.top=((1-_v.y)/2*fh)+'px';
+     lever.userData.knob.getWorldPosition(_v).project(cam);vtip.style.left=((_v.x+1)/2*fw)+'px';vtip.style.top=((1-_v.y)/2*fh)+'px';
      // 看片器落稳了，箭头才出来指着拨杆
      if(vtipArmed&&u.a>.95){vtipArmed=false;vtip.classList.remove('gone')}}}
   // 04：印样从前面滑进来；红圈一笔一笔画出来

@@ -73,3 +73,13 @@ it('stores both can rows and resizes the portrait canvas', () => {
   expect(desk).toContain("cv.style.width='1040px'")
   expect(desk).toContain("cv.style.height='694px'")
 })
+
+it('maps roll taps and viewer labels with the frame', () => {
+  const html = readFileSync(join(process.cwd(), 'public/reel-shell/rolls.html'), 'utf8')
+  expect(html).toContain('const framePx=()=>[fr.clientWidth,fr.clientHeight]')
+  expect(html).toContain('const [w,h]=framePx()')
+  expect(html).toContain('const [fw,fh]=framePx()')
+  expect(html).not.toContain('x/1040*2-1')
+  expect(html).not.toContain('/2*1040')
+  expect(html).not.toContain('/2*694')
+})
