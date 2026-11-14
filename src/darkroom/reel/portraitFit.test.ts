@@ -32,6 +32,13 @@ it('gives the opening a readable portrait title and cue', () => {
   expect(css).toContain('#stage.portrait .mark{min-width:44px;min-height:44px}')
 })
 
+it('places the radio under the bulb with a 22px song', () => {
+  const css = readFileSync(join(process.cwd(), 'public/reel-shell/portrait.css'), 'utf8')
+  expect(css).toContain('#stage.portrait .now .song{font-size:22px}')
+  expect(css).toContain('#stage.portrait .cord{min-width:44px;min-height:44px}')
+  expect(css).toContain('#stage.portrait .radio{left:8%;top:36%;width:74%')
+})
+
 it('points every scene at fitStage and the portrait sheet', () => {
   for (const page of PAGES) {
     const html = readFileSync(join(process.cwd(), 'public/reel-shell', page), 'utf8')

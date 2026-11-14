@@ -10,3 +10,11 @@
 #stage.portrait .mark span{font-size:30px}
 #stage.portrait .strip{left:auto;right:3%;width:78px}
 #stage.portrait .log{font-size:12px}
+#stage.portrait .bulb{left:42%}
+#stage.portrait .radio{left:8%;top:36%;width:74%;height:auto}
+#stage.portrait .radio img{width:100%;height:auto}
+#stage.portrait .cord{min-width:44px;min-height:44px}
+#stage.portrait .cord{left:auto;right:4%;top:22%;width:72px;min-width:44px;min-height:44px}
+#stage.portrait .now{left:8%;right:8%;top:auto;bottom:7%;width:auto}
+#stage.portrait .now .song{font-size:22px}
+#stage.portrait .now .song{font-family:Fraunces,serif;font-style:italic}
