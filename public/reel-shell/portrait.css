@@ -25,5 +25,6 @@
 #stage.portrait .env{left:16px;top:auto;bottom:96px;width:46%;height:auto}
 #stage.portrait .tearhint{font-size:30px}
 #stage.phonewide .letter pre{font-size:calc(16px / var(--cover))}
-#stage.portrait #desk{width:100%;height:calc(100% - 72px)}
+#stage.portrait #main{left:0;top:0;width:100%;height:100%}
+#stage.portrait #desk{width:100%;height:100%}
 #stage.portrait .arrow span{font-size:18px}

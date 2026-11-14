@@ -35,7 +35,7 @@ html,body{margin:0;height:100%;background:var(--ink);overflow:hidden}
 .hand{position:absolute;font:400 25px/1.05 'Reenie',cursive;color:var(--red);z-index:3}
 
 /* 大格里的手电 */
-#main{cursor:none}
+#main{cursor:none;left:30px;top:30px;width:640px;height:470px}
 #main .dark{position:absolute;inset:0;pointer-events:none;transition:opacity 1.2s;
   background:radial-gradient(circle at var(--mx,300px) var(--my,240px),transparent 0,transparent 105px,rgba(14,9,6,.6) 140px,rgba(14,9,6,.95) 180px)}
 #main .hatch{position:absolute;inset:0;pointer-events:none;opacity:.55;transition:opacity 1.2s;
@@ -129,7 +129,7 @@ html,body{margin:0;height:100%;background:var(--ink);overflow:hidden}
   <div class="proj">
     <div class="spill"></div>
     <div class="frame" id="frame">
-      <div class="pnl" id="main" style="left:30px;top:30px;width:640px;height:470px">
+      <div class="pnl" id="main">
         <svg id="desk" viewBox="0 0 1341 985" preserveAspectRatio="xMidYMid slice"></svg>
         <div class="dark"></div><div class="hatch"></div><div class="ring"></div>
         <div class="box" style="left:14px;top:12px">Lights are out.</div>
@@ -281,9 +281,8 @@ const desk=document.getElementById('desk');desk.setAttribute('viewBox',`0 0 ${VW
 
 // ---- 大格里的手电：鼠标走到哪亮到哪，带一点点手抖 ----
 const main=document.getElementById('main');
-const frame=document.getElementById('frame');
-let tx=300,ty=240,mx=300,my=240;
-main.addEventListener('pointermove',e=>{const r=main.getBoundingClientRect();tx=(e.clientX-r.left)/k;ty=(e.clientY-r.top)/k});
+let tx=300,ty=240,mx=300,my=240,px=0,held=false;
+main.addEventListener('pointermove',e=>{const rm=main.getBoundingClientRect();tx=(e.clientX-rm.left)/k;ty=(e.clientY-rm.top)/k;px=e.clientX;held=true});
 // 桌子比格子宽：手电往左右边上照，画面跟着慢慢平移
 let vx=(IMG_W-VW)/2;
 if(s.classList.contains('portrait')){const r0=desk.getBoundingClientRect();vx=(IMG_W-IMG_H*(r0.width/Math.max(1,r0.height)))/2;}
@@ -291,7 +290,7 @@ if(s.classList.contains('portrait')){const r0=desk.getBoundingClientRect();vx=(I
   const r=desk.getBoundingClientRect();
   const win=s.classList.contains('portrait')?IMG_H*(r.width/Math.max(1,r.height)):VW;
   const span=IMG_W-win;
-  const panT=s.classList.contains('portrait')?Math.max(0,Math.min(1,mx/Math.max(1,frame.clientWidth))):Math.max(0,Math.min(1,(mx-90)/460));
+  const panT=s.classList.contains('portrait')?Math.max(0,Math.min(1,held?(px-r.left)/Math.max(1,r.width):.5)):Math.max(0,Math.min(1,(mx-90)/460));
   vx+=(panT*span-vx)*.05;
   desk.setAttribute('viewBox',`${vx.toFixed(1)} 0 ${win} ${IMG_H}`);
   main.style.setProperty('--mx',(mx+Math.sin((t||0)/90)*1.2)+'px');main.style.setProperty('--my',(my+Math.cos((t||0)/110)*1.2)+'px');requestAnimationFrame(loop)})();
