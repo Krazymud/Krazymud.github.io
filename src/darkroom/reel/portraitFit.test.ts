@@ -117,3 +117,9 @@ it('keeps light-table hints and the crane on the portrait camera', () => {
   expect(html).toContain('tray-lt-flow.js?v=tnqe1a')
 })
 
+it('frames the book cover at 72% of the portrait width', () => {
+  const html = readFileSync(join(process.cwd(), 'public/reel-shell/book-cover.html'), 'utf8')
+  expect(html).toContain('BW/(2*Math.tan(30*Math.PI/360)*cam.aspect*0.72)')
+  expect(html).toContain('cam.lookAt(1.15,0,-.1)')
+})
+
