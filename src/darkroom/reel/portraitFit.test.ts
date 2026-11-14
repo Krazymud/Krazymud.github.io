@@ -83,3 +83,21 @@ it('maps roll taps and viewer labels with the frame', () => {
   expect(html).not.toContain('/2*1040')
   expect(html).not.toContain('/2*694')
 })
+
+it('resizes the light table with the portrait frame', () => {
+  const html = readFileSync(join(process.cwd(), 'public/reel-shell/tray.html'), 'utf8')
+  expect(html).toContain("box.mode==='portrait'")
+  expect(html).toContain('renderer.setSize(r.width,r.height,false)')
+  expect(html).toContain('Box3')
+  const portrait = html.slice(html.indexOf("if(box.mode==='portrait')"), html.indexOf('}else{'))
+  expect(portrait).toContain("cv.style.width='100%'")
+  expect(portrait).toContain("cv.style.height='100%'")
+  const desk = html.slice(html.indexOf('}else{'), html.indexOf('layout3d(ROLL.fitStage(s))'))
+  expect(desk).toContain("cv.style.width='1040px'")
+  expect(desk).toContain("cv.style.height='694px'")
+  expect(html).toContain('const framePx=()=>[fr.clientWidth,fr.clientHeight]')
+  expect(html).toContain('const [w,h]=framePx()')
+  expect(html).not.toContain('x/1040*2-1')
+  expect(html).not.toContain('/2*1040')
+})
+

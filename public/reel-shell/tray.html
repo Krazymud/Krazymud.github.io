@@ -78,7 +78,8 @@ import * as THREE from './lib/three.module.js?v=tn9zuj';
 import {addLightTable} from './tray-lt.js?v=tnpf3k';
 import {flow} from './tray-lt-flow.js?v=tnqdf9';
 const s=document.getElementById('stage');let k=1;
-const fit=()=>{const box=ROLL.fitStage(s);k=box.pointer};
+let layout3d=null;
+const fit=()=>{const box=ROLL.fitStage(s);k=box.pointer;if(layout3d)layout3d(box)};
 fit();addEventListener('resize',fit);
 if(window.visualViewport){visualViewport.addEventListener('resize',fit);visualViewport.addEventListener('scroll',fit)}
 
@@ -107,7 +108,7 @@ const full=new Proxy(pics,{get:(t,k)=>fulls[k]||t[k]});
 // ---- 场景：同一张木桌，台灯换成暗房安全灯（橘红、更暗）----
 const cv=document.getElementById('gl');
 const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
-renderer.setPixelRatio(ROLL.pr());renderer.setSize(1040,694,false);ROLL.onQuality(()=>{renderer.setPixelRatio(ROLL.pr());renderer.setSize(1040,694,false)});
+renderer.setPixelRatio(ROLL.pr());renderer.setSize(1040,694,false);ROLL.onQuality(()=>{renderer.setPixelRatio(ROLL.pr());if(layout3d)fit();else renderer.setSize(1040,694,false)});
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;
 const scene=new THREE.Scene();scene.background=new THREE.Color('#090403');
@@ -176,6 +177,32 @@ const liqAlpha=(()=>{const c=document.createElement('canvas');c.width=512;c.heig
 liqGeo.setAttribute('color',new THREE.Float32BufferAttribute(new Float32Array(liqGeo.attributes.position.count*3).fill(1),3));
 const liquid=new THREE.Mesh(liqGeo,new THREE.MeshPhysicalMaterial({vertexColors:true,color:'#7a4422',transparent:true,opacity:.42,alphaMap:liqAlpha,roughness:.02,metalness:0,ior:1.33,specularIntensity:1,clearcoat:1,clearcoatRoughness:.02,envMapIntensity:1.8,depthWrite:false}));
 liquid.position.y=LIQ_Y;liquid.renderOrder=2;tray.add(liquid);
+const deskPos=cam.position.clone(),deskLook=LOOK.clone();
+layout3d=(box)=>{
+  const r=document.querySelector('.proj').getBoundingClientRect();
+  if(box.mode==='portrait'){
+    renderer.setSize(r.width,r.height,false);cv.style.width='100%';cv.style.height='100%';cam.aspect=r.width/Math.max(1,r.height);cam.position.copy(deskPos);cam.lookAt(deskLook);cam.updateProjectionMatrix();
+    const box3=new THREE.Box3().setFromObject(tray);
+    const corners=[
+      new THREE.Vector3(box3.min.x,box3.min.y,box3.min.z),new THREE.Vector3(box3.min.x,box3.min.y,box3.max.z),
+      new THREE.Vector3(box3.min.x,box3.max.y,box3.min.z),new THREE.Vector3(box3.min.x,box3.max.y,box3.max.z),
+      new THREE.Vector3(box3.max.x,box3.min.y,box3.min.z),new THREE.Vector3(box3.max.x,box3.min.y,box3.max.z),
+      new THREE.Vector3(box3.max.x,box3.max.y,box3.min.z),new THREE.Vector3(box3.max.x,box3.max.y,box3.max.z)]
+    const look=deskLook.clone(),dir=deskPos.clone().sub(look);let dist=dir.length();dir.normalize();
+    const fov=32*Math.PI/180,tanV=Math.tan(fov/2);
+    for(let n=0;n<40;n++){
+      cam.position.copy(look).addScaledVector(dir,dist);cam.lookAt(look);cam.updateProjectionMatrix();
+      const tanH=tanV*cam.aspect,forward=look.clone().sub(cam.position).normalize();
+      const right=new THREE.Vector3().crossVectors(forward,new THREE.Vector3(0,1,0)).normalize();
+      const up=new THREE.Vector3().crossVectors(right,forward).normalize();
+      const ok=corners.every(p=>{const rel=p.clone().sub(cam.position),depth=rel.dot(forward);if(depth<=0.2)return false;
+        return Math.abs(rel.dot(right)/depth)<tanH*0.92&&Math.abs(rel.dot(up)/depth)<tanV*0.92});
+      if(ok)break;dist+=0.25}
+  }else{
+    renderer.setSize(1040,694,false);cv.style.width='1040px';cv.style.height='694px';cam.aspect=1040/694;cam.position.copy(deskPos);cam.lookAt(deskLook);cam.updateProjectionMatrix();
+  }
+};
+layout3d(ROLL.fitStage(s));
 // 水面：每个格点一个高度，按波动方程往四周传，碰到盘壁弹回来，慢慢衰减；
 // 东西碰到水（相纸入水、夹子伸进去、水珠落下、相纸出水）就在那一点按一下 poke(x,z,深浅,半径)，一圈圈荡开
 const NX=97,NZ=73,dX=LW/(NX-1),dZ=LD/(NZ-1);
@@ -381,7 +408,8 @@ const tips=[];tongs.traverse(c=>{if(c.material&&c.material.color&&c.material.col
 // ---- 点 ----
 const ray=new THREE.Raycaster(),m=new THREE.Vector2(),fr=document.getElementById('frame');
 const local=e=>{const r=fr.getBoundingClientRect();return[(e.clientX-r.left)/k,(e.clientY-r.top)/k]};
-const aim=e=>{const [x,y]=local(e);m.set(x/1040*2-1,-(y/694)*2+1);ray.setFromCamera(m,cam)};
+const framePx=()=>[fr.clientWidth,fr.clientHeight];
+const aim=e=>{const [x,y]=local(e);const [w,h]=framePx();m.set(x/w*2-1,-(y/h)*2+1);ray.setFromCamera(m,cam)};
 const hits=(e,objs)=>{aim(e);return ray.intersectObjects(objs,true).length>0};
 const pickPrint=e=>{aim(e);const h=ray.intersectObjects(prints.flatMap(p=>[p.front,p.back]))[0];return h&&h.object.userData.pr};
 function what(e){
@@ -402,7 +430,7 @@ const dry=document.getElementById('dry');
 const peekEl=document.getElementById('peek');let flipped=false;const _pk=new THREE.Vector3();
 function placePeek(){const p=prints.find(q=>q.stage==='hung');const want=!!p&&!flipped&&!looking&&!leave&&(phase==='idle'||phase==='done'||phase==='in'||phase==='dev');
   peekEl.classList.toggle('on',want);if(!p)return;_pk.set(PW/2,PH/2,0);p.g.localToWorld(_pk);_pk.project(cam);
-  const x=(_pk.x+1)/2*1040,y=(1-_pk.y)/2*694;peekEl.style.left=(x-6)+'px';peekEl.style.top=(y-6)+'px'}
+  const [w,h]=framePx();const x=(_pk.x+1)/2*w,y=(1-_pk.y)/2*h;peekEl.style.left=(x-6)+'px';peekEl.style.top=(y-6)+'px'}
 // 照片墙提前在后面装好（透明），转场时淡上来，不黑场也不刷新页面
 const wallF=document.createElement('iframe');wallF.className='next';let wallGo=0,cut=0;
 // 换片时那一下黑：盖在暗房上面、照片墙下面
