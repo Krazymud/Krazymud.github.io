@@ -278,33 +278,39 @@ function placeCans(mode){
   const pos=mode==='portrait'?POS_PORT:POS_DESK;
   cans.forEach((h,i)=>{h.position.set(pos[i][0],h.userData.base.y,pos[i][1]);h.userData.base.copy(h.position)});
 }
-function dolly(look,points){
-  const dir=cam.position.clone().sub(look);let dist=dir.length();dir.normalize();
-  const fov=32*Math.PI/180,tanV=Math.tan(fov/2),tanH=tanV*cam.aspect;
+function dollyPos(from,look,points){
+  const dir=from.clone().sub(look);let dist=dir.length();dir.normalize();
+  const fov=32*Math.PI/180,tanV=Math.tan(fov/2),tanH=tanV*cam.aspect,pos=new THREE.Vector3();
   for(let n=0;n<40;n++){
-    cam.position.copy(look).addScaledVector(dir,dist);
-    const forward=look.clone().sub(cam.position).normalize();
+    pos.copy(look).addScaledVector(dir,dist);
+    const forward=look.clone().sub(pos).normalize();
     const right=new THREE.Vector3().crossVectors(forward,new THREE.Vector3(0,1,0)).normalize();
     const up=new THREE.Vector3().crossVectors(right,forward).normalize();
-    const ok=points.every(p=>{const rel=p.clone().sub(cam.position),depth=rel.dot(forward);if(depth<=0.2)return false;
+    const ok=points.every(p=>{const rel=p.clone().sub(pos),depth=rel.dot(forward);if(depth<=0.2)return false;
       return Math.abs(rel.dot(right)/depth)<tanH*0.9&&Math.abs(rel.dot(up)/depth)<tanV*0.9});
     if(ok)break;dist+=0.35}
-  cam.lookAt(look);
+  return pos;
 }
-let focus=null;
+// 总览：桌面就是 HOME；竖屏从 HOME 沿视线退到四只罐子和近处桌沿都在画里
+const overview=()=>s.classList.contains('portrait')
+  ?{pos:dollyPos(HOME.pos,HOME.look,POS_PORT.map(([x,z])=>new THREE.Vector3(x,.2,z)).concat([new THREE.Vector3(0,.2,2.4)])),look:HOME.look.clone()}
+  :{pos:HOME.pos.clone(),look:HOME.look.clone()};
+// 推近一卷：竖屏跟书一样，沿视线把桌面那一镜拉远，横向看到的宽度和桌面一样
+const aimShot=shot=>{if(!s.classList.contains('portrait'))return {pos:shot.pos.clone(),look:shot.look.clone()};
+  const dir=shot.pos.clone().sub(shot.look),dist=dir.length()*(1040/694)/cam.aspect;
+  return {pos:shot.look.clone().addScaledVector(dir.normalize(),dist),look:shot.look.clone()}};
+let focus=null,focusShot=null;
 layout3d=(box)=>{
   const proj=document.querySelector('.proj'),r=proj.getBoundingClientRect();
   if(box.mode==='portrait'){
     renderer.setSize(r.width,r.height,false);cv.style.width='100%';cv.style.height='100%';cam.aspect=r.width/Math.max(1,r.height);cam.updateProjectionMatrix();
     placeCans('portrait');
-    if(!focus){
-      cam.position.set(0,7,5.4);
-      dolly(new THREE.Vector3(0,0,.15),POS_PORT.map(([x,z])=>new THREE.Vector3(x,.2,z)).concat([new THREE.Vector3(0,.2,2.4)]));
-    }
+    if(!focus){const o=overview();cam.position.copy(o.pos);cam.lookAt(o.look)}
   }else{
     renderer.setSize(1040,694,false);cv.style.width='1040px';cv.style.height='694px';cam.aspect=1040/694;cam.updateProjectionMatrix();
     placeCans('desk');if(!focus){cam.position.copy(HOME.pos);cam.lookAt(HOME.look)}
   }
+  if(focus&&focusShot){camFrom={pos:cam.position.clone(),look:curLook.clone()};camTo=aimShot(focusShot);camT=0}
 };
 layout3d(ROLL.fitStage(s));
 const STAND_Y=L/2+.09;
@@ -557,11 +563,11 @@ function setFocus(c){
   viewer.position.set(film.position.x+GX,STAND_Y,STAGE.z+.05);
   sheet.position.copy(SHEET_AT());
   // 印样那卷镜头抬高往下看，纸和片子都在画里
-  camTo=cur.play==='sheet'
+  focusShot=cur.play==='sheet'
     ?{pos:new THREE.Vector3(STAGE.x+1.7,3.9,STAGE.z+4.5),look:new THREE.Vector3(STAGE.x+1.65,.25,STAGE.z+1.05)}
-    :{pos:new THREE.Vector3(STAGE.x+1.6,STAND_Y+.6,STAGE.z+4.7),look:new THREE.Vector3(STAGE.x+1.45,STAND_Y-.05,STAGE.z)};camT=0}
-function release(){closing=false;focus=null;film.visible=false;saveDev();
-  camFrom={pos:cam.position.clone(),look:curLook.clone()};camTo={pos:HOME.pos.clone(),look:HOME.look.clone()};camT=0}
+    :{pos:new THREE.Vector3(STAGE.x+1.6,STAND_Y+.6,STAGE.z+4.7),look:new THREE.Vector3(STAGE.x+1.45,STAND_Y-.05,STAGE.z)};camTo=aimShot(focusShot);camT=0}
+function release(){closing=false;focus=null;focusShot=null;film.visible=false;saveDev();
+  camFrom={pos:cam.position.clone(),look:curLook.clone()};camTo=overview();camT=0}
 
 // ---- 动 ----
 const curLook=HOME.look.clone();const clock=new THREE.Clock();

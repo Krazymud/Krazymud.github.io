@@ -210,6 +210,11 @@ if(window.top!==window)['pointerup','touchend','click','keydown'].forEach(t=>add
   document.head.appendChild(st);
   function setup(){const fr=document.querySelector('.proj>.frame');if(!fr||fr.parentNode.querySelector(':scope>.below'))return;
     const below=document.createElement('div');fr.after(below);
+    // 手机上框底下那条黑在屏幕外：竖屏收进框底，横放贴着屏幕看得见的下沿
+    const place=()=>{const st=document.getElementById('stage');if(!st)return;
+      const c=parseFloat(st.style.getPropertyValue('--cover'))||1,h=parseFloat(st.style.height)||0;
+      below.style.top=st.classList.contains('portrait')?'calc(100% - 110px)':st.classList.contains('phonewide')?(fr.parentNode.offsetHeight/2+h/2/c-110)+'px':''};
+    place();addEventListener('reel-fit',place);
     const sync=()=>{below.className='below '+[...fr.classList].filter(c=>c!=='frame').join(' ')};sync();
     new MutationObserver(sync).observe(fr,{attributes:true,attributeFilter:['class']});
     const move=el=>{if(el.nodeType===1&&el.tagName!=='IFRAME'&&el.matches(SEL))below.appendChild(el)};

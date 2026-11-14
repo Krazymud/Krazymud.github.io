@@ -141,8 +141,10 @@ svg.fiber path{fill:none;stroke:rgba(246,226,190,.75);stroke-width:1.6;stroke-li
 <script src="roll-link.js?v=portrait1"></script>
 <script>
 const s=document.getElementById('stage');
-let k=1;
-const fit=()=>{const box=ROLL.fitStage(s);k=box.pointer};
+let k=1,es=1;
+// 竖屏袋子保持桌面尺寸，整只按格子宽度缩小（左下角不动）；撕的距离按同一个比例换回袋子上的像素
+const fit=()=>{const box=ROLL.fitStage(s),f=document.getElementById('frame');k=box.pointer;
+  es=box.mode==='portrait'?Math.min(1,(f.clientWidth-32)/470):1;f.style.setProperty('--env',String(es))};
 fit();addEventListener('resize',fit);
 if(window.visualViewport){visualViewport.addEventListener('resize',fit);visualViewport.addEventListener('scroll',fit)}
 
@@ -194,9 +196,10 @@ function ripBit(){const now=performance.now(),v=(p-lastP)/Math.max(16,now-lastT)
   play(rip,Math.random()*.3,.09+Math.random()*.08,Math.min(1,.35+v*1.2),.9+Math.random()*.2)}
 function ripAll(){play(rip,0,.5,.9)}
 const local=e=>{const r=fr.getBoundingClientRect();return[(e.clientX-r.left)/k,(e.clientY-r.top)/k]};
+const tearX=e=>local(e)[0]/es;
 let dragging=false,startX=0;
-[strip,stripA].forEach(el=>el.addEventListener('pointerdown',e=>{audio();if(fr.classList.contains('opened'))return;dragging=true;startX=local(e)[0]-p;el.setPointerCapture(e.pointerId)}));
-addEventListener('pointermove',e=>{if(!dragging)return;p=Math.max(0,Math.min(W,local(e)[0]-startX));fr.classList.toggle("tearing",p>12);render();ripBit();if(p>W*.88)open()});
+[strip,stripA].forEach(el=>el.addEventListener('pointerdown',e=>{audio();if(fr.classList.contains('opened'))return;dragging=true;startX=tearX(e)-p;el.setPointerCapture(e.pointerId)}));
+addEventListener('pointermove',e=>{if(!dragging)return;p=Math.max(0,Math.min(W,tearX(e)-startX));fr.classList.toggle("tearing",p>12);render();ripBit();if(p>W*.88)open()});
 addEventListener('pointerup',()=>dragging=false);
 
 function open(){if(fr.classList.contains('opened'))return;dragging=false;p=W;render();

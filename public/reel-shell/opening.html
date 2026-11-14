@@ -165,8 +165,12 @@ fit();addEventListener('resize',fit);
 if(window.visualViewport){visualViewport.addEventListener('resize',fit);visualViewport.addEventListener('scroll',fit)}
 // 专属设置（服务器 custom.json）：片头大小标题。h1 是我们自己写的，可以带 <em>；比原来 A Roll for Two 宽就一点点缩字（原来的刚好不碰右边胶片）
 if(window.CUSTOM?.title){const T=document.querySelector('.title'),h=T.querySelector('h1'),c=CUSTOM.title;
-  if(c.h1){h.innerHTML=c.h1;h.style.whiteSpace='nowrap';const shrink=()=>{let f=116;h.style.fontSize='';h.style.width='max-content';const mine=h.innerHTML;h.innerHTML='A Roll <em>for Two</em>';const W=h.offsetWidth;h.innerHTML=mine;
-    while(h.offsetWidth>W&&f>40){f-=2;h.style.fontSize=f+'px'}h.style.width=''};shrink();document.fonts.ready.then(shrink)}
+  if(c.h1){h.innerHTML=c.h1;const shrink=()=>{let f=116;h.style.fontSize='';h.style.width='';
+      // 竖屏不缩：按格子宽度折行，字号交给 portrait.css
+      if(s.classList.contains('portrait')){h.style.whiteSpace='';return}
+      h.style.whiteSpace='nowrap';h.style.width='max-content';const mine=h.innerHTML;h.innerHTML='A Roll <em>for Two</em>';const W=h.offsetWidth;h.innerHTML=mine;
+    while(h.offsetWidth>W&&f>40){f-=2;h.style.fontSize=f+'px'}h.style.width=''};shrink();document.fonts.ready.then(shrink);
+    let tall=s.classList.contains('portrait');addEventListener('reel-fit',e=>{const t=e.detail.mode==='portrait';if(t!==tall){tall=t;shrink()}})}
   if(c.sub)T.querySelector('.sub').textContent=c.sub}
 // 她定了标题居中；?l 是靠左的旧版
 if(!new URLSearchParams(location.search).has('l'))s.classList.add('center');

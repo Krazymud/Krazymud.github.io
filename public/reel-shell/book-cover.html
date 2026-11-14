@@ -186,9 +186,17 @@ let move=null;const look=SHOT.wide.l.clone();
 const pose={p:SHOT.wide.p.clone(),l:SHOT.wide.l.clone()};
 const park=(p,l)=>{pose.p.copy(p);pose.l.copy(l)};
 let reading=null,camHold=false;
+// 竖屏书那一镜：看点移到书 (1.15, 0, -0.1)，沿视线退到封面约占格子宽 72%
+function bookFit(){
+  const lookAt=new THREE.Vector3(1.15,0,-.1);
+  const dist=BW/(2*Math.tan(30*Math.PI/360)*cam.aspect*0.72);
+  const dir=new THREE.Vector3(.4,7.2,5.4).sub(lookAt).normalize();
+  return {p:lookAt.clone().addScaledVector(dir,dist),l:lookAt};
+}
 function aimAt(p,l,portrait){
   const target=l.clone(),tall=portrait??s.classList.contains('portrait');
   if(!tall)return {p:p.clone(),l:target};
+  if(p.equals(SHOT.book.p)&&l.equals(SHOT.book.l))return bookFit();
   const dir=p.clone().sub(target),dist=dir.length()*(1040/694)/cam.aspect;dir.normalize();
   return {p:target.clone().addScaledVector(dir,dist),l:target};
 }
@@ -196,19 +204,11 @@ const goShot=(name,ms)=>{park(SHOT[name].p,SHOT[name].l);const to=aimAt(SHOT[nam
 let stage='wide',writing=false,sealedAt=0,stitches=null,si=0,plan=null,prep=0,bumpDone=false,blinkAt=0,caret=false;
 function placeCam(mode){
   const portrait=mode?mode==='portrait':s.classList.contains('portrait');
-  if(stage==='wide'){
-    if(portrait){
-      const lookAt=new THREE.Vector3(1.15,0,-.1);
-      const dist=BW/(2*Math.tan(30*Math.PI/360)*cam.aspect*0.72);
-      const dir=new THREE.Vector3(.4,7.2,5.4).sub(lookAt).normalize();
-      cam.position.copy(lookAt).addScaledVector(dir,dist);
-      cam.lookAt(1.15,0,-.1);
-      look.copy(lookAt);
-    }else{
-      cam.position.set(.4,7.2,5.4);cam.lookAt(.4,0,-.15);look.set(.4,0,-.15);
-    }
+  if(stage==='wide'&&!portrait){
+    cam.position.set(.4,7.2,5.4);cam.lookAt(.4,0,-.15);look.set(.4,0,-.15);
   }else{
-    const to=aimAt(pose.p,pose.l,portrait);
+    // 竖屏还没点信纸的时候对着信纸（连着书脊），得先点得到信纸；封好书名、stage 变成 book 才换成书的 72%
+    const to=stage==='wide'?aimAt(SHOT.letter.p,SHOT.letter.l,true):aimAt(pose.p,pose.l,portrait);
     cam.position.copy(to.p);cam.lookAt(to.l);look.copy(to.l);
   }
   camHold=true;

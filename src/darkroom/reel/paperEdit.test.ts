@@ -277,8 +277,16 @@ describe('paper-edit saves', () => {
     expect(bar.style.position).toBe('fixed')
     expect(bar.style.zIndex).not.toBe('')
     const next = [...ctx.win.document.querySelectorAll('button')].find((b) => b.textContent === '下一幕') as HTMLElement
-    const barFont = next.style.fontSize
-    expect(barFont === '' ? 16 : Number.parseFloat(barFont)).toBeGreaterThanOrEqual(15)
+    expect(Number.parseFloat(next.style.fontSize)).toBeGreaterThanOrEqual(15)
+  })
+
+  it('leaves the designed desk sizes alone when the letter mounts on a desk', () => {
+    const ctx = boot([{ source: 'notes/n1', title: '夜路', date: '2026-03-01', body: '风' }])
+    open.push(ctx.dom)
+    const next = [...ctx.win.document.querySelectorAll('.pe-bar button')].find((b) => b.textContent === '下一幕') as HTMLElement
+    expect(next.style.fontSize).toBe('11px')
+    expect(next.style.minHeight).toBe('')
+    expect((ctx.win.document.querySelector('.pe-text') as HTMLElement).style.fontSize).toBe('15px')
   })
 
   it('sizes live note and list body from reel-fit and on mount', () => {
@@ -303,7 +311,8 @@ describe('paper-edit saves', () => {
     win.document.getElementById('stage')!.classList.remove('phonewide')
     win.dispatchEvent(new win.CustomEvent('reel-fit', { detail: { cover: 1 } }))
     const barBtn = [...win.document.querySelectorAll('.pe-bar button')].find((b) => b.textContent === '下一幕') as HTMLElement
-    expect(barBtn.style.fontSize).toBe('')
+    expect(barBtn.style.fontSize).toBe('11px')
+    expect(item.style.fontSize).toBe('15px')
     open.push(dom)
   })
 

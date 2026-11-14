@@ -24,7 +24,7 @@ html,body{margin:0;height:100%;background:var(--ink);overflow:hidden}
 .pnl svg{position:absolute;inset:0;width:100%;height:100%;display:block}
 /* 还没找到的格子：只有一道虚线的空位 */
 .art{position:absolute;inset:0}
-.slot{background:transparent;border:2px dashed rgba(22,16,11,.28)}
+.slot{background:transparent;border:2px dashed rgba(22,16,11,.28);pointer-events:none}
 .slot .art{opacity:0}
 .pnl.on{border:3px solid var(--line);background:#1a120c;animation:pop .55s cubic-bezier(.2,1.6,.4,1)}
 .pnl.on .art{opacity:1;transition:opacity .25s}
@@ -36,6 +36,10 @@ html,body{margin:0;height:100%;background:var(--ink);overflow:hidden}
 
 /* 大格里的手电 */
 #main{cursor:none;left:30px;top:30px;width:640px;height:470px}
+#p0{left:684px;top:30px;width:326px;height:148px}
+#p1{left:684px;top:191px;width:326px;height:148px}
+#p2{left:684px;top:352px;width:326px;height:148px}
+#p3{left:30px;top:514px;width:980px;height:150px}
 #main .dark{position:absolute;inset:0;pointer-events:none;transition:opacity 1.2s;
   background:radial-gradient(circle at var(--mx,300px) var(--my,240px),transparent 0,transparent 105px,rgba(14,9,6,.6) 140px,rgba(14,9,6,.95) 180px)}
 #main .hatch{position:absolute;inset:0;pointer-events:none;opacity:.55;transition:opacity 1.2s;
@@ -134,10 +138,10 @@ html,body{margin:0;height:100%;background:var(--ink);overflow:hidden}
         <div class="dark"></div><div class="hatch"></div><div class="ring"></div>
         <div class="box" style="left:14px;top:12px">Lights are out.</div>
       </div>
-      <div class="pnl slot" id="p0" style="left:684px;top:30px;width:326px;height:148px"><div class="art"></div></div>
-      <div class="pnl slot" id="p1" style="left:684px;top:191px;width:326px;height:148px"><div class="art"></div></div>
-      <div class="pnl slot" id="p2" style="left:684px;top:352px;width:326px;height:148px"><div class="art"></div></div>
-      <div class="pnl slot" id="p3" style="left:30px;top:514px;width:980px;height:150px"><div class="art"></div></div>
+      <div class="pnl slot" id="p0"><div class="art"></div></div>
+      <div class="pnl slot" id="p1"><div class="art"></div></div>
+      <div class="pnl slot" id="p2"><div class="art"></div></div>
+      <div class="pnl slot" id="p3"><div class="art"></div></div>
       <div class="pageno" style="right:34px;bottom:12px">7</div>
       <div class="paper"></div><div class="vig"></div>
       <div class="peek" id="peek"><div class="obj" id="obj"></div><div class="tip" id="tip">tap anywhere to put it back</div></div>
@@ -316,7 +320,7 @@ const tug=cord.querySelector('.tug');
 cord.addEventListener('click',()=>{tug.classList.remove('go');void tug.offsetWidth;tug.classList.add('go');
   setTimeout(()=>{const on=!main.classList.contains('lit');main.classList.toggle('lit',on);cord.querySelector('span').textContent=on?'and off?':'pull it';
     const p3=document.getElementById('p3');
-    if(on&&!p3.classList.contains('on')){p3.querySelector('.art').innerHTML=ART[3]();p3.classList.remove('slot');p3.classList.add('on');document.getElementById('frame').classList.add('done');setTimeout(()=>{if(!seen)arrow.classList.add('on')},1400)}},180)});
+    if(on&&!p3.classList.contains('on')){p3.querySelector('.art').innerHTML=ART[3]();p3.classList.remove('slot');p3.classList.add('on');document.getElementById('frame').classList.add('done');document.getElementById('side').classList.add('done');setTimeout(()=>{if(!seen)arrow.classList.add('on')},1400)}},180)});
 // 开灯以后三格能点开看大图，跟看显影照片一样；第一次点开箭头就淡掉
 const peek=document.getElementById('peek'),arrow=document.getElementById('arrow');
 // 点格子：眼前摊开的是东西本身（字条 / 照片 / 票根），看内容；票根再点一下翻面

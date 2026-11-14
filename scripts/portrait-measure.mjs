@@ -55,11 +55,12 @@ const letter = await letterPage.evaluate(() => {
     font: pre ? parseFloat(getComputedStyle(pre).fontSize) : 0,
     n: buttons.length,
     inView: buttons.every((b) => b.top >= 0 && b.bottom <= innerHeight && b.height >= 44),
+    paperInView: paper.top >= 0 && paper.left >= 0 && paper.right <= innerWidth + 1 && paper.height >= 300,
     clear: paper.bottom <= bar.top + 1,
   }
 })
 await phoneCtx.close()
-if (letter.font < 16 || letter.n < 5 || !letter.inView || !letter.clear) throw new Error('letter ' + JSON.stringify(letter))
+if (letter.font < 16 || letter.n < 5 || !letter.inView || !letter.paperInView || !letter.clear) throw new Error('letter ' + JSON.stringify(letter))
 
 for (const path of ['/rolls.html', '/tray.html?lt', '/book-cover.html']) {
   await open(path)
@@ -67,10 +68,27 @@ for (const path of ['/rolls.html', '/tray.html?lt', '/book-cover.html']) {
   const gl = await page.evaluate(() => {
     const c = document.querySelector('canvas')
     const b = c ? c.getBoundingClientRect() : { width: 0, height: 0 }
-    return { w: b.width, h: b.height, portrait: document.getElementById('stage').classList.contains('portrait') }
+    const f = document.querySelector('.frame').getBoundingClientRect()
+    return { w: b.width, h: b.height, fw: f.width, fh: f.height, portrait: document.getElementById('stage').classList.contains('portrait') }
   })
-  if (!gl.portrait || gl.w < 300 || gl.h < 500) throw new Error(path + ' canvas ' + JSON.stringify(gl))
+  if (!gl.portrait || Math.abs(gl.w - gl.fw) > 2 || Math.abs(gl.h - gl.fh) > 2) throw new Error(path + ' canvas ' + JSON.stringify(gl))
+}
+
+const SCENES = ['/opening.html', '/frame-c.html', '/frame-e.html', '/frame-lists.html', '/rolls.html', '/tray.html', '/torch-comic.html', '/book-cover.html', '/credits.html']
+await page.setViewportSize({ width: 844, height: 390 })
+const wide = []
+for (const path of SCENES) {
+  await page.goto(base + path, { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(600)
+  const r = await page.evaluate(() => {
+    const s = document.getElementById('stage')
+    const p = document.querySelector('.proj').getBoundingClientRect()
+    return { phonewide: s.classList.contains('phonewide'), portrait: s.classList.contains('portrait'), l: p.left, t: p.top, r: p.right, b: p.bottom, w: innerWidth, h: innerHeight }
+  })
+  const covers = r.l <= 1 && r.t <= 1 && r.r >= r.w - 1 && r.b >= r.h - 1
+  if (!r.phonewide || r.portrait || !covers) throw new Error(path + ' phone-wide ' + JSON.stringify(r))
+  wide.push(path.slice(1))
 }
 
 await browser.close()
-console.log('portrait measure ok', opening, cue)
+console.log('portrait measure ok', opening, cue, { phonewide: wide.length })
