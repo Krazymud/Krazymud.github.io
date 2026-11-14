@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="portrait.css?v=portrait1">
 <title>A Roll For Two · Book cover</title>
 <style>
 @font-face{font-family:'JB Mono';src:url(font/jbmono.woff2) format('woff2')}
@@ -51,7 +52,7 @@ canvas#gl{position:absolute;inset:0;width:1040px;height:694px;display:block}
 <script src="zh.js?v=radio2"></script>
 <script src="vault-bridge.js"></script>
 <script src="content.js?v=radio2"></script>
-<script src="roll-link.js?v=vaultcta2"></script>
+<script src="roll-link.js?v=portrait1"></script>
 <script type="module">
 import * as THREE from './lib/three.module.js?v=tn9zuj';
 import {CW,CH,coverTextures,titleStitches,hasCJK,TITLE_Y0,TITLE_H} from './bc-tex.js?v=tnboar';
@@ -70,7 +71,10 @@ import {GLTFLoader} from './lib/GLTFLoader.js?v=tnd0f8';
 import {liveCollage} from './bc-collage.js?v=tnco07';
 import {buildLetters} from './bc-letters.js?v=tnbplo';
 const s=document.getElementById('stage');
-const fit=()=>{const k=Math.min(innerWidth/1600,innerHeight/1000);s.style.transform=`translate(-50%,-50%) scale(${k})`};fit();addEventListener('resize',fit);
+let layout3d=null;
+const fit=()=>{ROLL.fitStage(s);if(layout3d)layout3d(ROLL.fitStage(s))};
+fit();addEventListener('resize',fit);
+if(window.visualViewport){visualViewport.addEventListener('resize',fit);visualViewport.addEventListener('scroll',fit)}
 
 // 书名是客人在入场那一幕用羽毛笔写的；这里先放占位
 const Q=new URLSearchParams(location.search);
@@ -103,7 +107,7 @@ const tex=coverTextures({title:TITLE,byline:BYLINE,color:COLOR,card:cardPx});
 
 const cv=document.getElementById('gl');
 const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true,preserveDrawingBuffer:true});
-renderer.setPixelRatio(ROLL.pr());renderer.setSize(1040,694,false);ROLL.onQuality(()=>{renderer.setPixelRatio(ROLL.pr());renderer.setSize(1040,694,false)});
+renderer.setPixelRatio(ROLL.pr());renderer.setSize(1040,694,false);ROLL.onQuality(()=>{renderer.setPixelRatio(ROLL.pr());if(layout3d)fit();else renderer.setSize(1040,694,false)});
 renderer.shadowMap.enabled=true;
 // 影子不每帧重画：只在灯、纸、羽毛笔、桌上东西在动的时候才画（镜头动不用重画影子）
 renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -179,8 +183,47 @@ const SHOT={wide:{p:cam.position.clone(),l:new THREE.Vector3(.4,0,-.15)},
   letter:{p:new THREE.Vector3(PAPER.x+.15,4.6,PAPER.z+3.0),l:new THREE.Vector3(PAPER.x+.1,0,PAPER.z-.05)},
   book:{p:new THREE.Vector3(BOOK.x+.05,5.0,BOOK.z+3.3),l:new THREE.Vector3(BOOK.x,.25,BOOK.z-.05)}};
 let move=null;const look=SHOT.wide.l.clone();
-const goShot=(name,ms)=>{move={from:{p:cam.position.clone(),l:look.clone()},to:SHOT[name],t0:performance.now(),ms}};
+const pose={p:SHOT.wide.p.clone(),l:SHOT.wide.l.clone()};
+const park=(p,l)=>{pose.p.copy(p);pose.l.copy(l)};
+let reading=null,camHold=false;
+// 竖屏书那一镜：看点移到书 (1.15, 0, -0.1)，沿视线退到封面约占格子宽 72%
+function bookFit(){
+  const lookAt=new THREE.Vector3(1.15,0,-.1);
+  const dist=BW/(2*Math.tan(30*Math.PI/360)*cam.aspect*0.72);
+  const dir=new THREE.Vector3(.4,7.2,5.4).sub(lookAt).normalize();
+  return {p:lookAt.clone().addScaledVector(dir,dist),l:lookAt};
+}
+function aimAt(p,l,portrait){
+  const target=l.clone(),tall=portrait??s.classList.contains('portrait');
+  if(!tall)return {p:p.clone(),l:target};
+  if(p.equals(SHOT.book.p)&&l.equals(SHOT.book.l))return bookFit();
+  const dir=p.clone().sub(target),dist=dir.length()*(1040/694)/cam.aspect;dir.normalize();
+  return {p:target.clone().addScaledVector(dir,dist),l:target};
+}
+const goShot=(name,ms)=>{park(SHOT[name].p,SHOT[name].l);const to=aimAt(SHOT[name].p,SHOT[name].l);move={from:{p:cam.position.clone(),l:look.clone()},to,t0:performance.now(),ms}};
 let stage='wide',writing=false,sealedAt=0,stitches=null,si=0,plan=null,prep=0,bumpDone=false,blinkAt=0,caret=false;
+function placeCam(mode){
+  const portrait=mode?mode==='portrait':s.classList.contains('portrait');
+  if(stage==='wide'&&!portrait){
+    cam.position.set(.4,7.2,5.4);cam.lookAt(.4,0,-.15);look.set(.4,0,-.15);
+  }else{
+    // 竖屏还没点信纸的时候对着信纸（连着书脊），得先点得到信纸；封好书名、stage 变成 book 才换成书的 72%
+    const to=stage==='wide'?aimAt(SHOT.letter.p,SHOT.letter.l,true):aimAt(pose.p,pose.l,portrait);
+    cam.position.copy(to.p);cam.lookAt(to.l);look.copy(to.l);
+  }
+  camHold=true;
+}
+layout3d=(box)=>{
+  const r=document.querySelector('.proj').getBoundingClientRect();
+  if(box.mode==='portrait'){
+    renderer.setSize(r.width,r.height,false);cv.style.width='100%';cv.style.height='100%';cam.aspect=r.width/Math.max(1,r.height);cam.updateProjectionMatrix();
+  }else{
+    renderer.setSize(1040,694,false);cv.style.width='1040px';cv.style.height='694px';cam.aspect=1040/694;cam.updateProjectionMatrix();
+  }
+  if(move||(reading&&(reading.anim||(reading.state==='reading'&&reading.busy)))){camHold=false;return}
+  placeCam(box.mode);
+};
+layout3d(ROLL.fitStage(s));
 hint.textContent='tap the letter';
 // 书名那一条小平面开场就放好（空的透明图），着色器和贴图先编译上传，回车时只换图，不会半路卡一下
 const blankCol=mk2(CW/2,TITLE_H/2),blankBump=mk2(CW/2,TITLE_H/2);
@@ -239,7 +282,7 @@ const leftSide=new THREE.Group();scene.add(leftSide);
 let slideAt=0;
 // 11.03：后面几页（拼贴、立体电影院、地图、指南针、花瓣、借书卡）要的图和模型不挡封面：封面先亮、先绣名字，这些在后台装；
 // 绣完要翻开的时候还没装好，就停在封面上等一下
-let theater=null,mapObj=null,reading=null,sealedTitle='';
+let theater=null,mapObj=null,sealedTitle='';
 const pagesReady=(async()=>{
 const collagePics=await Promise.all(CONTENT.book.collage.map((p,i)=>img(p.photo).then(im=>cut(im,p,i?210/250:360/270)))),theaterPic=cut(await img(CONTENT.book.theater.photo),CONTENT.book.theater,900/560);
 // 拼贴页的实拍东西（Commons 公有领域）：蝴蝶标本照片本来就是透明底；1935 年美国邮票扫描是黑底，抠掉
@@ -321,7 +364,7 @@ reading=setupReading({renderer,endWords:END_WORDS[noteMode]||END_WORDS.days,book
   // 放映的时候整间屋子暗下去：曝光压低、补光关小（银幕和光柱不吃曝光）
   dim:k=>{renderer.toneMappingExposure=.95*(1-.95*k);fill.intensity=1.1*(1-k)},
   popup:o=>(theater=makeTheater(theaterPic,{...o,title:Q.get('t')||sealedTitle||''})),onOpen:()=>{slideAt=performance.now()},parts:threads,extras:[card.group,titlePlane],BW,BD,cam,frameEl,cv,hint,lamp:lampBook,lampOn:105,bookShot:SHOT.book,
-  go:(p,l,ms)=>{move={from:{p:cam.position.clone(),l:look.clone()},to:{p,l},t0:performance.now(),ms}}});
+  go:(p,l,ms)=>{park(p,l);const to=aimAt(p,l);move={from:{p:cam.position.clone(),l:look.clone()},to,t0:performance.now(),ms}}});
 // ?map=open：地图直接全摊开（看摊平以后的样子）
 if(Q.get('map')==='open')mapObj?.open();
 if(sealedTitle)theater?.setTitle(sealedTitle)})();
@@ -352,6 +395,8 @@ const frame=now=>{
   let moving=false;
   if(slideAt){const k=Math.min(1,(now-slideAt)/1300);leftSide.position.x=-2.6*(1-Math.pow(1-k,3));if(k<1)moving=true}
   reading?.update(now);
+  if(move||(reading&&(reading.anim||(reading.state==='reading'&&reading.busy))))camHold=false;
+  else if(!camHold)placeCam();
   // 东西在动的时候影子隔一帧画一次就够了，眼睛看不出来
   if((moving||reading?.busy||Math.abs(tiltGoal-tilt)>.002||curNib.distanceTo(nibGoal||nibHome)>.002)){++frameN;renderer.shadowMap.needsUpdate=true}
   renderer.render(scene,cam);

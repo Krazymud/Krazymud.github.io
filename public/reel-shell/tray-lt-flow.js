@@ -24,7 +24,7 @@ const CSS=`
 .ltgo.on path{stroke-dashoffset:0}
 .ltgo:hover path{stroke-width:3.4}`;
 
-export function flow({lt,cam,LOOK,canvas,frameEl,picks,trayView,onDone}){
+export function flow({lt,cam,LOOK,canvas,frameEl,picks,trayView,onDone,holdCam}){
   const st=document.createElement('style');st.textContent=CSS;document.head.appendChild(st);
   const h=document.createElement('div');h.className='lth';
   h.innerHTML='<svg viewBox="0 0 90 70"><path filter="url(#pencil2)" d="M74 58 C 60 50, 40 44, 22 26 C 18 22, 15 18, 12 12 M12 12 L 13 26 M12 12 L 25 15"/></svg><span></span>';frameEl.appendChild(h);
@@ -34,7 +34,7 @@ export function flow({lt,cam,LOOK,canvas,frameEl,picks,trayView,onDone}){
   let anchor=null,up=false;const _v=new THREE.Vector3();
   function hint(key,at,u=false){anchor=at;up=u;h.classList.toggle('up',u);h.querySelector('span').textContent=HINT[key]||'';h.classList.remove('on');if(key)requestAnimationFrame(()=>h.classList.add('on'))}
   const hide=()=>{anchor=null;h.classList.remove('on')};
-  (function follow(){if(anchor){_v.copy(anchor());_v.project(cam);h.style.transform=`translate(${(_v.x+1)/2*1040-10}px,${(1-_v.y)/2*694-(up?62:8)}px)`}requestAnimationFrame(follow)})();
+  (function follow(){if(anchor){_v.copy(anchor());_v.project(cam);const portrait=frameEl.closest('#stage').classList.contains('portrait'),fw=portrait?frameEl.clientWidth:1040,fh=portrait?frameEl.clientHeight:694;h.style.transform=`translate(${(_v.x+1)/2*fw-10}px,${(1-_v.y)/2*fh-(up?62:8)}px)`}requestAnimationFrame(follow)})();
   const atSwitch=()=>lt.front.localToWorld(new THREE.Vector3(.02,-.02,.03));
   const atLoupe=()=>lt.loupe.localToWorld(new THREE.Vector3(.12,.5,.1));
   const atCell=i=>()=>{const [u,v]=lt.cells[i];return lt.box.localToWorld(new THREE.Vector3((u-.5)*lt.W+.18,lt.BH,(v-.5)*lt.D+.12))};
@@ -42,7 +42,7 @@ export function flow({lt,cam,LOOK,canvas,frameEl,picks,trayView,onDone}){
   let on=false,done=false,drag=null;const seen=new Set();
   const ctl=lt.dive({cam,LOOK,canvas,frameEl,noClick:true,
     onIn:()=>seen.add(lt.cur()),
-    onOut:()=>{const next=picks.find(i=>!seen.has(i)&&i!==lt.cur());next!=null?hint('another',atCell(next)):hide();if(seen.size>=Math.min(3,picks.length))go.classList.add('on')}});
+    onOut:()=>{holdCam&&holdCam(false);const next=picks.find(i=>!seen.has(i)&&i!==lt.cur());next!=null?hint('another',atCell(next)):hide();if(seen.size>=Math.min(3,picks.length))go.classList.add('on')}});
   // 一开始灯是关的
   lt.power(0);lt.flip(false);hint('switch',atSwitch,true);
 
@@ -68,7 +68,7 @@ export function flow({lt,cam,LOOK,canvas,frameEl,picks,trayView,onDone}){
     if(!on){if(onSwitch(e)){e.stopImmediatePropagation();turnOn()}return}
     if(ctl.hit(e)){e.stopImmediatePropagation();const p=tableAt(e)||lt.loupe.position;drag={x:e.clientX,y:e.clientY,moved:false,dx:p.x-lt.loupe.position.x,dz:p.z-lt.loupe.position.z};frameEl.setPointerCapture?.(e.pointerId)}},true);
   frameEl.addEventListener('pointerup',e=>{if(!drag)return;const d=drag;drag=null;canvas.style.cursor='';
-    if(!d.moved){hide();ctl.goIn();return}
+    if(!d.moved){hide();holdCam&&holdCam(true);ctl.goIn();return}
     hide();
     // 松手：滑到最近的那一格上扣好
     let best=0,bd=1e9;lt.cells.forEach(([u,v],i)=>{const dd=Math.hypot((u-.5)*lt.W-lt.loupe.position.x,(v-.5)*lt.D-lt.loupe.position.z);if(dd<bd){bd=dd;best=i}});
@@ -78,6 +78,6 @@ export function flow({lt,cam,LOOK,canvas,frameEl,picks,trayView,onDone}){
   // 这一段没走完之前，点击不往下漏给显影盘
   frameEl.addEventListener('click',e=>{if(!done&&!go.contains(e.target))e.stopImmediatePropagation()},true);
   go.addEventListener('click',async e=>{e.stopPropagation();if(done||ctl.busy())return;done=true;go.classList.remove('on');hide();canvas.style.cursor='';
-    await ctl.fly(trayView.pos,trayView.look,cam.fov,2400,ease);onDone&&onDone()});
+    holdCam&&holdCam(true);await ctl.fly(trayView.pos,trayView.look,cam.fov,2400,ease);onDone&&onDone()});
   return {ctl};
 }

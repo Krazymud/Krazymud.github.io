@@ -222,6 +222,44 @@
       const bRip = mkBtn('撕掉')
       const bScene = mkBtn('下一幕')
       ;[bPrev, bNext, bNew, bRip, bScene].forEach((b) => bar.appendChild(b))
+      const btnFont = new Map()
+      bar.querySelectorAll('button').forEach((b) => btnFont.set(b, b.style.fontSize))
+      const deskBodySize = bodyEl.style.fontSize || '15px'
+      let liveBodySize = ''
+      const applyLiveBodySize = () => {
+        const size = liveBodySize || deskBodySize
+        if (bodyEl) bodyEl.style.fontSize = size
+        listEl.querySelectorAll('[contenteditable]').forEach((txt) => {
+          txt.style.fontSize = size
+        })
+      }
+      const fitBar = (ev) => {
+        const stage = document.getElementById('stage')
+        const portrait = !!(stage && stage.classList.contains('portrait'))
+        const phonewide = !!(stage && stage.classList.contains('phonewide'))
+        const mode = portrait || phonewide
+        bar.querySelectorAll('button').forEach((b) => {
+          b.style.minHeight = mode ? '44px' : ''
+          b.style.fontSize = mode ? '15px' : btnFont.get(b) || ''
+        })
+        if (portrait) liveBodySize = '17px'
+        else if (phonewide) {
+          const cover =
+            (ev && ev.detail && ev.detail.cover) ||
+            (stage && parseFloat(stage.style.getPropertyValue('--cover'))) ||
+            1
+          liveBodySize = 16 / cover + 'px'
+        } else liveBodySize = ''
+        applyLiveBodySize()
+      }
+      addEventListener('reel-fit', fitBar)
+      const mountStage = document.getElementById('stage')
+      const mountCover =
+        (mountStage && parseFloat(mountStage.style.getPropertyValue('--cover'))) ||
+        (window.ROLL && window.ROLL.view
+          ? Math.max(window.ROLL.view().w / 1040, window.ROLL.view().h / 694)
+          : 1)
+      fitBar({ detail: { cover: mountCover } })
 
       if (isList) {
         bodyWrap.appendChild(listEl)
@@ -235,6 +273,12 @@
       // 手机上整幕被缩进画框，纸上的字只有几像素，点不中。按钮挂到页面上，不跟画框一起缩小。
       if (coarse) {
         document.body.appendChild(bar)
+        // 条在窄屏上会折成两行：按它现在真实的上沿，告诉竖屏的纸要在框底让出多少
+        const reserveBar = () => {
+          const frameBottom = root.getBoundingClientRect().bottom
+          const barTop = bar.getBoundingClientRect().top
+          root.style.setProperty('--pe-bar', Math.max(0, Math.ceil(frameBottom - barTop)) + 'px')
+        }
         const pinBar = () => {
           const vv = window.visualViewport
           const gapBottom = vv ? Math.max(0, window.innerHeight - (vv.offsetTop + vv.height)) : 0
@@ -242,8 +286,10 @@
           bar.style.bottom = Math.max(12, gapBottom + 12) + 'px'
           bar.style.left = ((vv ? vv.offsetLeft : 0) + 12) + 'px'
           bar.style.right = Math.max(12, gapRight + 12) + 'px'
+          reserveBar()
         }
         pinBar()
+        addEventListener('reel-fit', pinBar)
         if (window.visualViewport) {
           visualViewport.addEventListener('resize', pinBar)
           visualViewport.addEventListener('scroll', pinBar)
@@ -288,6 +334,7 @@
             renderListItems(items)
             noteListClick()
           }
+          if (liveBodySize) txt.style.fontSize = liveBodySize
           row.append(box, txt, del)
           listEl.appendChild(row)
         })

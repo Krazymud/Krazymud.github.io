@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="portrait.css?v=portrait1">
 <title>A Roll For Two · Rolls</title>
 <style>
 @font-face{font-family:'JB Mono';src:url(font/jbmono.woff2) format('woff2')}
@@ -102,13 +103,15 @@ canvas#gl{position:absolute;inset:0;width:1040px;height:694px;display:block}
 <script src="zh.js?v=radio2"></script>
 <script src="vault-bridge.js"></script>
 <script src="content.js?v=radio2"></script>
-<script src="roll-link.js?v=vaultcta2"></script>
+<script src="roll-link.js?v=portrait1"></script>
 <script type="module">
 import * as THREE from './lib/three.module.js?v=tn9zuj';
 const s=document.getElementById('stage');
 let k=1;
-const fit=()=>{k=Math.min(innerWidth/1600,innerHeight/1000);s.style.transform=`translate(-50%,-50%) scale(${k})`};
+let layout3d=null;
+const fit=()=>{const box=ROLL.fitStage(s);k=box.pointer;if(layout3d)layout3d(box)};
 fit();addEventListener('resize',fit);
+if(window.visualViewport){visualViewport.addEventListener('resize',fit);visualViewport.addEventListener('scroll',fit)}
 
 // 四卷：客人可以改名字、日期和颜色；每卷八格，照片、日期、一句话
 // play 是这一卷多出来的那样玩法：pull 点格显影 / light 举到灯前 / viewer 看片器 / sheet 印样上圈
@@ -136,7 +139,7 @@ const pics=await Promise.all(PICS.map(p=>img(p).then(i=>[p,i]))).then(Object.fro
 // ---- 场景 ----
 const cv=document.getElementById('gl');
 const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
-renderer.setPixelRatio(ROLL.pr());renderer.setSize(1040,694,false);ROLL.onQuality(()=>{renderer.setPixelRatio(ROLL.pr());renderer.setSize(1040,694,false)});
+renderer.setPixelRatio(ROLL.pr());renderer.setSize(1040,694,false);ROLL.onQuality(()=>{renderer.setPixelRatio(ROLL.pr());if(layout3d)fit();else renderer.setSize(1040,694,false)});
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
 const scene=new THREE.Scene();scene.background=new THREE.Color("#0b0705");
@@ -269,6 +272,47 @@ let pull=0,pullT=0;
 const setPullView=()=>{const p=Math.max(.001,pull);film.scale.x=p;filmTex.repeat.x=p;filmTex.offset.x=1-p};
 
 const cans=ROLLS.map(r=>{const h=canister(r);h.userData.ft=0;scene.add(h);return h});
+const POS_DESK=[[-2.5,-.35],[-.75,.95],[1.05,-.75],[2.75,.7]];
+const POS_PORT=[[0.15,-1.6],[-0.2,-0.45],[0.2,0.7],[-0.1,1.85]];
+function placeCans(mode){
+  const pos=mode==='portrait'?POS_PORT:POS_DESK;
+  cans.forEach((h,i)=>{h.position.set(pos[i][0],h.userData.base.y,pos[i][1]);h.userData.base.copy(h.position)});
+}
+function dollyPos(from,look,points){
+  const dir=from.clone().sub(look);let dist=dir.length();dir.normalize();
+  const fov=32*Math.PI/180,tanV=Math.tan(fov/2),tanH=tanV*cam.aspect,pos=new THREE.Vector3();
+  for(let n=0;n<40;n++){
+    pos.copy(look).addScaledVector(dir,dist);
+    const forward=look.clone().sub(pos).normalize();
+    const right=new THREE.Vector3().crossVectors(forward,new THREE.Vector3(0,1,0)).normalize();
+    const up=new THREE.Vector3().crossVectors(right,forward).normalize();
+    const ok=points.every(p=>{const rel=p.clone().sub(pos),depth=rel.dot(forward);if(depth<=0.2)return false;
+      return Math.abs(rel.dot(right)/depth)<tanH*0.9&&Math.abs(rel.dot(up)/depth)<tanV*0.9});
+    if(ok)break;dist+=0.35}
+  return pos;
+}
+// 总览：桌面就是 HOME；竖屏从 HOME 沿视线退到四只罐子和近处桌沿都在画里
+const overview=()=>s.classList.contains('portrait')
+  ?{pos:dollyPos(HOME.pos,HOME.look,POS_PORT.map(([x,z])=>new THREE.Vector3(x,.2,z)).concat([new THREE.Vector3(0,.2,2.4)])),look:HOME.look.clone()}
+  :{pos:HOME.pos.clone(),look:HOME.look.clone()};
+// 推近一卷：竖屏跟书一样，沿视线把桌面那一镜拉远，横向看到的宽度和桌面一样
+const aimShot=shot=>{if(!s.classList.contains('portrait'))return {pos:shot.pos.clone(),look:shot.look.clone()};
+  const dir=shot.pos.clone().sub(shot.look),dist=dir.length()*(1040/694)/cam.aspect;
+  return {pos:shot.look.clone().addScaledVector(dir.normalize(),dist),look:shot.look.clone()}};
+let focus=null,focusShot=null;
+layout3d=(box)=>{
+  const proj=document.querySelector('.proj'),r=proj.getBoundingClientRect();
+  if(box.mode==='portrait'){
+    renderer.setSize(r.width,r.height,false);cv.style.width='100%';cv.style.height='100%';cam.aspect=r.width/Math.max(1,r.height);cam.updateProjectionMatrix();
+    placeCans('portrait');
+    if(!focus){const o=overview();cam.position.copy(o.pos);cam.lookAt(o.look)}
+  }else{
+    renderer.setSize(1040,694,false);cv.style.width='1040px';cv.style.height='694px';cam.aspect=1040/694;cam.updateProjectionMatrix();
+    placeCans('desk');if(!focus){cam.position.copy(HOME.pos);cam.lookAt(HOME.look)}
+  }
+  if(focus&&focusShot){camFrom={pos:cam.position.clone(),look:curLook.clone()};camTo=aimShot(focusShot);camT=0}
+};
+layout3d(ROLL.fitStage(s));
 const STAND_Y=L/2+.09;
 // 点开的那卷挪到前面这个位置，其它的往后退
 const STAGE=new THREE.Vector3(-2.2,0,1.3);
@@ -281,10 +325,11 @@ const tick=()=>{try{ac=ac||new AudioContext();const t=ac.currentTime,b=ac.create
   s.connect(f).connect(g).connect(ac.destination);s.start(t)}catch(e){}};
 
 // ---- 交互 ----
-const ray=new THREE.Raycaster(),m=new THREE.Vector2();let hover=null,focus=null,closing=false;
+const ray=new THREE.Raycaster(),m=new THREE.Vector2();let hover=null,closing=false;
 const fr=document.getElementById('frame'),tag=document.getElementById('tag'),hint2=document.getElementById('hint2');
 const local=e=>{const r=fr.getBoundingClientRect();return[(e.clientX-r.left)/k,(e.clientY-r.top)/k]};
-const aim=e=>{const [x,y]=local(e);m.set(x/1040*2-1,-(y/694)*2+1);ray.setFromCamera(m,cam)};
+const framePx=()=>[fr.clientWidth,fr.clientHeight];
+const aim=e=>{const [x,y]=local(e);const [w,h]=framePx();m.set(x/w*2-1,-(y/h)*2+1);ray.setFromCamera(m,cam)};
 const pick=e=>{aim(e);const hit=ray.intersectObjects(cans,true)[0];if(!hit)return null;let o=hit.object;while(o&&!cans.includes(o))o=o.parent;return o};
 // 片子上点到的是第几格
 const frameAt=e=>{aim(e);const hit=ray.intersectObject(film)[0];if(!hit||!hit.uv)return -1;const u=filmTex.offset.x+hit.uv.x*filmTex.repeat.x,i=S-1-Math.floor(u*S);return i<N?i:-1};
@@ -518,11 +563,11 @@ function setFocus(c){
   viewer.position.set(film.position.x+GX,STAND_Y,STAGE.z+.05);
   sheet.position.copy(SHEET_AT());
   // 印样那卷镜头抬高往下看，纸和片子都在画里
-  camTo=cur.play==='sheet'
+  focusShot=cur.play==='sheet'
     ?{pos:new THREE.Vector3(STAGE.x+1.7,3.9,STAGE.z+4.5),look:new THREE.Vector3(STAGE.x+1.65,.25,STAGE.z+1.05)}
-    :{pos:new THREE.Vector3(STAGE.x+1.6,STAND_Y+.6,STAGE.z+4.7),look:new THREE.Vector3(STAGE.x+1.45,STAND_Y-.05,STAGE.z)};camT=0}
-function release(){closing=false;focus=null;film.visible=false;saveDev();
-  camFrom={pos:cam.position.clone(),look:curLook.clone()};camTo={pos:HOME.pos.clone(),look:HOME.look.clone()};camT=0}
+    :{pos:new THREE.Vector3(STAGE.x+1.6,STAND_Y+.6,STAGE.z+4.7),look:new THREE.Vector3(STAGE.x+1.45,STAND_Y-.05,STAGE.z)};camTo=aimShot(focusShot);camT=0}
+function release(){closing=false;focus=null;focusShot=null;film.visible=false;saveDev();
+  camFrom={pos:cam.position.clone(),look:curLook.clone()};camTo=overview();camT=0}
 
 // ---- 动 ----
 const curLook=HOME.look.clone();const clock=new THREE.Clock();
@@ -588,8 +633,8 @@ const loop=fd=>{const dt=fd||Math.min(clock.getDelta(),.1),t=clock.elapsedTime;
        if(dev[g]===0)dev[g]=.001}
      else{vx.fillStyle='#3a2414';vx.fillRect(0,0,FW,FH);vcap.classList.remove('on')}
      vTex.needsUpdate=true}}
-   if(viewer.visible){_v.set(viewer.position.x,STAND_Y+.72,viewer.position.z).project(cam);vcap.style.left=((_v.x+1)/2*1040)+'px';vcap.style.top=((1-_v.y)/2*694)+'px';
-     lever.userData.knob.getWorldPosition(_v).project(cam);vtip.style.left=((_v.x+1)/2*1040)+'px';vtip.style.top=((1-_v.y)/2*694)+'px';
+   if(viewer.visible){const [fw,fh]=framePx();_v.set(viewer.position.x,STAND_Y+.72,viewer.position.z).project(cam);vcap.style.left=((_v.x+1)/2*fw)+'px';vcap.style.top=((1-_v.y)/2*fh)+'px';
+     lever.userData.knob.getWorldPosition(_v).project(cam);vtip.style.left=((_v.x+1)/2*fw)+'px';vtip.style.top=((1-_v.y)/2*fh)+'px';
      // 看片器落稳了，箭头才出来指着拨杆
      if(vtipArmed&&u.a>.95){vtipArmed=false;vtip.classList.remove('gone')}}}
   // 04：印样从前面滑进来；红圈一笔一笔画出来
