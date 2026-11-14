@@ -123,6 +123,13 @@ it('frames the book cover at 72% of the portrait width', () => {
   expect(html).toContain('cam.lookAt(1.15,0,-.1)')
 })
 
+it('rolls the credits at a readable size', () => {
+  const css = readFileSync(join(process.cwd(), 'public/reel-shell/portrait.css'), 'utf8')
+  expect(css).toContain('#stage.portrait .credits{left:12%;width:76%;top:8%;bottom:8%}')
+  expect(css).toContain('#stage.portrait .rollup .name{font-size:22px}')
+  expect(css).toContain('#stage.portrait .thend{left:12%;width:76%}')
+})
+
 it('opens a tall window on the comic desk', () => {
   const html = readFileSync(join(process.cwd(), 'public/reel-shell/torch-comic.html'), 'utf8')
   const css = readFileSync(join(process.cwd(), 'public/reel-shell/portrait.css'), 'utf8')

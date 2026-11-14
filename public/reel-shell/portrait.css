@@ -28,3 +28,8 @@
 #stage.portrait #main{left:0;top:0;width:100%;height:100%}
 #stage.portrait #desk{width:100%;height:100%}
 #stage.portrait .arrow span{font-size:18px}
+#stage.portrait .credits{left:12%;width:76%;top:8%;bottom:8%}
+#stage.portrait .rollup .name{font-size:22px}
+#stage.portrait .rollup .role{font-size:12px}
+#stage.portrait .thend{left:12%;width:76%}
+#stage.portrait .thend p{font-size:40px}
