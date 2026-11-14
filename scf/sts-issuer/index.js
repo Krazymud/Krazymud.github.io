@@ -46,6 +46,34 @@ function jsonResponse(statusCode, body, extraHeaders = {}) {
   }
 }
 
+/** Flatten STS / axios / Error into a short string for the client + logs. */
+function stsDetail(err) {
+  if (err == null) return 'unknown'
+  if (typeof err === 'string') return err
+  if (err instanceof Error) return err.message || err.name || String(err)
+  if (typeof err === 'object') {
+    const code = err.Code || err.code
+    const message = err.Message || err.message
+    const requestId = err.RequestId || err.requestId
+    if (code || message) {
+      return [code, message, requestId ? `RequestId=${requestId}` : null]
+        .filter(Boolean)
+        .join(': ')
+    }
+    try {
+      return JSON.stringify(err)
+    } catch {
+      return String(err)
+    }
+  }
+  return String(err)
+}
+
+function missingEnv() {
+  const required = ['STS_GATE', 'COS_SECRET_ID', 'COS_SECRET_KEY', 'STS_RESOURCE']
+  return required.filter((key) => !process.env[key] || !String(process.env[key]).trim())
+}
+
 exports.main_handler = async (event) => {
   const method =
     event.httpMethod || event.requestContext?.http?.method || event.method || 'POST'
@@ -79,6 +107,18 @@ exports.main_handler = async (event) => {
     return jsonResponse(429, { error: 'rate' })
   }
 
+  const missing = missingEnv()
+  if (missing.length) {
+    console.error('STS env missing:', missing.join(','))
+    return jsonResponse(500, {
+      error: 'sts',
+      detail: `missing env: ${missing.join(',')}`,
+    })
+  }
+
+  const region =
+    process.env.COS_REGION || process.env.STS_REGION || 'ap-guangzhou'
+
   let credential
   try {
     credential = await new Promise((resolve, reject) => {
@@ -86,6 +126,7 @@ exports.main_handler = async (event) => {
         {
           secretId: process.env.COS_SECRET_ID,
           secretKey: process.env.COS_SECRET_KEY,
+          region,
           durationSeconds: 1800,
           policy: {
             version: '2.0',
@@ -105,8 +146,10 @@ exports.main_handler = async (event) => {
         (err, data) => (err ? reject(err) : resolve(data)),
       )
     })
-  } catch {
-    return jsonResponse(500, { error: 'sts' })
+  } catch (err) {
+    const detail = stsDetail(err)
+    console.error('STS getCredential failed:', detail)
+    return jsonResponse(500, { error: 'sts', detail })
   }
 
   return jsonResponse(200, {
