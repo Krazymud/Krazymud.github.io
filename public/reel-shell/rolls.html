@@ -139,7 +139,7 @@ const pics=await Promise.all(PICS.map(p=>img(p).then(i=>[p,i]))).then(Object.fro
 // ---- 场景 ----
 const cv=document.getElementById('gl');
 const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
-renderer.setPixelRatio(ROLL.pr());renderer.setSize(1040,694,false);ROLL.onQuality(()=>{renderer.setPixelRatio(ROLL.pr());renderer.setSize(1040,694,false)});
+renderer.setPixelRatio(ROLL.pr());renderer.setSize(1040,694,false);ROLL.onQuality(()=>{renderer.setPixelRatio(ROLL.pr());if(layout3d)fit();else renderer.setSize(1040,694,false)});
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
 const scene=new THREE.Scene();scene.background=new THREE.Color("#0b0705");
