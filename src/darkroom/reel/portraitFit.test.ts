@@ -22,3 +22,14 @@ describe('ROLL.compact', () => {
     expect(compact(1180, 820)).toBe(false)
   })
 })
+
+const PAGES = ['opening.html','frame-c.html','frame-e.html','frame-lists.html','rolls.html','tray.html','torch-comic.html','book-cover.html','credits.html']
+
+it('points every scene at fitStage and the portrait sheet', () => {
+  for (const page of PAGES) {
+    const html = readFileSync(join(process.cwd(), 'public/reel-shell', page), 'utf8')
+    expect(html, page).toContain('portrait.css?v=portrait1')
+    expect(html, page).toContain('ROLL.fitStage(')
+    expect(html, page).not.toContain('innerWidth/1600')
+  }
+})

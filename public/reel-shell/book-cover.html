@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="portrait.css?v=portrait1">
 <title>A Roll For Two · Book cover</title>
 <style>
 @font-face{font-family:'JB Mono';src:url(font/jbmono.woff2) format('woff2')}
@@ -51,7 +52,7 @@ canvas#gl{position:absolute;inset:0;width:1040px;height:694px;display:block}
 <script src="zh.js?v=radio2"></script>
 <script src="vault-bridge.js"></script>
 <script src="content.js?v=radio2"></script>
-<script src="roll-link.js?v=vaultcta2"></script>
+<script src="roll-link.js?v=portrait1"></script>
 <script type="module">
 import * as THREE from './lib/three.module.js?v=tn9zuj';
 import {CW,CH,coverTextures,titleStitches,hasCJK,TITLE_Y0,TITLE_H} from './bc-tex.js?v=tnboar';
@@ -70,7 +71,9 @@ import {GLTFLoader} from './lib/GLTFLoader.js?v=tnd0f8';
 import {liveCollage} from './bc-collage.js?v=tnco07';
 import {buildLetters} from './bc-letters.js?v=tnbplo';
 const s=document.getElementById('stage');
-const fit=()=>{const k=Math.min(innerWidth/1600,innerHeight/1000);s.style.transform=`translate(-50%,-50%) scale(${k})`};fit();addEventListener('resize',fit);
+const fit=()=>{ROLL.fitStage(s)};
+fit();addEventListener('resize',fit);
+if(window.visualViewport){visualViewport.addEventListener('resize',fit);visualViewport.addEventListener('scroll',fit)}
 
 // 书名是客人在入场那一幕用羽毛笔写的；这里先放占位
 const Q=new URLSearchParams(location.search);

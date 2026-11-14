@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="portrait.css?v=portrait1">
 <title>A Roll For Two · Opening</title>
 <style>
 @font-face{font-family:'JB Mono';src:url(font/jbmono.woff2) format('woff2')}
@@ -156,11 +157,12 @@ frames found ............... 24</b></div>
 <script src="zh.js?v=radio2"></script>
 <script src="vault-bridge.js"></script>
 <script src="content.js?v=radio2"></script>
-<script src="roll-link.js?v=vaultcta2"></script>
+<script src="roll-link.js?v=portrait1"></script>
 <script>
 const s=document.getElementById('stage');
-const fit=()=>{const k=Math.min(innerWidth/1600,innerHeight/1000);s.style.transform=`translate(-50%,-50%) scale(${k})`};
+const fit=()=>{ROLL.fitStage(s)};
 fit();addEventListener('resize',fit);
+if(window.visualViewport){visualViewport.addEventListener('resize',fit);visualViewport.addEventListener('scroll',fit)}
 // 专属设置（服务器 custom.json）：片头大小标题。h1 是我们自己写的，可以带 <em>；比原来 A Roll for Two 宽就一点点缩字（原来的刚好不碰右边胶片）
 if(window.CUSTOM?.title){const T=document.querySelector('.title'),h=T.querySelector('h1'),c=CUSTOM.title;
   if(c.h1){h.innerHTML=c.h1;h.style.whiteSpace='nowrap';const shrink=()=>{let f=116;h.style.fontSize='';h.style.width='max-content';const mine=h.innerHTML;h.innerHTML='A Roll <em>for Two</em>';const W=h.offsetWidth;h.innerHTML=mine;

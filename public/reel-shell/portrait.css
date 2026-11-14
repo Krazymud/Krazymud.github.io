@@ -1,0 +1,4 @@
+#stage.portrait,#stage.phonewide{position:absolute}
+#stage.portrait .proj{left:12px;top:12px;width:calc(100% - 24px);height:calc(100% - 24px)}
+#stage.phonewide .proj{left:50%;top:50%;width:1040px;height:694px;transform:translate(-50%,-50%) scale(var(--cover))}
+#stage.portrait .mono,#stage.phonewide .mono{font-size:12px}
