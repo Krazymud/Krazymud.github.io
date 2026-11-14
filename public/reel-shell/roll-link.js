@@ -54,7 +54,7 @@ if(window.top!==window&&(location.pathname.split('/').pop()||'roll.html')!=='rol
 // 字体先装好再亮：网速慢的时候，字会先用电脑自带的字顶着，装好了再跳回来（她 11.01 看到片头跳两下）。
 // 第一帧排好以后，页面上真用到的字体（document.fonts.ready）装好之前先不显示，最多等 1.2 秒。
 // 以前是把这页声明的字体全装一遍、等 2.5 秒，大幕临转场才装，转场就黑着等（11.01 她又看到黑屏）。壳子自己不等
-(()=>{if((location.pathname.split('/').pop()||'roll.html')==='roll.html')return;const h=document.documentElement;h.style.opacity=0;
+(()=>{const file=location.pathname.split('/').pop()||'roll.html';if(file==='roll.html'||file==='index.html'||window.FILM_V!=null)return;const h=document.documentElement;h.style.opacity=0;
   requestAnimationFrame(()=>Promise.race([document.fonts.ready,new Promise(r=>setTimeout(r,1200))]).then(()=>h.style.opacity=''))})();
 // 提前在后台装着的下一幕，还没轮到它（壳子没发 go）的时候，动画一秒只走五帧，把显卡让给正在放的这一幕。
 // 只管壳子直接装的那一层；照片墙这种装在别的幕里面的不管（它收不到 go）

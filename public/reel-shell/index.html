@@ -123,7 +123,10 @@ function show(f){f.classList.add('on');f.style.transition='';f.style.opacity='';
 addEventListener('load',()=>{});
 function boot(){if(cur===0)try{['aroll.dev','aroll.marks'].forEach(k=>sessionStorage.removeItem(k))}catch(e){}
   now=load(cur);show(now);preload();warm(cur)}
-function preload(force){next=null;if(cur+1>=SCENES.length||(HEAVY.has(cur+1)&&!force))return;next=load(cur+1)}
+// 手机上片头和收音机两幕一起画（滤镜、遮罩、模糊）会把进程打崩，Safari 刷新几次后显示「重复出现的问题」。
+// 手机不提前装下一幕；要切的时候 advance 再装。桌面仍提前装，转场不用等。
+const LEAN=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)||!!(window.matchMedia&&matchMedia('(pointer: coarse)').matches);
+function preload(force){next=null;if(cur+1>=SCENES.length||(HEAVY.has(cur+1)&&!force))return;if(LEAN&&!force)return;next=load(cur+1)}
 const loaded=f=>f.dataset.ready?wait(0):new Promise(r=>f.addEventListener('ready',r,{once:true}));
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 const tween=(el,css,ms,ease='ease')=>new Promise(r=>{el.style.transition=Object.keys(css).map(k=>`${k.replace(/[A-Z]/g,m=>'-'+m.toLowerCase())} ${ms}ms ${ease}`).join(',');setTimeout(()=>{Object.assign(el.style,css);setTimeout(r,ms)},30)});
@@ -189,7 +192,7 @@ const FX={
 const WARM=(()=>{const C=window.CONTENT,JV=window.FILM_JS||{},js=f=>f+(JV[f]?'?v='+JV[f]:''),P=f=>f&&f.photo,S=f=>f&&(f.thumb||f.photo),B=C.book||{};
   return [
     // 片头起：胶卷那幕
-    {at:0,to:4,list:()=>[js('lib/three.module.js'),'img/wood.jpg',...C.rolls.flatMap(r=>r.frames.map(S)),...C.rolls[1].frames.map(P)]},
+    {at:LEAN?2:0,to:4,list:()=>[js('lib/three.module.js'),'img/wood.jpg',...C.rolls.flatMap(r=>r.frames.map(S)),...C.rolls[1].frames.map(P)]},
     // 清单起：暗房（第 4 卷都可能被圈，八张都下）
     {at:3,to:5,list:()=>[...['tray-lt.js','tray-lt-dive.js','tray-lt-flow.js'].map(js),...['col','nor_gl','rough'].map(k=>`img/steel/steel_${k}.jpg`),...C.rolls[3].frames.map(P)]},
     // 暗房起：书

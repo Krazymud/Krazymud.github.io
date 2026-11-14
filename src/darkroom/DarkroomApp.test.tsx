@@ -43,7 +43,9 @@ describe('DarkroomApp', () => {
     expect(await screen.findByLabelText('口令')).toBeTruthy()
     expect(screen.queryByTestId('darkroom-ready')).toBeNull()
     const opening = screen.getByTestId('film-opening')
-    expect(opening.querySelector('iframe')?.getAttribute('src')).toContain('/reel-shell/index.html')
+    const src = opening.querySelector('iframe')?.getAttribute('src') ?? ''
+    expect(src).toContain('/reel-shell/opening.html')
+    expect(src).not.toContain('index.html')
     expect(screen.getByRole('dialog', { name: '请输入口令' })).toBeInTheDocument()
     await enter(TEST_PASSPHRASE)
     expect(await screen.findByTestId('darkroom-ready')).toBeInTheDocument()

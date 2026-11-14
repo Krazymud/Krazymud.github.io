@@ -25,7 +25,11 @@ interface DarkroomAppProps {
   webStore?: WebStore | null
 }
 
-const OPENING_SRC = '/reel-shell/index.html?vault=1&embed=1&v=gate1'
+// The passphrase sits on the opening still. The projector (index.html) also
+// preloads the radio scene and, a few seconds later, three.js. On iOS that
+// stack crashes the tab, Safari reloads it, and then shows “a problem
+// repeatedly occurred” for this URL.
+const OPENING_SRC = '/reel-shell/opening.html?v=gate1'
 
 function FilmOpening({ children }: { children: ReactNode }) {
   try {

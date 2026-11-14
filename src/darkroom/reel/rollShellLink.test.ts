@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 describe('roll-link shell targeting', () => {
   it('posts roll events to FILM_V shell instead of always window.top', () => {
     const src = readFileSync(join(process.cwd(), 'public/reel-shell/roll-link.js'), 'utf8')
+    expect(src).toContain("file==='index.html'")
     expect(src).toContain('function rollShell()')
     expect(src).toContain('w.FILM_V!=null')
     expect(src).toContain('rollShell().postMessage({roll:\'done\'')
