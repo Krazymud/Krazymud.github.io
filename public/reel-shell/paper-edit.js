@@ -222,6 +222,16 @@
       const bRip = mkBtn('撕掉')
       const bScene = mkBtn('下一幕')
       ;[bPrev, bNext, bNew, bRip, bScene].forEach((b) => bar.appendChild(b))
+      const fitBar = () => {
+        const stage = document.getElementById('stage')
+        const mode = stage && (stage.classList.contains('portrait') || stage.classList.contains('phonewide'))
+        bar.querySelectorAll('button').forEach((b) => {
+          b.style.minHeight = mode ? '44px' : ''
+          b.style.fontSize = mode ? '15px' : b.style.fontSize
+        })
+        if (bodyEl) bodyEl.style.fontSize = stage && stage.classList.contains('portrait') ? '17px' : '15px'
+      }
+      addEventListener('reel-fit', fitBar)
 
       if (isList) {
         bodyWrap.appendChild(listEl)

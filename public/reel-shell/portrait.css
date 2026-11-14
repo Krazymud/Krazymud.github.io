@@ -18,3 +18,10 @@
 #stage.portrait .now{left:8%;right:8%;top:auto;bottom:7%;width:auto}
 #stage.portrait .now .song{font-size:22px}
 #stage.portrait .now .song{font-family:Fraunces,serif;font-style:italic}
+#stage.portrait .letter{left:16px;top:48px;width:calc(100% - 32px);height:calc(100% - 148px);transform:none}
+#stage.portrait .letter pre{font-size:17px}
+#stage.portrait .letter pre{max-height:none}
+#stage.portrait .letter .head{font-size:12px}
+#stage.portrait .env{left:16px;top:auto;bottom:96px;width:46%;height:auto}
+#stage.portrait .tearhint{font-size:30px}
+#stage.phonewide .letter pre{font-size:calc(16px / var(--cover))}

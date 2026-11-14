@@ -39,6 +39,14 @@ it('places the radio under the bulb with a 22px song', () => {
   expect(css).toContain('#stage.portrait .radio{left:8%;top:36%;width:74%')
 })
 
+it('keeps the letter body at 17px in portrait and 44px tall buttons', () => {
+  const css = readFileSync(join(process.cwd(), 'public/reel-shell/portrait.css'), 'utf8')
+  const js = readFileSync(join(process.cwd(), 'public/reel-shell/paper-edit.js'), 'utf8')
+  expect(css).toContain('#stage.portrait .letter pre{font-size:17px}')
+  expect(js).toContain("minHeight = mode ? '44px'")
+  expect(js).toContain("reel-fit")
+})
+
 it('points every scene at fitStage and the portrait sheet', () => {
   for (const page of PAGES) {
     const html = readFileSync(join(process.cwd(), 'public/reel-shell', page), 'utf8')
