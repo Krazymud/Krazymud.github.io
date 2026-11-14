@@ -2,3 +2,11 @@
 #stage.portrait .proj{left:12px;top:12px;width:calc(100% - 24px);height:calc(100% - 24px)}
 #stage.phonewide .proj{left:50%;top:50%;width:1040px;height:694px;transform:translate(-50%,-50%) scale(var(--cover))}
 #stage.portrait .mono,#stage.phonewide .mono{font-size:12px}
+#stage.portrait .title{left:6%;width:62%;top:16%}
+#stage.portrait .title h1{font-size:clamp(40px,12vw,64px)}
+#stage.portrait .title .sub{font-size:17px}
+#stage.portrait .mark{min-width:44px;min-height:44px}
+#stage.portrait .mark{left:10%;top:46%;width:58%;height:88px;min-width:44px;min-height:44px}
+#stage.portrait .mark span{font-size:30px}
+#stage.portrait .strip{left:auto;right:3%;width:78px}
+#stage.portrait .log{font-size:12px}
