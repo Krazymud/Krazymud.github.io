@@ -109,7 +109,11 @@ it('keeps light-table hints and the crane on the portrait camera', () => {
   expect(flow).toContain("contains('portrait')")
   expect(flow).not.toContain('/2*1040')
   expect(flow).not.toContain('/2*694')
+  expect(html).toContain('y:(1-_b.y)/2*694')
+  expect(html).toContain('if(!developed&&!camHold&&!leave)')
+  expect(html).toContain('dollyFrom(deskPos,deskLook)')
+  expect(html).toContain('developed=true')
   expect(html).toContain('CAM0=[cam.position.y,cam.position.z]')
-  expect(html).not.toContain('/2*694')
+  expect(html).toContain('tray-lt-flow.js?v=tnqe1a')
 })
 

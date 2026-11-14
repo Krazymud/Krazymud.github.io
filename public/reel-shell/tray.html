@@ -76,7 +76,7 @@ iframe.next.on{opacity:1;pointer-events:auto}
 import * as THREE from './lib/three.module.js?v=tn9zuj';
 // 看片台的两个脚本跟 three 一起拿（11.02：以前等照片到齐才 import，再串着拿 dive、flow，跨境多黑三四秒）
 import {addLightTable} from './tray-lt.js?v=tnpf3k';
-import {flow} from './tray-lt-flow.js?v=tnqdf9';
+import {flow} from './tray-lt-flow.js?v=tnqe1a';
 const s=document.getElementById('stage');let k=1;
 let layout3d=null;
 const fit=()=>{const box=ROLL.fitStage(s);k=box.pointer;if(layout3d)layout3d(box)};
@@ -177,31 +177,36 @@ const liqAlpha=(()=>{const c=document.createElement('canvas');c.width=512;c.heig
 liqGeo.setAttribute('color',new THREE.Float32BufferAttribute(new Float32Array(liqGeo.attributes.position.count*3).fill(1),3));
 const liquid=new THREE.Mesh(liqGeo,new THREE.MeshPhysicalMaterial({vertexColors:true,color:'#7a4422',transparent:true,opacity:.42,alphaMap:liqAlpha,roughness:.02,metalness:0,ior:1.33,specularIntensity:1,clearcoat:1,clearcoatRoughness:.02,envMapIntensity:1.8,depthWrite:false}));
 liquid.position.y=LIQ_Y;liquid.renderOrder=2;tray.add(liquid);
+let developed=false,camHold=false,leave=0;
 const deskPos=cam.position.clone(),deskLook=LOOK.clone();
+function dollyFrom(fromPos,fromLook){
+  cam.position.copy(fromPos);cam.lookAt(fromLook);cam.updateProjectionMatrix();
+  if(!s.classList.contains('portrait'))return;
+  const box3=new THREE.Box3().setFromObject(tray);
+  const corners=[
+    new THREE.Vector3(box3.min.x,box3.min.y,box3.min.z),new THREE.Vector3(box3.min.x,box3.min.y,box3.max.z),
+    new THREE.Vector3(box3.min.x,box3.max.y,box3.min.z),new THREE.Vector3(box3.min.x,box3.max.y,box3.max.z),
+    new THREE.Vector3(box3.max.x,box3.min.y,box3.min.z),new THREE.Vector3(box3.max.x,box3.min.y,box3.max.z),
+    new THREE.Vector3(box3.max.x,box3.max.y,box3.min.z),new THREE.Vector3(box3.max.x,box3.max.y,box3.max.z)]
+  const look=fromLook.clone(),dir=fromPos.clone().sub(look);let dist=dir.length();dir.normalize();
+  const fov=32*Math.PI/180,tanV=Math.tan(fov/2);
+  for(let n=0;n<40;n++){
+    cam.position.copy(look).addScaledVector(dir,dist);cam.lookAt(look);cam.updateProjectionMatrix();
+    const tanH=tanV*cam.aspect,forward=look.clone().sub(cam.position).normalize();
+    const right=new THREE.Vector3().crossVectors(forward,new THREE.Vector3(0,1,0)).normalize();
+    const up=new THREE.Vector3().crossVectors(right,forward).normalize();
+    const ok=corners.every(p=>{const rel=p.clone().sub(cam.position),depth=rel.dot(forward);if(depth<=0.2)return false;
+      return Math.abs(rel.dot(right)/depth)<tanH*0.92&&Math.abs(rel.dot(up)/depth)<tanV*0.92});
+    if(ok)break;dist+=0.25}
+}
 layout3d=(box)=>{
   const r=document.querySelector('.proj').getBoundingClientRect();
   if(box.mode==='portrait'){
-    renderer.setSize(r.width,r.height,false);cv.style.width='100%';cv.style.height='100%';cam.aspect=r.width/Math.max(1,r.height);cam.position.copy(deskPos);cam.lookAt(deskLook);cam.updateProjectionMatrix();
-    const box3=new THREE.Box3().setFromObject(tray);
-    const corners=[
-      new THREE.Vector3(box3.min.x,box3.min.y,box3.min.z),new THREE.Vector3(box3.min.x,box3.min.y,box3.max.z),
-      new THREE.Vector3(box3.min.x,box3.max.y,box3.min.z),new THREE.Vector3(box3.min.x,box3.max.y,box3.max.z),
-      new THREE.Vector3(box3.max.x,box3.min.y,box3.min.z),new THREE.Vector3(box3.max.x,box3.min.y,box3.max.z),
-      new THREE.Vector3(box3.max.x,box3.max.y,box3.min.z),new THREE.Vector3(box3.max.x,box3.max.y,box3.max.z)]
-    const look=deskLook.clone(),dir=deskPos.clone().sub(look);let dist=dir.length();dir.normalize();
-    const fov=32*Math.PI/180,tanV=Math.tan(fov/2);
-    for(let n=0;n<40;n++){
-      cam.position.copy(look).addScaledVector(dir,dist);cam.lookAt(look);cam.updateProjectionMatrix();
-      const tanH=tanV*cam.aspect,forward=look.clone().sub(cam.position).normalize();
-      const right=new THREE.Vector3().crossVectors(forward,new THREE.Vector3(0,1,0)).normalize();
-      const up=new THREE.Vector3().crossVectors(right,forward).normalize();
-      const ok=corners.every(p=>{const rel=p.clone().sub(cam.position),depth=rel.dot(forward);if(depth<=0.2)return false;
-        return Math.abs(rel.dot(right)/depth)<tanH*0.92&&Math.abs(rel.dot(up)/depth)<tanV*0.92});
-      if(ok)break;dist+=0.25}
+    renderer.setSize(r.width,r.height,false);cv.style.width='100%';cv.style.height='100%';cam.aspect=r.width/Math.max(1,r.height);cam.updateProjectionMatrix();
   }else{
-    renderer.setSize(1040,694,false);cv.style.width='1040px';cv.style.height='694px';cam.aspect=1040/694;cam.position.copy(deskPos);cam.lookAt(deskLook);cam.updateProjectionMatrix();
+    renderer.setSize(1040,694,false);cv.style.width='1040px';cv.style.height='694px';cam.aspect=1040/694;cam.updateProjectionMatrix();
   }
-  CAM0=[cam.position.y,cam.position.z];
+  if(!developed&&!camHold&&!leave){dollyFrom(deskPos,deskLook);CAM0=[cam.position.y,cam.position.z]}
 };
 layout3d(ROLL.fitStage(s));
 // 水面：每个格点一个高度，按波动方程往四周传，碰到盘壁弹回来，慢慢衰减；
@@ -270,7 +275,8 @@ if(LT){
   // 看完走到盘子跟前：镜头和盘子的相对位置跟原来那一幕一样
   lt.flow=flow({lt,cam,LOOK,canvas:cv,frameEl:document.getElementById('frame'),picks:circled.length?circled:frames.map((_,i)=>i),
     trayView:{pos:new THREE.Vector3(TX-.1,4.0,TZ+5.75),look:new THREE.Vector3(TX-.1,.7,TZ-1.15)},
-    onDone:()=>{CAM0=[4.0,TZ+5.75];ltDone=true;window.__ltSay&&window.__ltSay()}});
+    holdCam:v=>{camHold=v;if(!v&&!developed)fit()},
+    onDone:()=>{developed=true;dollyFrom(cam.position.clone(),LOOK.clone());CAM0=[cam.position.y,cam.position.z];ltDone=true;window.__ltSay&&window.__ltSay()}});
   window.__lt=lt}
 // ---- 冲印师傅的工作条：贴在桌上，手写一行 don't rush this one（和冲印袋那句呼应，别改）----
 {const c=document.createElement('canvas');c.width=640;c.height=300;const x=c.getContext('2d');
@@ -402,7 +408,7 @@ function grabIt(){if(phase!=='ready')return;phase='grab';active.t=0;say()}
 
 // 滴水：一小把水珠循环用
 const drops=Array.from({length:14},()=>{const d=new THREE.Mesh(new THREE.SphereGeometry(.018,8,6),new THREE.MeshPhysicalMaterial({color:'#5a2a14',transparent:true,opacity:.75,roughness:.05,clearcoat:1}));d.visible=false;d.userData.v=0;scene.add(d);return d});
-let dropT=0,boost=.4,leave=0;
+let dropT=0,boost=.4;
 function spawnDrop(p){const d=drops.find(d=>!d.visible);if(!d)return;d.visible=true;d.userData.v=0;d.position.copy(p).add(_a.set((Math.random()-.5)*PW*.8,0,(Math.random()-.5)*.05))}
 const tips=[];tongs.traverse(c=>{if(c.material&&c.material.color&&c.material.color.getHexString()==='9e2a1e')tips.push(c)});
 
@@ -501,7 +507,7 @@ const loop=fd=>{const dt=fd||Math.min(clock.getDelta(),.1),t=clock.elapsedTime+=
     // 走到快头：灯暗下去一次，照片墙从暗里亮起来。暗和亮都交给浏览器合成层去过渡（主线程忙也不卡）；暗到底这边就停画，力气让给照片墙
     if(u>=.88&&!cut){cut=1;blk.style.transition='opacity .8s ease-in';blk.style.opacity=1;
       setTimeout(()=>{renderer.setAnimationLoop(null);_b.set(run,LINE_Y,LINE_Z).project(cam);
-        const handH=s.classList.contains('portrait')?fr.clientHeight:694;wallF.contentWindow.postMessage({go:1,x:-20,y:(1-_b.y)/2*handH},'*');wallF.classList.add('on');
+        wallF.contentWindow.postMessage({go:1,x:-20,y:(1-_b.y)/2*694},'*');wallF.classList.add('on');
         wallF.style.transition='opacity .9s ease-out';wallF.style.opacity=1},850)}}
   else cam.lookAt(LOOK);
   placePeek();
