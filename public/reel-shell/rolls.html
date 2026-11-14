@@ -291,16 +291,19 @@ function dolly(look,points){
     if(ok)break;dist+=0.35}
   cam.lookAt(look);
 }
+let focus=null;
 layout3d=(box)=>{
   const proj=document.querySelector('.proj'),r=proj.getBoundingClientRect();
   if(box.mode==='portrait'){
-    renderer.setSize(r.width,r.height,false);cam.aspect=r.width/Math.max(1,r.height);cam.updateProjectionMatrix();
+    renderer.setSize(r.width,r.height,false);cv.style.width='100%';cv.style.height='100%';cam.aspect=r.width/Math.max(1,r.height);cam.updateProjectionMatrix();
     placeCans('portrait');
-    cam.position.set(0,7,5.4);
-    dolly(new THREE.Vector3(0,0,.15),POS_PORT.map(([x,z])=>new THREE.Vector3(x,.2,z)).concat([new THREE.Vector3(0,.2,2.4)]));
+    if(!focus){
+      cam.position.set(0,7,5.4);
+      dolly(new THREE.Vector3(0,0,.15),POS_PORT.map(([x,z])=>new THREE.Vector3(x,.2,z)).concat([new THREE.Vector3(0,.2,2.4)]));
+    }
   }else{
-    renderer.setSize(1040,694,false);cam.aspect=1040/694;cam.updateProjectionMatrix();
-    placeCans('desk');cam.position.copy(HOME.pos);cam.lookAt(HOME.look);
+    renderer.setSize(1040,694,false);cv.style.width='1040px';cv.style.height='694px';cam.aspect=1040/694;cam.updateProjectionMatrix();
+    placeCans('desk');if(!focus){cam.position.copy(HOME.pos);cam.lookAt(HOME.look)}
   }
 };
 layout3d(ROLL.fitStage(s));
@@ -316,7 +319,7 @@ const tick=()=>{try{ac=ac||new AudioContext();const t=ac.currentTime,b=ac.create
   s.connect(f).connect(g).connect(ac.destination);s.start(t)}catch(e){}};
 
 // ---- 交互 ----
-const ray=new THREE.Raycaster(),m=new THREE.Vector2();let hover=null,focus=null,closing=false;
+const ray=new THREE.Raycaster(),m=new THREE.Vector2();let hover=null,closing=false;
 const fr=document.getElementById('frame'),tag=document.getElementById('tag'),hint2=document.getElementById('hint2');
 const local=e=>{const r=fr.getBoundingClientRect();return[(e.clientX-r.left)/k,(e.clientY-r.top)/k]};
 const aim=e=>{const [x,y]=local(e);m.set(x/1040*2-1,-(y/694)*2+1);ray.setFromCamera(m,cam)};
