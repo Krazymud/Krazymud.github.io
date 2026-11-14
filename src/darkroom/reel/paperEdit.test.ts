@@ -22,7 +22,7 @@ type PaperMsg = {
   page?: { source?: string; title?: string; body?: string; items?: { text?: string; done?: boolean }[] }
 }
 
-function boot(records: Record<string, unknown>[], kind: 'note' | 'list' = 'note') {
+function boot(records: Record<string, unknown>[], kind: 'note' | 'list' = 'note', coarse = false) {
   const dom = new JSDOM(
     `<!doctype html><body>
       <div id="root"><div class="corner"></div><div class="corner"></div>
@@ -50,6 +50,18 @@ function boot(records: Record<string, unknown>[], kind: 'note' | 'list' = 'note'
     },
   }
   win.confirm = () => true
+  win.matchMedia = ((query: string) => ({
+    matches: coarse && query === '(pointer: coarse)',
+    media: query,
+    onchange: null,
+    addEventListener() {},
+    removeEventListener() {},
+    addListener() {},
+    removeListener() {},
+    dispatchEvent() {
+      return false
+    },
+  })) as unknown as typeof window.matchMedia
   win.addEventListener('message', (event: MessageEvent) => {
     const data = event.data as PaperMsg
     if (!data || data.roll === 'paper-result' || data.roll === 'vault-content') return
@@ -144,10 +156,7 @@ describe('paper-edit saves', () => {
     expect(field(ctx.win, '.pe-text')).toBe('keep')
     click(ctx.win, '下一篇')
     await settle()
-    expect(ctx.saves).toHaveLength(2)
-    expect(ctx.saves[1]?.page?.source).toBe('notes/old')
-    reply(ctx.win, ctx.saves[1]!.id!)
-    await settle()
+    expect(ctx.saves).toHaveLength(1)
     expect(field(ctx.win, '.pe-title')).toBe('')
   })
 
@@ -250,14 +259,25 @@ describe('paper-edit saves', () => {
     expect(field(ctx.win, '.pe-title')).toBe('旧')
   })
 
-  it('still saves a note that already has a source', async () => {
-    const ctx = boot([{ source: 'notes/n1', title: '', date: '2026-01-01', body: '' }])
+  it('leaves an unchanged saved note without posting another save', async () => {
+    const ctx = boot([{ source: 'notes/n1', title: '夜路', date: '2026-03-01', body: '风' }])
     open.push(ctx.dom)
+    click(ctx.win, '下一篇')
     click(ctx.win, '下一幕')
     await settle()
-    expect(ctx.saves).toHaveLength(1)
-    expect(ctx.saves[0]?.page?.source).toBe('notes/n1')
-    expect(ctx.scene).toEqual([])
+    expect(ctx.saves).toEqual([])
+    expect(ctx.scene).toEqual(['cross'])
+    expect(status(ctx.win)).toBe('')
+  })
+
+  it('keeps the action row above the sheet on a phone', () => {
+    const ctx = boot([{ source: 'notes/n1', title: '夜路', date: '2026-03-01', body: '风' }], 'note', true)
+    open.push(ctx.dom)
+    const bar = ctx.win.document.querySelector('.pe-bar') as HTMLElement
+    expect(bar.style.position).toBe('fixed')
+    expect(bar.style.zIndex).not.toBe('')
+    const next = [...ctx.win.document.querySelectorAll('button')].find((b) => b.textContent === '下一幕') as HTMLElement
+    expect(Number.parseFloat(next.style.fontSize)).toBeGreaterThanOrEqual(15)
   })
 
   it('saves when focus leaves a field that changed', async () => {
@@ -355,12 +375,12 @@ describe('paper-edit saves', () => {
     open.push(sourced.dom)
     click(sourced.win, '新的一篇')
     await flushSaves(sourced)
-    expect(sourced.saves.map((s) => s.page?.source)).toEqual(['notes/empty'])
+    expect(sourced.saves).toEqual([])
     expect(field(sourced.win, '.pe-title')).toBe('')
     fill(sourced.win, '新页', '2026-04-01', '有了')
     click(sourced.win, '上一篇')
     await flushSaves(sourced)
-    expect(sourced.saves.map((s) => s.page?.title)).toEqual(['', '新页'])
+    expect(sourced.saves.map((s) => s.page?.title)).toEqual(['新页'])
     expect(field(sourced.win, '.pe-title')).toBe('')
 
     const list = boot([], 'list')

@@ -156,7 +156,7 @@
       const err = document.createElement('div')
       err.className = 'pe-err'
       err.style.cssText =
-        'position:absolute;left:40px;right:40px;top:54px;font:400 12px/1.5 "Courier Prime",monospace;color:#d8432f;min-height:1.2em'
+        'position:absolute;left:40px;right:40px;top:54px;z-index:5;font:400 12px/1.5 "Courier Prime",monospace;color:#d8432f;min-height:1.2em'
       letter.appendChild(err)
       const setErr = (m) => {
         err.textContent = m || ''
@@ -167,11 +167,11 @@
       titleEl.contentEditable = 'true'
       titleEl.setAttribute('data-placeholder', '标题')
       titleEl.style.cssText =
-        'position:absolute;left:40px;right:40px;top:28px;font:600 20px/1.3 Fraunces,serif;color:#3a2510;outline:none;border-bottom:1px dashed rgba(74,46,22,.35);padding-bottom:4px'
+        'position:absolute;left:40px;right:40px;top:28px;z-index:5;font:600 20px/1.3 Fraunces,serif;color:#3a2510;outline:none;border-bottom:1px dashed rgba(74,46,22,.35);padding-bottom:4px'
 
       const bodyWrap = document.createElement('div')
       bodyWrap.className = 'pe-body'
-      bodyWrap.style.cssText = 'position:absolute;left:40px;right:30px;top:88px;bottom:88px;overflow:auto'
+      bodyWrap.style.cssText = 'position:absolute;left:40px;right:30px;top:88px;bottom:88px;z-index:4;overflow:auto'
 
       const dateEl = document.createElement('div')
       dateEl.className = 'pe-date'
@@ -195,16 +195,19 @@
       addRow.style.cssText =
         'align-self:flex-start;margin-top:6px;border:1px dashed rgba(74,46,22,.45);background:transparent;color:#4a2e16;font:400 18px/1 "Reenie",cursive;cursor:pointer;padding:2px 12px'
 
+      const coarse = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches)
       const bar = document.createElement('div')
       bar.className = 'pe-bar'
-      bar.style.cssText =
-        'position:absolute;left:24px;right:24px;bottom:18px;display:flex;flex-wrap:wrap;gap:8px 12px;justify-content:center'
+      bar.style.cssText = coarse
+        ? 'position:fixed;left:12px;right:12px;bottom:max(12px, env(safe-area-inset-bottom));z-index:40;display:flex;flex-wrap:wrap;gap:10px 14px;justify-content:center;padding:12px 10px;background:rgba(12,8,6,.9);border-radius:14px'
+        : 'position:absolute;left:24px;right:24px;bottom:18px;z-index:6;display:flex;flex-wrap:wrap;gap:8px 12px;justify-content:center'
       const mkBtn = (label) => {
         const b = document.createElement('button')
         b.type = 'button'
         b.textContent = label
-        b.style.cssText =
-          'border:0;background:transparent;color:#4a2e16;font:400 11px/1 "JB Mono",monospace;letter-spacing:.08em;cursor:pointer;padding:4px 6px;opacity:.85'
+        b.style.cssText = coarse
+          ? 'border:0;background:transparent;color:#f3e6d2;font-size:16px;line-height:1;font-family:"JB Mono",monospace;letter-spacing:.08em;cursor:pointer;padding:10px 8px'
+          : 'border:0;background:transparent;color:#4a2e16;font:400 11px/1 "JB Mono",monospace;letter-spacing:.08em;cursor:pointer;padding:4px 6px;opacity:.85'
         b.onmouseenter = () => {
           b.style.opacity = '1'
         }
@@ -229,7 +232,23 @@
       }
       letter.appendChild(titleEl)
       letter.appendChild(bodyWrap)
-      letter.appendChild(bar)
+      // 手机上整幕被缩进画框，纸上的字只有几像素，点不中。按钮挂到页面上，不跟画框一起缩小。
+      if (coarse) {
+        document.body.appendChild(bar)
+        const pinBar = () => {
+          const vv = window.visualViewport
+          const gapBottom = vv ? Math.max(0, window.innerHeight - (vv.offsetTop + vv.height)) : 0
+          const gapRight = vv ? Math.max(0, window.innerWidth - (vv.offsetLeft + vv.width)) : 0
+          bar.style.bottom = Math.max(12, gapBottom + 12) + 'px'
+          bar.style.left = ((vv ? vv.offsetLeft : 0) + 12) + 'px'
+          bar.style.right = Math.max(12, gapRight + 12) + 'px'
+        }
+        pinBar()
+        if (window.visualViewport) {
+          visualViewport.addEventListener('resize', pinBar)
+          visualViewport.addEventListener('scroll', pinBar)
+        }
+      } else letter.appendChild(bar)
 
       function renderListItems(items) {
         listEl.innerHTML = ''
@@ -496,6 +515,11 @@
         if (needsTitle(page)) {
           setErr('先写标题')
           return Promise.resolve(false)
+        }
+        if (page.source && !dirty()) {
+          writeLocal(page)
+          setErr('')
+          return Promise.resolve(true)
         }
         saveFlight = performSave().finally(() => {
           saveFlight = null

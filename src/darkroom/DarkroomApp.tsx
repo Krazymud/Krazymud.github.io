@@ -9,6 +9,7 @@ import type { WebStore } from '../vault/webStore'
 import type { VaultFile } from '../vault/types'
 import { UnlockGate } from './overlays/UnlockGate'
 import { ReelShellHost } from './reel/ReelShellHost'
+import { vaultToReelContent } from './reel/vaultToReelContent'
 import { VaultBridge } from './VaultBridge'
 
 type DarkroomState =
@@ -22,6 +23,22 @@ interface DarkroomAppProps {
   fetchBytes?: FetchBytes
   keyStore?: KeyStore | null
   webStore?: WebStore | null
+}
+
+const OPENING_SRC = '/reel-shell/index.html?vault=1&embed=1&v=gate1'
+
+function FilmOpening({ children }: { children: ReactNode }) {
+  try {
+    sessionStorage.setItem('reel-vault-content', JSON.stringify(vaultToReelContent({ photos: [], notes: [], lists: [], urls: {} })))
+  } catch {
+    /* the opening still paints if storage is blocked */
+  }
+  return (
+    <div data-testid="film-opening" className="relative min-h-dvh" style={{ background: '#040302' }}>
+      <iframe title="暗房" src={OPENING_SRC} className="fixed inset-0 h-dvh w-full border-0" />
+      {children}
+    </div>
+  )
 }
 
 function Notice({ children }: { children: ReactNode }) {
@@ -121,7 +138,11 @@ export function DarkroomApp({ fetchBytes = fetchVaultBytes, keyStore, webStore }
         </Notice>
       )
     case 'locked':
-      return <UnlockGate canRemember={store !== null} onUnlock={(passphrase, remember) => unlock(state.file, passphrase, remember)} />
+      return (
+        <FilmOpening>
+          <UnlockGate canRemember={store !== null} onUnlock={(passphrase, remember) => unlock(state.file, passphrase, remember)} />
+        </FilmOpening>
+      )
     case 'ready':
       return (
         <VaultBridge session={state.session} file={state.file} fetchBytes={fetchBytes} onLock={lock} webStore={webStore}>
