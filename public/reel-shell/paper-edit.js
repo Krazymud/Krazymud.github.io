@@ -222,16 +222,40 @@
       const bRip = mkBtn('撕掉')
       const bScene = mkBtn('下一幕')
       ;[bPrev, bNext, bNew, bRip, bScene].forEach((b) => bar.appendChild(b))
-      const fitBar = () => {
+      let liveBodySize = '15px'
+      const applyLiveBodySize = () => {
+        if (bodyEl) bodyEl.style.fontSize = liveBodySize
+        listEl.querySelectorAll('[contenteditable]').forEach((txt) => {
+          txt.style.fontSize = liveBodySize
+        })
+      }
+      const fitBar = (ev) => {
         const stage = document.getElementById('stage')
-        const mode = stage && (stage.classList.contains('portrait') || stage.classList.contains('phonewide'))
+        const portrait = !!(stage && stage.classList.contains('portrait'))
+        const phonewide = !!(stage && stage.classList.contains('phonewide'))
+        const mode = portrait || phonewide
         bar.querySelectorAll('button').forEach((b) => {
           b.style.minHeight = mode ? '44px' : ''
-          b.style.fontSize = mode ? '15px' : b.style.fontSize
+          b.style.fontSize = mode ? '15px' : ''
         })
-        if (bodyEl) bodyEl.style.fontSize = stage && stage.classList.contains('portrait') ? '17px' : '15px'
+        if (portrait) liveBodySize = '17px'
+        else if (phonewide) {
+          const cover =
+            (ev && ev.detail && ev.detail.cover) ||
+            (stage && parseFloat(stage.style.getPropertyValue('--cover'))) ||
+            1
+          liveBodySize = 16 / cover + 'px'
+        } else liveBodySize = ''
+        applyLiveBodySize()
       }
       addEventListener('reel-fit', fitBar)
+      const mountStage = document.getElementById('stage')
+      const mountCover =
+        (mountStage && parseFloat(mountStage.style.getPropertyValue('--cover'))) ||
+        (window.ROLL && window.ROLL.view
+          ? Math.max(window.ROLL.view().w / 1040, window.ROLL.view().h / 694)
+          : 1)
+      fitBar({ detail: { cover: mountCover } })
 
       if (isList) {
         bodyWrap.appendChild(listEl)
@@ -298,6 +322,7 @@
             renderListItems(items)
             noteListClick()
           }
+          if (liveBodySize) txt.style.fontSize = liveBodySize
           row.append(box, txt, del)
           listEl.appendChild(row)
         })

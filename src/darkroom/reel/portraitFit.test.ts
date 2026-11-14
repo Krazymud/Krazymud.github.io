@@ -45,6 +45,10 @@ it('keeps the letter body at 17px in portrait and 44px tall buttons', () => {
   expect(css).toContain('#stage.portrait .letter pre{font-size:17px}')
   expect(js).toContain("minHeight = mode ? '44px'")
   expect(js).toContain("reel-fit")
+  expect(js).toContain("liveBodySize = '17px'")
+  expect(js).toContain('16 / cover')
+  expect(js).toContain("b.style.fontSize = mode ? '15px' : ''")
+  expect(js).toContain('fitBar({ detail: { cover: mountCover } })')
 })
 
 it('points every scene at fitStage and the portrait sheet', () => {

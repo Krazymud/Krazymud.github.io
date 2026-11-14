@@ -277,7 +277,34 @@ describe('paper-edit saves', () => {
     expect(bar.style.position).toBe('fixed')
     expect(bar.style.zIndex).not.toBe('')
     const next = [...ctx.win.document.querySelectorAll('button')].find((b) => b.textContent === '下一幕') as HTMLElement
-    expect(Number.parseFloat(next.style.fontSize)).toBeGreaterThanOrEqual(15)
+    const barFont = next.style.fontSize
+    expect(barFont === '' ? 16 : Number.parseFloat(barFont)).toBeGreaterThanOrEqual(15)
+  })
+
+  it('sizes live note and list body from reel-fit and on mount', () => {
+    const dom = new JSDOM(
+      `<!doctype html><body><div id="stage" class="portrait"></div>
+        <div id="root"><div class="corner"></div><div class="corner"></div>
+        <div id="letter"><div class="head"></div></div><div id="nameW"></div></div></body>`,
+      { url: 'http://localhost/', runScripts: 'dangerously' },
+    )
+    const win = dom.window as unknown as ShellWindow
+    win.CONTENT = { since: '2026-01-01', papers: { notes: [], lists: [{ source: '', title: '买', items: [{ text: '牛奶', done: false }] }] } }
+    win.ROLL = { prep() {}, done() {} }
+    vm.runInContext(script, dom.getInternalVMContext())
+    win.PAPER.mount({ kind: 'list', root: win.document.getElementById('root')! })
+    const item = win.document.querySelector('.pe-list [contenteditable]') as HTMLElement
+    expect(item.style.fontSize).toBe('17px')
+    win.document.getElementById('stage')!.classList.remove('portrait')
+    win.dispatchEvent(new win.CustomEvent('reel-fit', { detail: { cover: 0.4 } }))
+    win.document.getElementById('stage')!.classList.add('phonewide')
+    win.dispatchEvent(new win.CustomEvent('reel-fit', { detail: { cover: 0.4 } }))
+    expect(item.style.fontSize).toBe('40px')
+    win.document.getElementById('stage')!.classList.remove('phonewide')
+    win.dispatchEvent(new win.CustomEvent('reel-fit', { detail: { cover: 1 } }))
+    const barBtn = [...win.document.querySelectorAll('.pe-bar button')].find((b) => b.textContent === '下一幕') as HTMLElement
+    expect(barBtn.style.fontSize).toBe('')
+    open.push(dom)
   })
 
   it('saves when focus leaves a field that changed', async () => {
