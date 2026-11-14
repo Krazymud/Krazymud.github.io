@@ -201,6 +201,7 @@ layout3d=(box)=>{
   }else{
     renderer.setSize(1040,694,false);cv.style.width='1040px';cv.style.height='694px';cam.aspect=1040/694;cam.position.copy(deskPos);cam.lookAt(deskLook);cam.updateProjectionMatrix();
   }
+  CAM0=[cam.position.y,cam.position.z];
 };
 layout3d(ROLL.fitStage(s));
 // 水面：每个格点一个高度，按波动方程往四周传，碰到盘壁弹回来，慢慢衰减；
@@ -500,7 +501,7 @@ const loop=fd=>{const dt=fd||Math.min(clock.getDelta(),.1),t=clock.elapsedTime+=
     // 走到快头：灯暗下去一次，照片墙从暗里亮起来。暗和亮都交给浏览器合成层去过渡（主线程忙也不卡）；暗到底这边就停画，力气让给照片墙
     if(u>=.88&&!cut){cut=1;blk.style.transition='opacity .8s ease-in';blk.style.opacity=1;
       setTimeout(()=>{renderer.setAnimationLoop(null);_b.set(run,LINE_Y,LINE_Z).project(cam);
-        wallF.contentWindow.postMessage({go:1,x:-20,y:(1-_b.y)/2*694},'*');wallF.classList.add('on');
+        const handH=s.classList.contains('portrait')?fr.clientHeight:694;wallF.contentWindow.postMessage({go:1,x:-20,y:(1-_b.y)/2*handH},'*');wallF.classList.add('on');
         wallF.style.transition='opacity .9s ease-out';wallF.style.opacity=1},850)}}
   else cam.lookAt(LOOK);
   placePeek();

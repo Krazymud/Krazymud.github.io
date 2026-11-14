@@ -34,7 +34,7 @@ export function flow({lt,cam,LOOK,canvas,frameEl,picks,trayView,onDone}){
   let anchor=null,up=false;const _v=new THREE.Vector3();
   function hint(key,at,u=false){anchor=at;up=u;h.classList.toggle('up',u);h.querySelector('span').textContent=HINT[key]||'';h.classList.remove('on');if(key)requestAnimationFrame(()=>h.classList.add('on'))}
   const hide=()=>{anchor=null;h.classList.remove('on')};
-  (function follow(){if(anchor){_v.copy(anchor());_v.project(cam);h.style.transform=`translate(${(_v.x+1)/2*1040-10}px,${(1-_v.y)/2*694-(up?62:8)}px)`}requestAnimationFrame(follow)})();
+  (function follow(){if(anchor){_v.copy(anchor());_v.project(cam);const portrait=frameEl.closest('#stage').classList.contains('portrait'),fw=portrait?frameEl.clientWidth:1040,fh=portrait?frameEl.clientHeight:694;h.style.transform=`translate(${(_v.x+1)/2*fw-10}px,${(1-_v.y)/2*fh-(up?62:8)}px)`}requestAnimationFrame(follow)})();
   const atSwitch=()=>lt.front.localToWorld(new THREE.Vector3(.02,-.02,.03));
   const atLoupe=()=>lt.loupe.localToWorld(new THREE.Vector3(.12,.5,.1));
   const atCell=i=>()=>{const [u,v]=lt.cells[i];return lt.box.localToWorld(new THREE.Vector3((u-.5)*lt.W+.18,lt.BH,(v-.5)*lt.D+.12))};

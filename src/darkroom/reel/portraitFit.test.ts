@@ -101,3 +101,15 @@ it('resizes the light table with the portrait frame', () => {
   expect(html).not.toContain('/2*1040')
 })
 
+it('keeps light-table hints and the crane on the portrait camera', () => {
+  const html = readFileSync(join(process.cwd(), 'public/reel-shell/tray.html'), 'utf8')
+  const flow = readFileSync(join(process.cwd(), 'public/reel-shell/tray-lt-flow.js'), 'utf8')
+  expect(flow).toContain('frameEl.clientWidth')
+  expect(flow).toContain('frameEl.clientHeight')
+  expect(flow).toContain("contains('portrait')")
+  expect(flow).not.toContain('/2*1040')
+  expect(flow).not.toContain('/2*694')
+  expect(html).toContain('CAM0=[cam.position.y,cam.position.z]')
+  expect(html).not.toContain('/2*694')
+})
+
