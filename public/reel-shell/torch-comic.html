@@ -281,14 +281,18 @@ const desk=document.getElementById('desk');desk.setAttribute('viewBox',`0 0 ${VW
 
 // ---- 大格里的手电：鼠标走到哪亮到哪，带一点点手抖 ----
 const main=document.getElementById('main');
+const frame=document.getElementById('frame');
 let tx=300,ty=240,mx=300,my=240;
 main.addEventListener('pointermove',e=>{const r=main.getBoundingClientRect();tx=(e.clientX-r.left)/k;ty=(e.clientY-r.top)/k});
 // 桌子比格子宽：手电往左右边上照，画面跟着慢慢平移
 let vx=(IMG_W-VW)/2;
+if(s.classList.contains('portrait')){const r0=desk.getBoundingClientRect();vx=(IMG_W-IMG_H*(r0.width/Math.max(1,r0.height)))/2;}
 (function loop(t){mx+=(tx-mx)*.18;my+=(ty-my)*.18;
-  vx+=(Math.max(0,Math.min(1,(mx-90)/460))*(IMG_W-VW)-vx)*.05;
   const r=desk.getBoundingClientRect();
   const win=s.classList.contains('portrait')?IMG_H*(r.width/Math.max(1,r.height)):VW;
+  const span=IMG_W-win;
+  const panT=s.classList.contains('portrait')?Math.max(0,Math.min(1,mx/Math.max(1,frame.clientWidth))):Math.max(0,Math.min(1,(mx-90)/460));
+  vx+=(panT*span-vx)*.05;
   desk.setAttribute('viewBox',`${vx.toFixed(1)} 0 ${win} ${IMG_H}`);
   main.style.setProperty('--mx',(mx+Math.sin((t||0)/90)*1.2)+'px');main.style.setProperty('--my',(my+Math.cos((t||0)/110)*1.2)+'px');requestAnimationFrame(loop)})();
 
