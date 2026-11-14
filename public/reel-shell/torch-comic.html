@@ -286,7 +286,10 @@ main.addEventListener('pointermove',e=>{const r=main.getBoundingClientRect();tx=
 // 桌子比格子宽：手电往左右边上照，画面跟着慢慢平移
 let vx=(IMG_W-VW)/2;
 (function loop(t){mx+=(tx-mx)*.18;my+=(ty-my)*.18;
-  vx+=(Math.max(0,Math.min(1,(mx-90)/460))*(IMG_W-VW)-vx)*.05;desk.setAttribute('viewBox',`${vx.toFixed(1)} 0 ${VW} ${IMG_H}`);
+  vx+=(Math.max(0,Math.min(1,(mx-90)/460))*(IMG_W-VW)-vx)*.05;
+  const r=desk.getBoundingClientRect();
+  const win=s.classList.contains('portrait')?IMG_H*(r.width/Math.max(1,r.height)):VW;
+  desk.setAttribute('viewBox',`${vx.toFixed(1)} 0 ${win} ${IMG_H}`);
   main.style.setProperty('--mx',(mx+Math.sin((t||0)/90)*1.2)+'px');main.style.setProperty('--my',(my+Math.cos((t||0)/110)*1.2)+'px');requestAnimationFrame(loop)})();
 
 // ---- 我们的三样：点中了画个红圈，右边亮出一格特写 ----

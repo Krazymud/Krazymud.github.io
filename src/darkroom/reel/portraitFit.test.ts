@@ -123,3 +123,10 @@ it('frames the book cover at 72% of the portrait width', () => {
   expect(html).toContain('cam.lookAt(1.15,0,-.1)')
 })
 
+it('opens a tall window on the comic desk', () => {
+  const html = readFileSync(join(process.cwd(), 'public/reel-shell/torch-comic.html'), 'utf8')
+  const css = readFileSync(join(process.cwd(), 'public/reel-shell/portrait.css'), 'utf8')
+  expect(html).toContain("s.classList.contains('portrait')?IMG_H*(r.width/Math.max(1,r.height)):VW")
+  expect(css).toContain('#stage.portrait #desk{width:100%;height:calc(100% - 72px)}')
+})
+
