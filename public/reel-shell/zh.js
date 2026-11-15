@@ -42,7 +42,7 @@ window.ZH={
     'opening.html':{'roll it, darling':'宝宝，往下看'},
     'frame-lists.html':{'Some things':'有些东西','take time':'要慢慢','to develop':'才显影','tear here':'从这里撕开'},
     'frame-c.html':{
-      'pull me':'拉我','On air · request line':'正在直播 · 点歌热线','Now playing · Side A ·':'正在播放 · A 面 ·','pick a song ▴':'换一首 ▴',
+      'pull me':'拉我','scroll down':'往下滚','swipe down':'往下划','On air · request line':'正在直播 · 点歌热线','Now playing · Side A ·':'正在播放 · A 面 ·','pick a song ▴':'换一首 ▴',
       'Gymnopédie No.1':'《吉诺佩蒂》第一号','Erik Satie':'萨蒂','Liebestraum No.3':'《爱之梦》第三号','Franz Liszt':'李斯特',
       'Let Me Call You Sweetheart':'《让我叫你甜心》','Lewis James, 1924':'刘易斯·詹姆斯，1924','Comfort':'《Comfort》'},
     'frame-e.html':{'Some things':'有些东西','take time':'要慢慢','to develop':'才显影','tear here':'从这里撕开'},

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="stylesheet" href="portrait.css?v=portrait1">
+<link rel="stylesheet" href="portrait.css?v=portrait2">
 <title>A Roll For Two · 02</title>
 <style>
 @font-face{font-family:'JB Mono';src:url(font/jbmono.woff2) format('woff2')}
@@ -212,7 +212,7 @@ html,body{margin:0;height:100%;background:var(--ink);overflow:hidden}
   <div class="mote" style="left:120px;top:690px;width:14px;height:14px;opacity:.6"></div>
 </div>
 
-<script src="zh.js?v=radio2"></script>
+<script src="zh.js?v=portrait2"></script>
 <script src="vault-bridge.js"></script>
 <script src="content.js?v=radio2"></script>
 <script src="roll-link.js?v=portrait1"></script>
@@ -298,12 +298,16 @@ const dj=async()=>{const box=document.getElementById('dj'),t=document.getElement
   const shown=document.createElement('span'),rest=document.createElement('span');rest.style.visibility='hidden';t.replaceChildren(shown,rest);rest.textContent=DJ.slice(0,PG[0][1]);
   djTimer=setTimeout(tick,lead*1000)};
 if(useDJ){s.classList.add('djmode');dj()}
-// 串成一卷时：主持人说完、歌响起来，不自己走；客人往下滚（或按下键、点那行小字）镜头才往下摇到桌上
+if(ROLL.in)setTimeout(()=>ROLL.prep(),800);
+// 串成一卷时：主持人说完、歌响起来，不自己走；客人往下滚、往下划（或按下键、点那行小字）镜头才往下摇到桌上
 // 提示很淡：框底下一行小字，慢慢呼吸
 function showScroll(){if(document.querySelector('.scrolly'))return;const st=document.createElement('style');
-  st.textContent='.scrolly{position:absolute;left:0;right:0;text-align:center;font:400 11px/1 "JB Mono",monospace;letter-spacing:.3em;text-transform:uppercase;color:#f3e6d2;opacity:0;pointer-events:auto!important;cursor:pointer;animation:scrolly 3.2s ease-in-out 1s infinite}.scrolly b{display:block;font-weight:400;margin-top:6px;letter-spacing:0}@keyframes scrolly{0%,100%{opacity:.12;transform:translateY(0)}50%{opacity:.38;transform:translateY(4px)}}';
-  document.head.appendChild(st);const h=document.createElement('div');h.className='hint scrolly';h.innerHTML='scroll down<b>⌄</b>';document.querySelector('.proj>.frame').appendChild(h);
+  st.textContent='.scrolly{position:absolute;left:0;right:0;bottom:28px;z-index:5;text-align:center;font:400 12px/1 "JB Mono",monospace;letter-spacing:.22em;text-transform:uppercase;color:#f3e6d2;opacity:0;pointer-events:auto!important;cursor:pointer;animation:scrolly 3.2s ease-in-out 1s infinite}.scrolly b{display:block;font-weight:400;margin-top:6px;letter-spacing:0}@keyframes scrolly{0%,100%{opacity:.28;transform:translateY(0)}50%{opacity:.62;transform:translateY(4px)}}';
+  document.head.appendChild(st);const h=document.createElement('div');h.className='hint scrolly';h.innerHTML=(matchMedia('(pointer:coarse)').matches?'swipe down':'scroll down')+'<b>⌄</b>';document.querySelector('.proj>.frame').appendChild(h);
   let gone=false;const go=()=>{if(gone)return;gone=true;h.remove();ROLL.done('pan')};
+  let y0=0,x0=0,track=false;
+  addEventListener('pointerdown',e=>{const t=e.target;track=!(t.closest&&t.closest('.cord,.pick,.plist,.scrolly'));y0=e.clientY;x0=e.clientX},{passive:true});
+  addEventListener('pointerup',e=>{if(!track)return;const dy=e.clientY-y0,dx=Math.abs(e.clientX-x0);if(dy>64&&dy>dx*1.4)go()},{passive:true});
   addEventListener('wheel',e=>{if(e.deltaY>8)go()},{passive:true});
   addEventListener('keydown',e=>{if(['ArrowDown','PageDown',' '].includes(e.key))go()});h.onclick=go}
 // 歌单：壳子那边有几首就列几首，点哪首放哪首（单独打开这一幕时没有歌，按钮不出来）
