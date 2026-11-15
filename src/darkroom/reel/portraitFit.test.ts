@@ -36,7 +36,12 @@ it('places the radio under the bulb with a 22px song', () => {
   const css = readFileSync(join(process.cwd(), 'public/reel-shell/portrait.css'), 'utf8')
   expect(css).toContain('#stage.portrait .now .song{font-size:22px}')
   expect(css).toContain('#stage.portrait .cord{min-width:44px;min-height:44px}')
-  expect(css).toContain('#stage.portrait .radio{left:8%;top:36%;width:74%')
+  expect(css).toContain('#stage.portrait .radio{left:8%;top:36%;width:74%;height:auto;aspect-ratio:428/296}')
+  expect(css).toContain('#stage.portrait .how{left:16px;right:16px;top:96px')
+  const radio = readFileSync(join(process.cwd(), 'public/reel-shell/frame-c.html'), 'utf8')
+  expect(radio).toContain('ROLL.prep()')
+  expect(radio).toContain("dy>64&&dy>dx*1.4")
+  expect(radio).toContain('swipe down')
 })
 
 it('keeps the letter body at 17px in portrait and 44px tall buttons', () => {
@@ -120,7 +125,7 @@ it('warms the scene versions of roll-link and the light-table flow', () => {
 it('points every scene at fitStage and the portrait sheet', () => {
   for (const page of PAGES) {
     const html = readFileSync(join(process.cwd(), 'public/reel-shell', page), 'utf8')
-    expect(html, page).toContain('portrait.css?v=portrait1')
+    expect(html, page).toContain('portrait.css?v=portrait2')
     expect(html, page).toContain('ROLL.fitStage(')
     expect(html, page).not.toContain('innerWidth/1600')
   }

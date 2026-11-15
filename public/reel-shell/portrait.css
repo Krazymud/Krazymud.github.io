@@ -14,8 +14,9 @@
 #stage.portrait .frame>.strip{left:auto;right:3%;width:78px}
 #stage.portrait .log{font-size:12px}
 #stage.portrait .bulb{left:42%}
-#stage.portrait .radio{left:8%;top:36%;width:74%;height:auto}
-#stage.portrait .radio img{width:100%;height:auto}
+#stage.portrait .radio{left:8%;top:36%;width:74%;height:auto;aspect-ratio:428/296}
+#stage.portrait .radio img{width:100%;height:100%;object-fit:cover}
+#stage.portrait .scrolly{bottom:22px;z-index:6;font-size:13px;letter-spacing:.18em;padding:16px 0}
 #stage.portrait .cord{min-width:44px;min-height:44px}
 #stage.portrait .cord{left:auto;right:4%;top:22%;width:72px;min-width:44px;min-height:44px}
 #stage.portrait .now{left:8%;right:8%;top:auto;bottom:7%;width:auto}
@@ -52,6 +53,12 @@
 #stage.portrait .peek.on .obj{transform:translate(-50%,-50%) scale(.54) rotate(-2deg)}
 #stage.portrait .hint.pair{left:0;right:0;transform:none}
 #stage.portrait .below>.tocred{left:0;right:0;margin-left:0;text-align:center;top:58px!important}
+#stage.portrait .how{left:16px;right:16px;top:96px;width:auto;padding:8px 12px 6px}
+#stage.portrait .how::before{inset:-6px;pointer-events:none}
+#stage.portrait .how li{font-size:14px;line-height:1.25;margin:0 0 4px;padding-left:20px}
+#stage.portrait .how i{font-size:18px;margin-top:2px}
+#stage.portrait .how .mono{margin-bottom:6px}
+#stage.portrait .howBtn{left:auto;right:16px;top:14px}
 #stage.portrait .credits{left:12%;width:76%;top:8%;bottom:8%}
 #stage.portrait .rollup .name{font-size:22px}
 #stage.portrait .rollup .role{font-size:12px}
